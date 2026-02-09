@@ -1,22 +1,28 @@
 import mongoose from 'mongoose';
 
 const addressSchema = new mongoose.Schema({
-  // ✅ userId agora é opcional para suportar guest checkout
+  // ✅ userId opcional para suportar guest checkout
   userId: { type: String, required: false, default: null },
   
-  // 🆕 Flag para identificar moradas de guest
+  // 🆕 Flag para identificar endereços de guest
   isGuestAddress: { type: Boolean, default: false },
   
-  // Campos originais mantidos
+  // Dados pessoais
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   email: { type: String, required: true },
+  phone: { type: String, required: true },
+  cpf: { type: String, required: false, default: '' },
+  
+  // Endereço brasileiro
   street: { type: String, required: true },
+  number: { type: String, required: false, default: '' },
+  complement: { type: String, required: false, default: '' },
+  neighborhood: { type: String, required: false, default: '' },
   city: { type: String, required: true },
   state: { type: String, required: true },
-  zipcode: { type: String, required: true },
-  country: { type: String, required: true },
-  phone: { type: String, required: true },
+  zipcode: { type: String, required: true }, // CEP: 00000-000
+  country: { type: String, required: true, default: 'Brasil' },
 });
 
 // Index para performance

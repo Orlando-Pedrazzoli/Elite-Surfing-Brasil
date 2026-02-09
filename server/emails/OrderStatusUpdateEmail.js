@@ -1,51 +1,55 @@
 // server/emails/OrderStatusUpdateEmail.js
-// 🆕 Template de email para notificação de atualização de status
+// VERSÃO BRASIL - Elite Surfing Brasil
+
+const formatBRL = (value) => {
+  return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
 
 /**
- * Mapeia status para português e emoji
+ * Mapeia status para português brasileiro e emoji
  */
 const getStatusInfo = (status) => {
   const statusMap = {
     'Order Placed': {
       label: 'Pedido Recebido',
       emoji: '📋',
-      color: '#3B82F6', // blue
-      message: 'O seu pedido foi recebido e está a aguardar processamento.',
+      color: '#3B82F6',
+      message: 'O seu pedido foi recebido e está aguardando processamento.',
       icon: '📦'
     },
     'Processing': {
       label: 'Em Processamento',
       emoji: '🔄',
-      color: '#F59E0B', // amber
-      message: 'O seu pedido está a ser preparado pela nossa equipa.',
+      color: '#F59E0B',
+      message: 'O seu pedido está sendo preparado pela nossa equipe.',
       icon: '⚙️'
     },
     'Shipped': {
       label: 'Enviado',
       emoji: '🚚',
-      color: '#8B5CF6', // purple
+      color: '#8B5CF6',
       message: 'O seu pedido foi enviado e está a caminho!',
       icon: '📬'
     },
     'Out for Delivery': {
       label: 'Saiu para Entrega',
       emoji: '🏃',
-      color: '#6366F1', // indigo
-      message: 'O seu pedido está a caminho da sua morada. Esteja atento!',
+      color: '#6366F1',
+      message: 'O seu pedido está a caminho do seu endereço. Fique atento!',
       icon: '🛵'
     },
     'Delivered': {
       label: 'Entregue',
       emoji: '✅',
-      color: '#10B981', // green
+      color: '#10B981',
       message: 'O seu pedido foi entregue com sucesso. Obrigado pela sua compra!',
       icon: '🎉'
     },
     'Cancelled': {
       label: 'Cancelado',
       emoji: '❌',
-      color: '#EF4444', // red
-      message: 'O seu pedido foi cancelado. Se tiver dúvidas, contacte-nos.',
+      color: '#EF4444',
+      message: 'O seu pedido foi cancelado. Se tiver dúvidas, entre em contato conosco.',
       icon: '🚫'
     },
   };
@@ -54,7 +58,7 @@ const getStatusInfo = (status) => {
     label: status,
     emoji: '📦',
     color: '#6B7280',
-    message: 'O estado do seu pedido foi atualizado.',
+    message: 'O status do seu pedido foi atualizado.',
     icon: '📦'
   };
 };
@@ -80,14 +84,14 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
                 <p style="margin: 5px 0 0 0; font-size: 13px; color: #666;">Qtd: ${item.quantity}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0; font-weight: 600; color: #333;">€${(product.offerPrice * item.quantity).toFixed(2)}</p>
+                <p style="margin: 0; font-weight: 600; color: #333;">${formatBRL(product.offerPrice * item.quantity)}</p>
               </div>
             </div>
           `;
         }).join('')}
         <div style="padding-top: 15px; text-align: right; border-top: 2px solid #dee2e6; margin-top: 10px;">
           <p style="margin: 0; font-size: 18px; font-weight: bold; color: ${statusInfo.color};">
-            Total: €${order.amount.toFixed(2)}
+            Total: ${formatBRL(order.amount)}
           </p>
         </div>
       </div>
@@ -139,7 +143,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Atualização do Pedido - Elite Surfing</title>
+      <title>Atualização do Pedido - Elite Surfing Brasil</title>
     </head>
     <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
       
@@ -185,15 +189,15 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Data do Pedido:</td>
-                <td style="padding: 8px 0; text-align: right; font-weight: 500;">${new Date(order.createdAt).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 500;">${new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Método de Pagamento:</td>
-                <td style="padding: 8px 0; text-align: right; font-weight: 500;">${order.paymentType === 'COD' ? '💰 Pagamento na Entrega' : '💳 Pago Online'}</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 500;">💳 Pago Online</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666; font-size: 14px;">Total:</td>
-                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: ${statusInfo.color}; font-size: 18px;">€${order.amount.toFixed(2)}</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: ${statusInfo.color}; font-size: 18px;">${formatBRL(order.amount)}</td>
               </tr>
             </table>
           </div>
@@ -203,7 +207,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://elitesurfing.pt/my-orders" 
+            <a href="https://elitesurfing.com.br/my-orders" 
                style="display: inline-block; background: ${statusInfo.color}; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">
               Ver Meus Pedidos
             </a>
@@ -214,9 +218,9 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
             <div style="background: #EEF2FF; border: 1px solid #C7D2FE; padding: 20px; border-radius: 12px; margin-top: 20px;">
               <h4 style="margin: 0 0 10px 0; color: #4F46E5;">📬 Dicas de Entrega</h4>
               <ul style="margin: 0; padding-left: 20px; color: #4338CA; font-size: 14px;">
-                <li style="margin-bottom: 8px;">Mantenha o seu telefone por perto</li>
-                <li style="margin-bottom: 8px;">Verifique se a morada está correta</li>
-                <li>O tempo estimado de entrega é de 2-5 dias úteis</li>
+                <li style="margin-bottom: 8px;">Mantenha o seu celular por perto</li>
+                <li style="margin-bottom: 8px;">Verifique se o endereço está correto</li>
+                <li>O prazo estimado de entrega é de 3-10 dias úteis</li>
               </ul>
             </div>
           ` : ''}
@@ -229,7 +233,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
                 adoraríamos ouvir a sua opinião sobre os produtos.
               </p>
               <div style="text-align: center; margin-top: 15px;">
-                <a href="https://elitesurfing.pt/write-review" 
+                <a href="https://elitesurfing.com.br/write-review" 
                    style="display: inline-block; background: #10B981; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">
                   Deixar Avaliação
                 </a>
@@ -237,14 +241,14 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
             </div>
           ` : ''}
 
-          <!-- Contacto -->
+          <!-- Contato -->
           <div style="text-align: center; padding: 25px 0 10px 0; border-top: 1px solid #e9ecef; margin-top: 30px;">
             <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
-              Tem alguma questão sobre o seu pedido?
+              Tem alguma dúvida sobre o seu pedido?
             </p>
             <p style="margin: 0;">
-              <a href="mailto:suporte@elitesurfing.pt" style="color: ${statusInfo.color}; text-decoration: none; font-weight: 500;">
-                suporte@elitesurfing.pt
+              <a href="mailto:contato@elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-weight: 500;">
+                contato@elitesurfing.com.br
               </a>
             </p>
           </div>
@@ -254,11 +258,11 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
         <!-- Footer -->
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
           <p style="margin: 0; color: #666; font-size: 13px;">
-            Obrigado por escolher a Elite Surfing! 🏄‍♂️
+            Obrigado por escolher a Elite Surfing Brasil! 🏄‍♂️
           </p>
           <p style="margin: 10px 0 0 0;">
-            <a href="https://elitesurfing.pt" style="color: ${statusInfo.color}; text-decoration: none; font-size: 13px;">
-              www.elitesurfing.pt
+            <a href="https://elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-size: 13px;">
+              www.elitesurfing.com.br
             </a>
           </p>
         </div>
@@ -286,7 +290,7 @@ Olá ${customerName},
 
 ${statusInfo.emoji} ATUALIZAÇÃO DO SEU PEDIDO
 
-O estado do seu pedido #${order._id.toString().slice(-8).toUpperCase()} foi atualizado para:
+O status do seu pedido #${order._id.toString().slice(-8).toUpperCase()} foi atualizado para:
 
 ${statusInfo.label}
 
@@ -295,17 +299,17 @@ ${statusInfo.message}
 ---
 DETALHES DO PEDIDO
 Número: #${order._id.toString().slice(-8).toUpperCase()}
-Data: ${new Date(order.createdAt).toLocaleDateString('pt-PT')}
-Total: €${order.amount.toFixed(2)}
+Data: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}
+Total: ${formatBRL(order.amount)}
 ---
 
-Para ver todos os detalhes, visite:
-https://elitesurfing.pt/my-orders
+Para ver todos os detalhes, acesse:
+https://elitesurfing.com.br/my-orders
 
-Tem dúvidas? Contacte-nos: suporte@elitesurfing.pt
+Tem dúvidas? Fale conosco: contato@elitesurfing.com.br
 
-Obrigado por escolher a Elite Surfing!
-www.elitesurfing.pt
+Obrigado por escolher a Elite Surfing Brasil!
+www.elitesurfing.com.br
   `.trim();
 };
 

@@ -29,9 +29,9 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4001',
   'http://localhost:3000',
-  'https://elitesurfing.pt',
-  'https://www.elitesurfing.pt',
-  'https://elitesurfingeu-backend.vercel.app',
+  'https://elitesurfing.com.br',
+  'https://www.elitesurfing.com.br',
+  'https://elitesurfingbr-backend.vercel.app',
 ];
 
 app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
@@ -50,7 +50,7 @@ app.use(
 // ✅ Health check
 app.get('/', (req, res) => {
   res.json({
-    message: 'Elite Surfing API is Working - CLEAN VERSION',
+    message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     version: '2.0.0', // ✅ Nova versão para confirmar deploy

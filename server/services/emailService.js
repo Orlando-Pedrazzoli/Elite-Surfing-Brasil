@@ -1,6 +1,8 @@
 // server/services/emailService.js
-// VERSÃO CORRIGIDA - 26/01/2026
-// Com validação de variáveis de ambiente e logging detalhado
+// VERSÃO BRASIL - Elite Surfing Brasil
+// ✅ Moeda: BRL (R$)
+// ✅ Locale: pt-BR
+// ✅ Domínio: elitesurfing.com.br
 
 import nodemailer from 'nodemailer';
 import { createOrderEmailTemplate } from '../emails/OrderConfirmationEmail.js';
@@ -17,6 +19,13 @@ try {
 } catch (error) {
   console.log('⚠️ Template de status update não disponível:', error.message);
 }
+
+// =============================================================================
+// FORMATAR VALOR EM BRL
+// =============================================================================
+const formatBRL = (value) => {
+  return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
 
 // =============================================================================
 // VALIDAÇÃO DE VARIÁVEIS DE AMBIENTE
@@ -117,33 +126,33 @@ export const sendOrderConfirmationEmail = async (order, user, products, address)
       console.error('❌ Erro ao criar template:', templateError.message);
       // Usar template simples de fallback
       emailHtml = `
-        <h1>Confirmação de Pedido - Elite Surfing</h1>
+        <h1>Confirmação de Pedido - Elite Surfing Brasil</h1>
         <p>Olá ${user?.name || 'Cliente'},</p>
         <p>Obrigado pela sua compra!</p>
         <p><strong>Pedido:</strong> #${order._id}</p>
-        <p><strong>Total:</strong> €${(order.amount || 0).toFixed(2)}</p>
-        <p>Obrigado por escolher a Elite Surfing!</p>
+        <p><strong>Total:</strong> ${formatBRL(order.amount)}</p>
+        <p>Obrigado por escolher a Elite Surfing Brasil!</p>
       `;
     }
 
     const mailOptions = {
       from: {
-        name: 'Elite Surfing',
+        name: 'Elite Surfing Brasil',
         address: process.env.GMAIL_USER,
       },
       to: emailToSend,
-      subject: `✅ Confirmação de Encomenda #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing`,
+      subject: `✅ Confirmação do Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing Brasil`,
       html: emailHtml,
       text: `
         Olá ${user?.name || 'Cliente'},
         
-        Obrigado pela sua compra! A sua encomenda #${order._id} foi processada com sucesso.
+        Obrigado pela sua compra! O seu pedido #${order._id} foi processado com sucesso.
         
-        Total: €${(order.amount || 0).toFixed(2)}
-        Data: ${new Date(order.createdAt).toLocaleDateString('pt-PT')}
+        Total: ${formatBRL(order.amount)}
+        Data: ${new Date(order.createdAt).toLocaleDateString('pt-BR')}
         
-        Obrigado por escolher a Elite Surfing!
-        www.elitesurfing.pt
+        Obrigado por escolher a Elite Surfing Brasil!
+        www.elitesurfing.com.br
       `,
     };
 
@@ -208,10 +217,10 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
         if (user) {
           customerEmail = user.email;
           customerName = user.name;
-          console.log('📧 Modo: User registado');
+          console.log('📧 Modo: Usuário cadastrado');
         }
       } catch (userError) {
-        console.error('❌ Erro ao buscar user:', userError.message);
+        console.error('❌ Erro ao buscar usuário:', userError.message);
       }
     }
 
@@ -226,7 +235,7 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
           console.log('📧 Modo: Email do endereço');
         }
       } catch (addressError) {
-        console.error('❌ Erro ao buscar address:', addressError.message);
+        console.error('❌ Erro ao buscar endereço:', addressError.message);
       }
     }
 
@@ -260,7 +269,7 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
     if (!emailHtml) {
       const statusMessages = {
         'Order Placed': 'foi recebido',
-        'Processing': 'está a ser processado',
+        'Processing': 'está sendo processado',
         'Shipped': 'foi enviado',
         'Out for Delivery': 'saiu para entrega',
         'Delivered': 'foi entregue',
@@ -275,22 +284,22 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
         <body style="font-family: Arial, sans-serif; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden;">
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0;">🏄 Elite Surfing</h1>
+              <h1 style="color: white; margin: 0;">🏄 Elite Surfing Brasil</h1>
             </div>
             <div style="padding: 30px;">
               <h2 style="color: #333;">Olá ${customerName}!</h2>
               <p style="font-size: 16px; color: #555;">O seu pedido <strong>#${order._id.toString().slice(-8).toUpperCase()}</strong> ${statusMsg}.</p>
               
               <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0;"><strong>Estado atual:</strong> ${newStatus}</p>
-                <p style="margin: 10px 0 0 0;"><strong>Total:</strong> €${(order.amount || 0).toFixed(2)}</p>
+                <p style="margin: 0;"><strong>Status atual:</strong> ${newStatus}</p>
+                <p style="margin: 10px 0 0 0;"><strong>Total:</strong> ${formatBRL(order.amount)}</p>
               </div>
               
-              <p style="color: #666;">Se tiver alguma dúvida, não hesite em contactar-nos.</p>
-              <p style="color: #666;">Obrigado por escolher a Elite Surfing!</p>
+              <p style="color: #666;">Se tiver alguma dúvida, entre em contato conosco.</p>
+              <p style="color: #666;">Obrigado por escolher a Elite Surfing Brasil!</p>
             </div>
             <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666;">
-              <p style="margin: 0;">www.elitesurfing.pt | pedrazzoliorlando@gmail.com</p>
+              <p style="margin: 0;">www.elitesurfing.com.br | contato@elitesurfing.com.br</p>
             </div>
           </div>
         </body>
@@ -298,7 +307,7 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
       `;
     }
     
-    const emailText = `Olá ${customerName}, o estado do seu pedido #${order._id.toString().slice(-8).toUpperCase()} foi atualizado para: ${newStatus}`;
+    const emailText = `Olá ${customerName}, o status do seu pedido #${order._id.toString().slice(-8).toUpperCase()} foi atualizado para: ${newStatus}`;
 
     // Mapear status para assunto do email
     const statusSubjects = {
@@ -314,11 +323,11 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
 
     const mailOptions = {
       from: {
-        name: 'Elite Surfing',
+        name: 'Elite Surfing Brasil',
         address: process.env.GMAIL_USER,
       },
       to: customerEmail,
-      subject: `${subjectStatus} - Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing`,
+      subject: `${subjectStatus} - Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing Brasil`,
       html: emailHtml,
       text: emailText,
     };
@@ -367,7 +376,7 @@ export const sendSimpleEmail = async (to, subject, html, text = null) => {
 
     const result = await transporter.sendMail({
       from: {
-        name: 'Elite Surfing',
+        name: 'Elite Surfing Brasil',
         address: process.env.GMAIL_USER,
       },
       to: Array.isArray(to) ? to : [to],

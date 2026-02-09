@@ -1,7 +1,7 @@
 import Address from '../models/Address.js';
 
 // =============================================================================
-// Add Address : /api/address/add (ORIGINAL - MANTIDO)
+// Add Address : /api/address/add
 // =============================================================================
 export const addAddress = async (req, res) => {
   try {
@@ -13,11 +13,17 @@ export const addAddress = async (req, res) => {
         .json({ success: false, message: 'Dados incompletos' });
     }
 
-    // Garante que zipcode é string
+    // Formatar CEP brasileiro (00000-000)
+    const rawCep = String(address.zipcode).replace(/\D/g, '').trim();
+    const formattedCep = rawCep.length === 8 
+      ? `${rawCep.slice(0, 5)}-${rawCep.slice(5)}` 
+      : rawCep;
+
     const newAddress = {
       ...address,
       userId,
-      zipcode: String(address.zipcode).trim(),
+      zipcode: formattedCep,
+      country: address.country || 'Brasil',
       isGuestAddress: false,
     };
 
@@ -37,7 +43,7 @@ export const addAddress = async (req, res) => {
 };
 
 // =============================================================================
-// Get Address : /api/address/get (ORIGINAL - MANTIDO)
+// Get Address : /api/address/get
 // =============================================================================
 export const getAddress = async (req, res) => {
   try {
@@ -68,7 +74,7 @@ export const addGuestAddress = async (req, res) => {
     if (!address) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Dados da morada necessários' 
+        message: 'Dados do endereço necessários' 
       });
     }
 
@@ -90,11 +96,17 @@ export const addGuestAddress = async (req, res) => {
     if (!address.street || !address.city || !address.zipcode || !address.phone) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Morada completa é obrigatória' 
+        message: 'Endereço completo é obrigatório' 
       });
     }
 
-    // Criar morada de guest (sem userId)
+    // Formatar CEP brasileiro
+    const rawCep = String(address.zipcode).replace(/\D/g, '').trim();
+    const formattedCep = rawCep.length === 8 
+      ? `${rawCep.slice(0, 5)}-${rawCep.slice(5)}` 
+      : rawCep;
+
+    // Criar endereço de guest (sem userId)
     const newAddress = await Address.create({
       userId: null,
       isGuestAddress: true,
@@ -102,25 +114,29 @@ export const addGuestAddress = async (req, res) => {
       lastName: address.lastName,
       email: address.email,
       phone: address.phone,
+      cpf: address.cpf || '',
       street: address.street,
+      number: address.number || '',
+      complement: address.complement || '',
+      neighborhood: address.neighborhood || '',
       city: address.city,
       state: address.state || '',
-      zipcode: String(address.zipcode).trim(),
-      country: address.country || 'Portugal',
+      zipcode: formattedCep,
+      country: address.country || 'Brasil',
     });
 
-    console.log('✅ Morada de guest criada:', newAddress._id);
+    console.log('✅ Endereço de visitante criado:', newAddress._id);
 
     res.status(200).json({ 
       success: true, 
       addressId: newAddress._id,
-      message: 'Morada criada com sucesso'
+      message: 'Endereço criado com sucesso'
     });
   } catch (error) {
-    console.error('❌ Erro ao criar morada de guest:', error.message);
+    console.error('❌ Erro ao criar endereço de visitante:', error.message);
     res.status(500).json({ 
       success: false, 
-      message: 'Erro ao criar morada: ' + error.message 
+      message: 'Erro ao criar endereço: ' + error.message 
     });
   }
 };

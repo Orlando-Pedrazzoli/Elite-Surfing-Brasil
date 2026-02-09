@@ -1,7 +1,9 @@
 // server/controllers/orderController.js
-// VERSÃO CORRIGIDA - 26/01/2026
-// ✅ COD removido
-// ✅ Emails com AWAIT no webhook (fix para Vercel serverless)
+// VERSÃO BRASIL - Elite Surfing Brasil
+// ✅ Moeda: BRL (R$)
+// ✅ Pagamentos: PIX, Boleto, Cartão (via Stripe)
+// ✅ Locale: pt-BR
+// ✅ Domínio: elitesurfing.com.br
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -28,7 +30,7 @@ try {
 // =============================================================================
 const decrementProductStock = async (items) => {
   try {
-    console.log('📦 Decrementando stock dos produtos...');
+    console.log('📦 Decrementando estoque dos produtos...');
     
     for (const item of items) {
       const productId = item.product._id || item.product;
@@ -48,10 +50,10 @@ const decrementProductStock = async (items) => {
       }
     }
     
-    console.log('✅ Stock atualizado com sucesso');
+    console.log('✅ Estoque atualizado com sucesso');
     return true;
   } catch (error) {
-    console.error('❌ Erro ao decrementar stock:', error.message);
+    console.error('❌ Erro ao decrementar estoque:', error.message);
     return false;
   }
 };
@@ -89,10 +91,17 @@ const validateOrderStock = async (items) => {
 };
 
 // =============================================================================
+// FORMATAR VALOR EM BRL
+// =============================================================================
+const formatBRL = (value) => {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
+// =============================================================================
 // GERAR HTML DO EMAIL DE CONFIRMAÇÃO PARA CLIENTE
 // =============================================================================
 const generateOrderConfirmationHTML = (order, customerName, products, address) => {
-  const orderDate = new Date(order.createdAt).toLocaleDateString('pt-PT', {
+  const orderDate = new Date(order.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -108,7 +117,7 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">${productName}</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">€${(productPrice * item.quantity).toFixed(2)}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatBRL(productPrice * item.quantity)}</td>
       </tr>
     `;
   }).join('');
@@ -125,8 +134,8 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">🏄 Elite Surfing</h1>
-          <p style="color: #a0a0a0; margin: 10px 0 0 0;">Obrigado pela sua encomenda!</p>
+          <h1 style="color: white; margin: 0; font-size: 28px;">🏄 Elite Surfing Brasil</h1>
+          <p style="color: #a0a0a0; margin: 10px 0 0 0;">Obrigado pelo seu pedido!</p>
         </div>
         
         <!-- Order Info -->
@@ -142,7 +151,7 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
           <div style="background: #e8f4f8; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
             <h3 style="margin: 0 0 10px 0; color: #333;">👤 Dados do Cliente</h3>
             <p style="margin: 5px 0;"><strong>Nome:</strong> ${customerName}</p>
-            <p style="margin: 5px 0;"><strong>Morada:</strong> ${address.street}, ${address.zipcode} ${address.city}, ${address.country}</p>
+            <p style="margin: 5px 0;"><strong>Endereço:</strong> ${address.street}, ${address.zipcode} ${address.city} - ${address.state}, ${address.country}</p>
             ${address.phone ? `<p style="margin: 5px 0;"><strong>Telefone:</strong> ${address.phone}</p>` : ''}
           </div>
           
@@ -164,21 +173,21 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
           <!-- Total -->
           <div style="background: #1a1a2e; color: white; padding: 15px 20px; border-radius: 8px; text-align: right;">
             <span style="font-size: 18px;">Total: </span>
-            <span style="font-size: 24px; font-weight: bold;">€${order.amount.toFixed(2)}</span>
+            <span style="font-size: 24px; font-weight: bold;">${formatBRL(order.amount)}</span>
           </div>
           
           ${order.promoCode ? `
           <p style="margin-top: 10px; color: #28a745; font-size: 14px;">
-            🎉 Código promocional aplicado: <strong>${order.promoCode}</strong> (-${order.discountPercentage}%)
+            🎉 Cupom aplicado: <strong>${order.promoCode}</strong> (-${order.discountPercentage}%)
           </p>
           ` : ''}
           
           <!-- Footer -->
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
-            <p>Dúvidas? Contacte-nos:</p>
-            <p>📧 pedrazzoliorlando@gmail.com | 📱 +351 912 164 220</p>
+            <p>Dúvidas? Fale conosco:</p>
+            <p>📧 contato@elitesurfing.com.br | 📱 +55 (11) 99999-9999</p>
             <p style="margin-top: 20px;">
-              <a href="https://www.elitesurfing.pt" style="color: #1a1a2e;">www.elitesurfing.pt</a>
+              <a href="https://www.elitesurfing.com.br" style="color: #1a1a2e;">www.elitesurfing.com.br</a>
             </p>
           </div>
         </div>
@@ -192,7 +201,7 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
 // GERAR HTML DO EMAIL PARA ADMIN
 // =============================================================================
 const generateAdminNotificationHTML = (order, customerName, customerEmail, customerPhone, products, address) => {
-  const orderDate = new Date(order.createdAt).toLocaleDateString('pt-PT', {
+  const orderDate = new Date(order.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -208,7 +217,7 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">${productName}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">€${(productPrice * item.quantity).toFixed(2)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatBRL(productPrice * item.quantity)}</td>
       </tr>
     `;
   }).join('');
@@ -223,7 +232,7 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 25px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">🔔 NOVO PEDIDO!</h1>
-          <p style="color: #ffcccc; margin: 10px 0 0 0;">${order.isGuestOrder ? '👤 GUEST CHECKOUT' : '👤 Cliente Registado'}</p>
+          <p style="color: #ffcccc; margin: 10px 0 0 0;">${order.isGuestOrder ? '👤 GUEST CHECKOUT' : '👤 Cliente Cadastrado'}</p>
         </div>
         
         <div style="padding: 25px;">
@@ -245,12 +254,15 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
           
           <!-- Address -->
           <div style="background: #cce5ff; border: 1px solid #007bff; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <h3 style="margin: 0 0 10px 0; color: #004085;">📍 Morada de Entrega</h3>
+            <h3 style="margin: 0 0 10px 0; color: #004085;">📍 Endereço de Entrega</h3>
             <p style="margin: 5px 0;">${address.firstName} ${address.lastName}</p>
             <p style="margin: 5px 0;">${address.street}</p>
-            <p style="margin: 5px 0;">${address.zipcode} ${address.city}</p>
+            ${address.complement ? `<p style="margin: 5px 0;">${address.complement}</p>` : ''}
+            ${address.neighborhood ? `<p style="margin: 5px 0;">Bairro: ${address.neighborhood}</p>` : ''}
+            <p style="margin: 5px 0;">CEP: ${address.zipcode} - ${address.city}/${address.state}</p>
             <p style="margin: 5px 0;">${address.country}</p>
             ${address.phone ? `<p style="margin: 5px 0;">📱 ${address.phone}</p>` : ''}
+            ${address.cpf ? `<p style="margin: 5px 0;">CPF: ${address.cpf}</p>` : ''}
           </div>
           
           <!-- Products -->
@@ -269,17 +281,17 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
           </table>
           
           ${order.promoCode ? `
-          <p style="color: #28a745;"><strong>🎉 Código Promo:</strong> ${order.promoCode} (-${order.discountPercentage}%)</p>
+          <p style="color: #28a745;"><strong>🎉 Cupom:</strong> ${order.promoCode} (-${order.discountPercentage}%)</p>
           ` : ''}
           
           <!-- Total -->
           <div style="background: #007bff; color: white; padding: 15px; border-radius: 8px; text-align: center;">
-            <span style="font-size: 24px; font-weight: bold;">💰 TOTAL: €${order.amount.toFixed(2)}</span>
+            <span style="font-size: 24px; font-weight: bold;">💰 TOTAL: ${formatBRL(order.amount)}</span>
           </div>
           
           <!-- Action Button -->
           <div style="text-align: center; margin-top: 25px;">
-            <a href="https://www.elitesurfing.pt/seller/orders" 
+            <a href="https://www.elitesurfing.com.br/seller/orders" 
                style="display: inline-block; background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
               📋 Ver Pedido no Painel
             </a>
@@ -362,14 +374,14 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
     
     // 2. BUSCAR ADDRESS
     console.log('');
-    console.log('📍 Buscando address:', order.address);
+    console.log('📍 Buscando endereço:', order.address);
     const address = await Address.findById(order.address);
     
     if (!address) {
-      console.error('❌ ERRO: Address não encontrado!');
-      return { success: false, error: 'Address não encontrado' };
+      console.error('❌ ERRO: Endereço não encontrado!');
+      return { success: false, error: 'Endereço não encontrado' };
     }
-    console.log('✅ Address encontrado:', address.city, address.country);
+    console.log('✅ Endereço encontrado:', address.city, address.state);
     
     // 3. BUSCAR PRODUTOS
     const productIds = order.items.map(item => item.product._id || item.product);
@@ -399,10 +411,10 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER;
     
     const clientHTML = generateOrderConfirmationHTML(order, customerName, products, address);
-    const clientSubject = `✅ Confirmação do Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing`;
+    const clientSubject = `✅ Confirmação do Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing Brasil`;
     
     const adminHTML = generateAdminNotificationHTML(order, customerName, customerEmail, customerPhone, products, address);
-    const adminSubject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - €${order.amount.toFixed(2)}`;
+    const adminSubject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - ${formatBRL(order.amount)}`;
     
     // 6. ENVIAR EMAILS EM PARALELO
     console.log('');
@@ -415,7 +427,7 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
     const [clientResult, adminResult] = await Promise.all([
       // Email para cliente
       transporter.sendMail({
-        from: { name: 'Elite Surfing', address: process.env.GMAIL_USER },
+        from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
         to: customerEmail,
         subject: clientSubject,
         html: clientHTML,
@@ -424,7 +436,7 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
       
       // Email para admin
       transporter.sendMail({
-        from: { name: 'Elite Surfing', address: process.env.GMAIL_USER },
+        from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
         to: adminEmail,
         subject: adminSubject,
         html: adminHTML,
@@ -459,12 +471,12 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
 };
 
 // =============================================================================
-// PLACE ORDER STRIPE - SUPORTA GUEST
+// PLACE ORDER STRIPE - SUPORTA PIX, BOLETO E CARTÃO (BRASIL)
 // =============================================================================
 export const placeOrderStripe = async (req, res) => {
   console.log('');
   console.log('💳 ═══════════════════════════════════════════════════');
-  console.log('💳 NOVO PEDIDO STRIPE');
+  console.log('💳 NOVO PEDIDO STRIPE - BRASIL');
   console.log('💳 ═══════════════════════════════════════════════════');
 
   try {
@@ -496,11 +508,11 @@ export const placeOrderStripe = async (req, res) => {
     }
 
     if (!userId && !isGuestOrder) {
-      return res.json({ success: false, message: 'Utilizador ou dados de guest necessários' });
+      return res.json({ success: false, message: 'Usuário ou dados de visitante necessários' });
     }
 
     if (isGuestOrder && !guestEmail) {
-      return res.json({ success: false, message: 'Email é obrigatório para guest checkout' });
+      return res.json({ success: false, message: 'Email é obrigatório para compra como visitante' });
     }
 
     // Validar stock
@@ -508,7 +520,7 @@ export const placeOrderStripe = async (req, res) => {
     if (!stockValidation.valid) {
       return res.json({ 
         success: false, 
-        message: 'Stock insuficiente: ' + stockValidation.errors.join(', ')
+        message: 'Estoque insuficiente: ' + stockValidation.errors.join(', ')
       });
     }
 
@@ -559,7 +571,7 @@ export const placeOrderStripe = async (req, res) => {
       }
       return {
         price_data: {
-          currency: 'eur',
+          currency: 'brl',
           product_data: {
             name: discountPercentage > 0 ? `${item.name} (${discountPercentage}% OFF)` : item.name,
           },
@@ -569,13 +581,14 @@ export const placeOrderStripe = async (req, res) => {
       };
     });
 
+    // Métodos de pagamento Brasil
     let payment_method_types;
     switch (paymentMethod) {
-      case 'mbway':
-        payment_method_types = ['mb_way'];
+      case 'pix':
+        payment_method_types = ['pix'];
         break;
-      case 'multibanco':
-        payment_method_types = ['multibanco'];
+      case 'boleto':
+        payment_method_types = ['boleto'];
         break;
       default:
         payment_method_types = ['card'];
@@ -602,11 +615,22 @@ export const placeOrderStripe = async (req, res) => {
       sessionOptions.customer_email = guestEmail;
     }
 
-    if (paymentMethod === 'mbway') {
-      sessionOptions.payment_method_options = { mb_way: {} };
+    // Opções específicas para PIX
+    if (paymentMethod === 'pix') {
+      sessionOptions.payment_method_options = {
+        pix: {
+          expires_after_seconds: 1800, // PIX expira em 30 minutos
+        }
+      };
     }
-    if (paymentMethod === 'multibanco') {
-      sessionOptions.payment_method_options = { multibanco: {} };
+
+    // Opções específicas para Boleto
+    if (paymentMethod === 'boleto') {
+      sessionOptions.payment_method_options = {
+        boleto: {
+          expires_after_days: 3, // Boleto expira em 3 dias
+        }
+      };
     }
 
     const session = await stripeInstance.checkout.sessions.create(sessionOptions);
@@ -671,7 +695,7 @@ export const stripeWebhooks = async (request, response) => {
         
         console.log('✅ Pedido marcado como pago:', orderId);
         
-        // Decrementar stock
+        // Decrementar estoque
         await decrementProductStock(updatedOrder.items);
         
         // Limpar carrinho (se não for guest)
@@ -679,7 +703,7 @@ export const stripeWebhooks = async (request, response) => {
           await User.findByIdAndUpdate(userId, { cartItems: {} });
         }
 
-        // ✅ CORREÇÃO: ENVIAR EMAILS COM AWAIT (antes de responder)
+        // ✅ ENVIAR EMAILS COM AWAIT
         console.log('');
         console.log('📧 Preparando envio de emails...');
         
@@ -689,19 +713,19 @@ export const stripeWebhooks = async (request, response) => {
           console.log('📧 Modo: Guest - Email:', emailRecipient);
         } else {
           emailRecipient = userId;
-          console.log('📧 Modo: User registado - ID:', emailRecipient);
+          console.log('📧 Modo: User cadastrado - ID:', emailRecipient);
         }
         
         if (emailRecipient) {
-          // ✅ AWAIT - Espera os emails serem enviados ANTES de responder
           const emailResult = await sendAllOrderEmails(updatedOrder, emailRecipient);
           console.log('📧 Resultado dos emails:', JSON.stringify(emailResult, null, 2));
         } else {
           console.error('❌ Nenhum destinatário de email encontrado!');
         }
         
-      } else if (session.payment_status === 'unpaid' && paymentMethod === 'multibanco') {
-        console.log('⏳ Multibanco: Aguardando pagamento');
+      } else if (session.payment_status === 'unpaid' && paymentMethod === 'boleto') {
+        // Boleto: pagamento pendente (similar ao multibanco)
+        console.log('⏳ Boleto: Aguardando pagamento');
       }
       break;
     }
@@ -742,7 +766,7 @@ export const stripeWebhooks = async (request, response) => {
         
         console.log('✅ Pedido marcado como pago (payment_intent):', orderId);
         
-        // Decrementar stock
+        // Decrementar estoque
         await decrementProductStock(updatedOrder.items);
         
         // Limpar carrinho
@@ -807,7 +831,7 @@ export const getUserOrders = async (req, res) => {
         isPaid: true,
       };
     } else {
-      return res.json({ success: false, message: 'User ID ou Guest Email necessário' });
+      return res.json({ success: false, message: 'User ID ou Email de visitante necessário' });
     }
 
     const orders = await Order.find(query)
@@ -817,7 +841,7 @@ export const getUserOrders = async (req, res) => {
       })
       .populate({
         path: 'address',
-        select: 'firstName lastName street city state zipcode country email phone',
+        select: 'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
       })
       .sort({ createdAt: -1 });
 
@@ -836,7 +860,7 @@ export const getOrderById = async (req, res) => {
     const { orderId } = req.params;
 
     if (!orderId) {
-      return res.json({ success: false, message: 'Order ID necessário' });
+      return res.json({ success: false, message: 'ID do pedido necessário' });
     }
 
     const order = await Order.findById(orderId)
@@ -846,7 +870,7 @@ export const getOrderById = async (req, res) => {
       })
       .populate({
         path: 'address',
-        select: 'firstName lastName street city state zipcode country email phone',
+        select: 'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
       });
 
     if (!order) {
@@ -890,7 +914,7 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId, status } = req.body;
 
     if (!orderId || !status) {
-      return res.json({ success: false, message: 'Order ID e Status são obrigatórios' });
+      return res.json({ success: false, message: 'ID do pedido e Status são obrigatórios' });
     }
 
     const validStatuses = ['Order Placed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
@@ -921,7 +945,6 @@ export const updateOrderStatus = async (req, res) => {
       const productIds = updatedOrder.items.map(item => item.product?._id || item.product);
       const products = await Product.find({ _id: { $in: productIds } });
 
-      // ✅ Com await
       try {
         const result = await sendOrderStatusUpdateEmail(updatedOrder, status, products);
         if (result.success) {
@@ -946,11 +969,11 @@ export const updateOrderStatus = async (req, res) => {
 };
 
 // =============================================================================
-// EXPORTAR FUNÇÃO COD VAZIA PARA NÃO QUEBRAR IMPORTS EXISTENTES
+// COD DESATIVADO
 // =============================================================================
 export const placeOrderCOD = async (req, res) => {
   return res.json({ 
     success: false, 
-    message: 'Pagamento na entrega não está mais disponível. Por favor, use pagamento online.' 
+    message: 'Pagamento na entrega não está disponível. Por favor, use pagamento online (PIX, Boleto ou Cartão).' 
   });
 };

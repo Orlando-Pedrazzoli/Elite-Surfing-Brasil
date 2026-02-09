@@ -1,6 +1,15 @@
 // server/services/whatsappService.js
+// VERSÃO BRASIL - Elite Surfing Brasil
 // Serviço de notificações WhatsApp usando CallMeBot API
 // Documentação: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+// 
+// SETUP: 
+// 1. Adicione o número +34 644 71 81 99 nos seus contatos do WhatsApp
+// 2. Envie "I allow callmebot to send me messages" para esse número
+// 3. Você receberá sua API key
+// 4. Adicione no .env:
+//    ADMIN_WHATSAPP_NUMBER=5511999999999  (seu número BR com código do país)
+//    CALLMEBOT_API_KEY=sua_api_key
 
 /**
  * Envia notificação WhatsApp usando CallMeBot API
@@ -13,7 +22,7 @@ export const sendWhatsAppNotification = async (message) => {
     const apiKey = process.env.CALLMEBOT_API_KEY;
 
     if (!phoneNumber || !apiKey) {
-      console.log('⚠️ WhatsApp não configurado (ADMIN_WHATSAPP_NUMBER ou CALLMEBOT_API_KEY em falta)');
+      console.log('⚠️ WhatsApp não configurado (ADMIN_WHATSAPP_NUMBER ou CALLMEBOT_API_KEY ausente)');
       return { 
         success: false, 
         error: 'WhatsApp não configurado no .env' 
@@ -28,10 +37,16 @@ export const sendWhatsAppNotification = async (message) => {
     // CallMeBot API URL
     const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneNumber}&text=${encodedMessage}&apikey=${apiKey}`;
 
+    // Usar AbortController para timeout (compatível com Node.js)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
     const response = await fetch(url, {
       method: 'GET',
-      timeout: 10000, // 10 segundos timeout
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const responseText = await response.text();
     console.log('📱 CallMeBot response:', responseText);
@@ -52,12 +67,23 @@ export const sendWhatsAppNotification = async (message) => {
       };
     }
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('❌ WhatsApp timeout (15s)');
+      return { success: false, error: 'Timeout ao enviar WhatsApp' };
+    }
     console.error('❌ Erro ao enviar WhatsApp:', error.message);
     return { 
       success: false, 
       error: error.message 
     };
   }
+};
+
+/**
+ * Formata valor em BRL
+ */
+const formatBRL = (value) => {
+  return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 /**
@@ -71,7 +97,7 @@ export const sendWhatsAppNotification = async (message) => {
 export const formatNewOrderMessage = (order, user, products, address) => {
   const orderId = order._id.toString().slice(-8).toUpperCase();
   const customerName = order.isGuestOrder 
-    ? (order.guestName || 'Guest') 
+    ? (order.guestName || 'Visitante') 
     : (user?.name || 'Cliente');
   const customerEmail = order.isGuestOrder 
     ? order.guestEmail 
@@ -86,39 +112,36 @@ export const formatNewOrderMessage = (order, user, products, address) => {
       const productId = item.product?._id || item.product;
       const product = products.find(p => p._id.toString() === productId.toString());
       if (!product) return `- Item (${item.quantity}x)`;
-      return `• ${product.name} (${item.quantity}x) - €${((product.offerPrice || 0) * item.quantity).toFixed(2)}`;
+      return `• ${product.name} (${item.quantity}x) - ${formatBRL((product.offerPrice || 0) * item.quantity)}`;
     })
     .join('\n');
 
-  const paymentStatus = order.paymentType === 'COD' 
-    ? '💰 COD (Pagar na entrega)' 
-    : '✅ PAGO Online';
-
-  const guestTag = order.isGuestOrder ? ' [GUEST]' : '';
+  const guestTag = order.isGuestOrder ? ' [VISITANTE]' : '';
 
   const message = `🔔 *NOVO PEDIDO!*${guestTag}
 
 📋 *Pedido:* #${orderId}
-📅 *Data:* ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}
-💳 *Pagamento:* ${paymentStatus}
+📅 *Data:* ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+💳 *Pagamento:* ✅ PAGO Online
 
 👤 *Cliente:*
 Nome: ${customerName}
 Email: ${customerEmail}
 Tel: ${customerPhone}
 
-📍 *Morada:*
+📍 *Endereço:*
 ${address?.firstName || ''} ${address?.lastName || ''}
-${address?.street || ''}
-${address?.zipcode || ''} ${address?.city || ''}
-${address?.country || 'Portugal'}
+${address?.street || ''}${address?.number ? `, ${address.number}` : ''}
+${address?.complement ? `${address.complement}\n` : ''}${address?.neighborhood ? `${address.neighborhood}\n` : ''}CEP: ${address?.zipcode || ''} - ${address?.city || ''}/${address?.state || ''}
+${address?.country || 'Brasil'}
+${address?.cpf ? `CPF: ${address.cpf}` : ''}
 
 📦 *Produtos:*
 ${productList}
 
-💰 *TOTAL: €${(order.amount || 0).toFixed(2)}*
+💰 *TOTAL: ${formatBRL(order.amount)}*
 
-🔗 Ver pedido: elitesurfing.pt/seller/orders`;
+🔗 Ver pedido: elitesurfing.com.br/seller/orders`;
 
   return message;
 };
@@ -147,7 +170,7 @@ export const sendStatusUpdateToAdmin = async (order, customerName, newStatus) =>
 📋 Pedido: #${orderId}
 👤 Cliente: ${customerName}
 📊 Novo Status: *${newStatus}*
-📅 ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`;
+📅 ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
 
   return await sendWhatsAppNotification(message);
 };
