@@ -1,0 +1,121 @@
+# =====================================================
+# Elite Surfing Portugal - robots.txt
+# https://www.elitesurfing.pt
+# Última atualização: 2026-01-28
+# =====================================================
+
+# =====================================================
+# Regras para todos os crawlers
+# =====================================================
+User-agent: *
+Allow: /
+Allow: /products
+Allow: /products/
+Allow: /collections/
+Allow: /contact
+Allow: /faq
+Allow: /privacy
+Allow: /terms
+Allow: /refund-policy
+
+# Páginas privadas - não indexar
+Disallow: /seller
+Disallow: /seller/
+Disallow: /my-orders
+Disallow: /add-address
+Disallow: /write-review
+Disallow: /order-success
+Disallow: /cart
+Disallow: /loader
+
+# URLs técnicas
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /*?*
+
+# URLs removidas (redirecionadas via vercel.json)
+Disallow: /products/Deck-Bells
+Disallow: /products/deck-bells
+
+# =====================================================
+# Googlebot
+# =====================================================
+User-agent: Googlebot
+Allow: /
+Allow: /products
+Allow: /collections/
+Disallow: /seller
+Disallow: /seller/
+Disallow: /cart
+Disallow: /my-orders
+Disallow: /add-address
+
+# =====================================================
+# Google Images - permitir todas as imagens
+# =====================================================
+User-agent: Googlebot-Image
+Allow: /
+
+# =====================================================
+# AdsBot - necessário para Google Ads
+# =====================================================
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
+Allow: /
+
+# =====================================================
+# Bingbot
+# =====================================================
+User-agent: Bingbot
+Allow: /
+Disallow: /seller
+Disallow: /seller/
+Disallow: /cart
+Disallow: /my-orders
+
+# =====================================================
+# Outros bots úteis
+# =====================================================
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+# =====================================================
+# Bloquear bots maliciosos/desnecessários
+# =====================================================
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# =====================================================
+# Sitemaps
+# =====================================================
+Sitemap: https://www.elitesurfing.pt/sitemap.xml
+Sitemap: https://www.elitesurfing.pt/sitemap-static.xml
+Sitemap: https://www.elitesurfing.pt/sitemap-collections.xml
+Sitemap: https://www.elitesurfing.pt/sitemap-categories.xml
+Sitemap: https://www.elitesurfing.pt/sitemap-products.xml
