@@ -1,6 +1,6 @@
 // server/services/adminNotificationService.js
+// VERSÃO BRASIL - Elite Surfing Brasil
 // Serviço centralizado de notificações para o Admin
-// CORRIGIDO: Melhor tratamento de erros e logging
 
 import { sendSimpleEmail } from './emailService.js';
 
@@ -16,6 +16,13 @@ try {
 } catch (error) {
   console.log('⚠️ WhatsApp service não disponível:', error.message);
 }
+
+/**
+ * Formata valor em BRL
+ */
+const formatBRL = (value) => {
+  return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
 
 /**
  * Cria template de email para notificação de novo pedido ao admin
@@ -39,31 +46,29 @@ const createAdminEmailTemplate = (order, user, products, address) => {
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #eee;">${product.name}</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">€${(product.offerPrice || 0).toFixed(2)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">€${((product.offerPrice || 0) * item.quantity).toFixed(2)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatBRL(product.offerPrice)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">${formatBRL((product.offerPrice || 0) * item.quantity)}</td>
         </tr>
       `;
     })
     .filter(Boolean)
     .join('');
 
-  const paymentBadge = order.paymentType === 'COD'
-    ? '<span style="background: #ffc107; color: #000; padding: 5px 10px; border-radius: 4px; font-weight: bold;">💰 COD - Aguarda Pagamento</span>'
-    : '<span style="background: #28a745; color: #fff; padding: 5px 10px; border-radius: 4px; font-weight: bold;">💳 PAGO ONLINE</span>';
+  const paymentBadge = '<span style="background: #28a745; color: #fff; padding: 5px 10px; border-radius: 4px; font-weight: bold;">💳 PAGO ONLINE</span>';
 
   const guestBadge = order.isGuestOrder 
-    ? '<span style="background: #17a2b8; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">GUEST</span>'
+    ? '<span style="background: #17a2b8; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">VISITANTE</span>'
     : '';
 
   const discountHTML = order.promoCode ? `
     <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
-      <strong>🎫 Código Promocional:</strong> ${order.promoCode}<br>
-      <strong>Desconto:</strong> ${order.discountPercentage || 0}% (-€${(order.discountAmount || 0).toFixed(2)})
+      <strong>🎫 Cupom:</strong> ${order.promoCode}<br>
+      <strong>Desconto:</strong> ${order.discountPercentage || 0}% (-${formatBRL(order.discountAmount)})
     </div>
   ` : '';
 
   // Dados do cliente
-  const customerName = order.isGuestOrder ? (order.guestName || 'Guest') : (user.name || 'Cliente');
+  const customerName = order.isGuestOrder ? (order.guestName || 'Visitante') : (user.name || 'Cliente');
   const customerEmail = order.isGuestOrder ? order.guestEmail : (address.email || user.email);
   const customerPhone = order.isGuestOrder ? (order.guestPhone || address.phone) : address.phone;
 
@@ -72,14 +77,14 @@ const createAdminEmailTemplate = (order, user, products, address) => {
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Novo Pedido - Elite Surfing</title>
+      <title>Novo Pedido - Elite Surfing Brasil</title>
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
       
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); padding: 25px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">🔔 NOVO PEDIDO!</h1>
-        <p style="color: #fff; margin: 10px 0 0 0; font-size: 14px;">Elite Surfing - Painel Admin</p>
+        <p style="color: #fff; margin: 10px 0 0 0; font-size: 14px;">Elite Surfing Brasil - Painel Admin</p>
       </div>
 
       <!-- Content -->
@@ -94,7 +99,7 @@ const createAdminEmailTemplate = (order, user, products, address) => {
             </tr>
             <tr>
               <td><strong>📅 Data:</strong></td>
-              <td style="text-align: right;">${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}</td>
+              <td style="text-align: right;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
             </tr>
             <tr>
               <td><strong>💳 Pagamento:</strong></td>
@@ -113,12 +118,15 @@ const createAdminEmailTemplate = (order, user, products, address) => {
 
         <!-- Address -->
         <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h3 style="margin: 0 0 15px 0; color: #e65100;">📍 Morada de Entrega</h3>
+          <h3 style="margin: 0 0 15px 0; color: #e65100;">📍 Endereço de Entrega</h3>
           <p style="margin: 0; line-height: 1.8;">
             ${address.firstName || ''} ${address.lastName || ''}<br>
-            ${address.street || ''}<br>
-            ${address.zipcode || ''} ${address.city || ''}<br>
-            ${address.state || ''}, ${address.country || 'Portugal'}
+            ${address.street || ''}${address.number ? `, ${address.number}` : ''}<br>
+            ${address.complement ? `${address.complement}<br>` : ''}
+            ${address.neighborhood ? `${address.neighborhood}<br>` : ''}
+            CEP: ${address.zipcode || ''} - ${address.city || ''}/${address.state || ''}<br>
+            ${address.country || 'Brasil'}
+            ${address.cpf ? `<br>CPF: ${address.cpf}` : ''}
           </p>
         </div>
 
@@ -142,12 +150,12 @@ const createAdminEmailTemplate = (order, user, products, address) => {
 
         <!-- Total -->
         <div style="background: #1a237e; color: white; padding: 20px; border-radius: 8px; text-align: center;">
-          <h2 style="margin: 0; font-size: 28px;">💰 TOTAL: €${(order.amount || 0).toFixed(2)}</h2>
+          <h2 style="margin: 0; font-size: 28px;">💰 TOTAL: ${formatBRL(order.amount)}</h2>
         </div>
 
         <!-- Action Button -->
         <div style="text-align: center; margin-top: 25px;">
-          <a href="https://www.elitesurfing.pt/seller/orders" 
+          <a href="https://www.elitesurfing.com.br/seller/orders" 
              style="display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
             Ver Pedido no Painel
           </a>
@@ -158,7 +166,7 @@ const createAdminEmailTemplate = (order, user, products, address) => {
       <!-- Footer -->
       <div style="background: #f8f9fa; padding: 15px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #ddd; border-top: none;">
         <p style="margin: 0; color: #666; font-size: 12px;">
-          Elite Surfing - Notificação Automática de Pedidos<br>
+          Elite Surfing Brasil - Notificação Automática de Pedidos<br>
           ${new Date().toISOString()}
         </p>
       </div>
@@ -170,17 +178,13 @@ const createAdminEmailTemplate = (order, user, products, address) => {
 
 /**
  * Envia notificações para o admin (Email + WhatsApp)
- * @param {Object} order - Pedido criado
- * @param {Object} user - Usuário que fez o pedido
- * @param {Array} products - Lista de produtos do pedido
- * @param {Object} address - Endereço de entrega
  */
 export const notifyAdminNewOrder = async (order, user, products, address) => {
   console.log('═══════════════════════════════════════════════════');
   console.log('🔔 INICIANDO NOTIFICAÇÕES PARA ADMIN');
   console.log('═══════════════════════════════════════════════════');
   console.log('📋 Order ID:', order?._id);
-  console.log('👤 User:', user?.name || user?.email || 'Guest');
+  console.log('👤 User:', user?.name || user?.email || 'Visitante');
   console.log('📦 Products count:', products?.length || 0);
   console.log('📍 Address:', address?.city || 'N/A');
 
@@ -202,12 +206,12 @@ export const notifyAdminNewOrder = async (order, user, products, address) => {
 
   // ✅ 1. ENVIAR EMAIL PARA O ADMIN
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.SELLER_EMAIL || 'pedrazzoliorlando@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.SELLER_EMAIL || process.env.GMAIL_USER;
     console.log('📧 Admin Email configurado:', adminEmail);
     
     const emailHTML = createAdminEmailTemplate(order, user, products, address);
     
-    const subject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - €${(order.amount || 0).toFixed(2)} - ${order.isGuestOrder ? 'GUEST' : 'USER'}`;
+    const subject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - ${formatBRL(order.amount)} - ${order.isGuestOrder ? 'VISITANTE' : 'CLIENTE'}`;
     
     console.log('📧 Enviando email com subject:', subject);
     
@@ -215,7 +219,7 @@ export const notifyAdminNewOrder = async (order, user, products, address) => {
       adminEmail,
       subject,
       emailHTML,
-      `Novo pedido recebido!\n\nPedido: #${order._id}\nTotal: €${(order.amount || 0).toFixed(2)}\nCliente: ${user?.name || order.guestName || 'Guest'}\nEmail: ${user?.email || order.guestEmail || 'N/A'}\n\nAcesse: https://www.elitesurfing.pt/seller/orders`
+      `Novo pedido recebido!\n\nPedido: #${order._id}\nTotal: ${formatBRL(order.amount)}\nCliente: ${user?.name || order.guestName || 'Visitante'}\nEmail: ${user?.email || order.guestEmail || 'N/A'}\n\nAcesse: https://www.elitesurfing.com.br/seller/orders`
     );
 
     results.email = emailResult;

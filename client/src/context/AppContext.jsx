@@ -52,7 +52,7 @@ export const AppContextProvider = ({ children }) => {
     try {
       localStorage.setItem('cart_items', JSON.stringify(cartData));
     } catch (error) {
-      console.error('Error saving cart to localStorage:', error);
+      console.error('Erro ao salvar carrinho no localStorage:', error);
     }
   };
 
@@ -62,7 +62,7 @@ export const AppContextProvider = ({ children }) => {
       const savedCart = localStorage.getItem('cart_items');
       return savedCart ? JSON.parse(savedCart) : {};
     } catch (error) {
-      console.error('Error loading cart from localStorage:', error);
+      console.error('Erro ao carregar carrinho do localStorage:', error);
       return {};
     }
   };
@@ -86,7 +86,7 @@ export const AppContextProvider = ({ children }) => {
         localStorage.removeItem('user_data');
       }
     } catch (error) {
-      console.error('Error saving user to localStorage:', error);
+      console.error('Erro ao salvar usuário no localStorage:', error);
     }
   };
 
@@ -96,7 +96,7 @@ export const AppContextProvider = ({ children }) => {
       const savedUser = localStorage.getItem('user_data');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (error) {
-      console.error('Error loading user from localStorage:', error);
+      console.error('Erro ao carregar usuário do localStorage:', error);
       return null;
     }
   };
@@ -139,7 +139,7 @@ export const AppContextProvider = ({ children }) => {
             return;
           }
         } catch (tokenError) {
-          console.log('Token validation failed');
+          console.log('Validação de token falhou');
         }
       }
 
@@ -176,13 +176,13 @@ export const AppContextProvider = ({ children }) => {
     try {
       await axios.get('/api/user/logout');
     } catch (error) {
-      console.log('Server logout failed:', error);
+      console.log('Logout no servidor falhou:', error);
     } finally {
       setUser(null);
       setCartItems({});
       clearStoredData();
       navigate('/');
-      toast.success('Sessão terminada com sucesso');
+      toast.success('Você saiu da sua conta com sucesso');
     }
   };
 
@@ -191,7 +191,7 @@ export const AppContextProvider = ({ children }) => {
     try {
       await axios.get('/api/seller/logout');
     } catch (error) {
-      console.log('Seller logout request failed:', error);
+      console.log('Logout do seller falhou:', error);
     } finally {
       setIsSeller(false);
       sessionStorage.removeItem('seller_just_logged_in');
@@ -244,12 +244,12 @@ export const AppContextProvider = ({ children }) => {
         setProducts(data.products);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Erro ao buscar produtos:', error);
     }
   };
 
   // =============================================================================
-  // FUNÇÕES DE STOCK
+  // FUNÇÕES DE ESTOQUE
   // =============================================================================
 
   // Função auxiliar para encontrar produto
@@ -269,7 +269,7 @@ export const AppContextProvider = ({ children }) => {
     return product;
   };
 
-  // Obter stock disponível de um produto
+  // Obter estoque disponível de um produto
   const getAvailableStock = (productId) => {
     const product = findProduct(productId);
     return product?.stock || 0;
@@ -293,7 +293,7 @@ export const AppContextProvider = ({ children }) => {
     if (currentInCart + quantityToAdd > availableStock) {
       return { 
         can: false, 
-        reason: `Apenas ${availableStock} unidade(s) disponível(eis). Já tens ${currentInCart} no carrinho.`
+        reason: `Apenas ${availableStock} unidade(s) disponível(eis). Você já tem ${currentInCart} no carrinho.`
       };
     }
     
@@ -343,7 +343,7 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // =============================================================================
-  // CART OPERATIONS COM VALIDAÇÃO DE STOCK
+  // OPERAÇÕES DO CARRINHO COM VALIDAÇÃO DE ESTOQUE
   // =============================================================================
 
   const addToCart = async itemId => {
@@ -372,7 +372,7 @@ export const AppContextProvider = ({ children }) => {
       try {
         await axios.post('/api/cart/update', { cartItems: newCartItems });
       } catch (error) {
-        console.error('Error syncing cart with server:', error);
+        console.error('Erro ao sincronizar carrinho com o servidor:', error);
       }
     }
     
@@ -404,7 +404,7 @@ export const AppContextProvider = ({ children }) => {
       try {
         await axios.post('/api/cart/update', { cartItems: newCartItems });
       } catch (error) {
-        console.error('Error syncing cart with server:', error);
+        console.error('Erro ao sincronizar carrinho com o servidor:', error);
       }
     }
     
@@ -429,7 +429,7 @@ export const AppContextProvider = ({ children }) => {
       try {
         await axios.post('/api/cart/update', { cartItems: newCartItems });
       } catch (error) {
-        console.error('Error syncing cart with server:', error);
+        console.error('Erro ao sincronizar carrinho com o servidor:', error);
       }
     }
   };
@@ -542,7 +542,7 @@ export const AppContextProvider = ({ children }) => {
         try {
           await axios.post('/api/cart/update', { cartItems });
         } catch (error) {
-          console.error('Error syncing cart with server:', error);
+          console.error('Erro ao sincronizar carrinho com o servidor:', error);
         }
       }
     };
@@ -584,7 +584,7 @@ export const AppContextProvider = ({ children }) => {
     saveCartToStorage,
     loadCartFromStorage,
     saveUserToStorage,
-    // Funções de stock
+    // Funções de estoque
     getAvailableStock,
     canAddToCart,
     findProduct,

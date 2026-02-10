@@ -31,18 +31,18 @@ const Footer = () => {
               </div>
               <div>
                 <p className='font-bold text-gray-800 text-sm'>Pagamento Seguro</p>
-                <p className='text-xs text-gray-500'>Encriptação SSL 256-bit</p>
+                <p className='text-xs text-gray-500'>Criptografia SSL 256-bit</p>
               </div>
             </div>
 
-            {/* Envio Rápido */}
+            {/* Envio para todo Brasil */}
             <div className='flex items-center gap-3 justify-center md:justify-start'>
               <div className='w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0'>
                 <Truck className='w-6 h-6 text-blue-600' />
               </div>
               <div>
-                <p className='font-bold text-gray-800 text-sm'>Envio Rápido</p>
-                <p className='text-xs text-gray-500'>Entrega em 2-5 dias úteis</p>
+                <p className='font-bold text-gray-800 text-sm'>Envio para todo Brasil</p>
+                <p className='text-xs text-gray-500'>Entrega em 3-10 dias úteis</p>
               </div>
             </div>
 
@@ -53,7 +53,7 @@ const Footer = () => {
               </div>
               <div>
                 <p className='font-bold text-gray-800 text-sm'>Devolução Fácil</p>
-                <p className='text-xs text-gray-500'>14 dias para devolver</p>
+                <p className='text-xs text-gray-500'>7 dias para devolver</p>
               </div>
             </div>
 
@@ -63,7 +63,7 @@ const Footer = () => {
                 <Phone className='w-6 h-6 text-purple-600' />
               </div>
               <div>
-                <p className='font-bold text-gray-800 text-sm'>Apoio ao Cliente</p>
+                <p className='font-bold text-gray-800 text-sm'>Atendimento</p>
                 <p className='text-xs text-gray-500'>Seg-Sex 9h-18h</p>
               </div>
             </div>
@@ -81,21 +81,21 @@ const Footer = () => {
               <img 
                 className='w-28 hover:opacity-80 transition-opacity' 
                 src={assets.logo_es} 
-                alt='Elite Surfing' 
+                alt='Elite Surfing Brasil' 
               />
             </Link>
 
             <p className='text-sm text-gray-600 mb-4'>
-              A tua loja de surf em Portugal. Qualidade e paixão pelo mar desde 2010.
+              Sua loja de acessórios de surf no Brasil. Qualidade e paixão pelo mar.
             </p>
 
             <div className='space-y-3'>
               <h3 className='font-bold text-gray-900 text-xs uppercase tracking-wide'>
-                Segue-nos
+                Siga-nos
               </h3>
               <div className='flex items-center gap-2'>
                 <a
-                  href='https://www.instagram.com/elitesurfingeurope'
+                  href='https://www.instagram.com/elitesurfingbrasil'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='group relative w-9 h-9 bg-white rounded-lg flex items-center justify-center text-gray-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-200 hover:border-transparent overflow-hidden'
@@ -105,7 +105,7 @@ const Footer = () => {
                   <Instagram className='w-4 h-4 relative z-10' />
                 </a>
                 <a
-                  href='https://web.facebook.com/elitesurfingeurope'
+                  href='https://web.facebook.com/elitesurfingbrasil'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='group relative w-9 h-9 bg-white rounded-lg flex items-center justify-center text-gray-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-200 hover:border-transparent overflow-hidden'
@@ -148,7 +148,7 @@ const Footer = () => {
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
                 >
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Contacto
+                  Contato
                 </Link>
               </li>
             </ul>
@@ -157,7 +157,7 @@ const Footer = () => {
           {/* Coluna 3 - Informação Legal */}
           <div>
             <h3 className='font-bold text-gray-900 text-sm uppercase tracking-wide mb-5 pb-2 border-b-2 border-primary/20'>
-              Informação Legal
+              Informações Legais
             </h3>
             <ul className='space-y-3'>
               <li>
@@ -175,7 +175,7 @@ const Footer = () => {
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
                 >
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Política de Reembolso
+                  Política de Devolução
                 </Link>
               </li>
               <li>
@@ -202,7 +202,7 @@ const Footer = () => {
           {/* Coluna 4 - Conta */}
           <div>
             <h3 className='font-bold text-gray-900 text-sm uppercase tracking-wide mb-5 pb-2 border-b-2 border-primary/20'>
-              A Minha Conta
+              Minha Conta
             </h3>
             <ul className='space-y-3'>
               <li>
@@ -211,7 +211,7 @@ const Footer = () => {
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
                 >
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Os Meus Pedidos
+                  Meus Pedidos
                 </Link>
               </li>
               <li>
@@ -226,34 +226,36 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Coluna 5 - Contactos */}
+          {/* Coluna 5 - Contato */}
           <div className='lg:col-span-2'>
             <h3 className='font-bold text-gray-900 text-sm uppercase tracking-wide mb-5 pb-2 border-b-2 border-primary/20'>
-              Contactos
+              Contato
             </h3>
             <ul className='space-y-3'>
               <li>
                 <a
-                  href='mailto:pedrazzoliorlando@gmail.com'
+                  href='mailto:contato@elitesurfing.com.br'
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-start gap-2 group'
                 >
                   <Mail className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
-                  <span className='break-all'>pedrazzoliorlando@gmail.com</span>
+                  <span className='break-all'>contato@elitesurfing.com.br</span>
                 </a>
               </li>
               <li>
                 <a
-                  href='tel:+351912164220'
+                  href='https://wa.me/5511999999999'
+                  target='_blank'
+                  rel='noopener noreferrer'
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-start gap-2 group'
                 >
                   <Phone className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
-                  <span>+351 912 164 220</span>
+                  <span>+55 (11) 99999-9999</span>
                 </a>
               </li>
               <li className='flex items-start gap-2 text-gray-600 text-sm'>
                 <MapPin className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
                 <span>
-                  Av. Dr. Francisco de Sá Carneiro 3, Apartamento 3D, 2780-241 Oeiras, Portugal
+                  São Paulo, SP - Brasil
                 </span>
               </li>
             </ul>
@@ -270,9 +272,18 @@ const Footer = () => {
             {/* Métodos de Pagamento */}
             <div className='flex flex-col items-center lg:items-start gap-3'>
               <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide'>
-                Métodos de Pagamento
+                Formas de Pagamento
               </p>
               <div className='flex items-center gap-3 flex-wrap justify-center lg:justify-start'>
+                {/* PIX */}
+                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm gap-1.5'>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                    <path d="M17.66 6.34l-3.18 3.18a2.5 2.5 0 01-3.54 0L7.76 6.34a2.5 2.5 0 010-3.54l.52-.52a2.5 2.5 0 013.54 0l.18.18.18-.18a2.5 2.5 0 013.54 0l.52.52c.37.37.66.81.84 1.3" stroke="#32BCAD" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M6.34 17.66l3.18-3.18a2.5 2.5 0 013.54 0l3.18 3.18a2.5 2.5 0 010 3.54l-.52.52a2.5 2.5 0 01-3.54 0l-.18-.18-.18.18a2.5 2.5 0 01-3.54 0l-.52-.52a2.5 2.5 0 010-3.54z" stroke="#32BCAD" strokeWidth="1.5"/>
+                  </svg>
+                  <span className='text-xs font-semibold text-[#32BCAD]'>PIX</span>
+                </div>
+
                 {/* Visa */}
                 <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm'>
                   <svg viewBox="0 0 48 16" className="h-4" fill="none">
@@ -293,22 +304,10 @@ const Footer = () => {
                   </svg>
                 </div>
 
-                {/* MB Way */}
-                <div className='h-8 px-2 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm'>
-                  <img 
-                    src='/mbway.png' 
-                    alt='MB Way' 
-                    className='h-5 object-contain'
-                  />
-                </div>
-
-                {/* Multibanco */}
-                <div className='h-8 px-2 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm'>
-                  <img 
-                    src='/multibanco.png' 
-                    alt='Multibanco' 
-                    className='h-5 object-contain'
-                  />
+                {/* Boleto */}
+                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm gap-1.5'>
+                  <CreditCard className='w-4 h-4 text-gray-600' />
+                  <span className='text-xs font-semibold text-gray-600'>Boleto</span>
                 </div>
               </div>
             </div>
@@ -352,11 +351,11 @@ const Footer = () => {
           <div className='flex flex-col md:flex-row items-center justify-between gap-4'>
             <div className='flex flex-col md:flex-row items-center gap-2 md:gap-4'>
               <p className='text-sm text-gray-500 text-center md:text-left'>
-                © {new Date().getFullYear()} Elite Surfing. Todos os direitos reservados.
+                © {new Date().getFullYear()} Elite Surfing Brasil. Todos os direitos reservados.
               </p>
               <span className='hidden md:inline text-gray-300'>|</span>
               <p className='text-xs text-gray-400'>
-                NIF: 292650094
+                CNPJ: 00.000.000/0001-00
               </p>
             </div>
             <div className='flex items-center gap-2 text-sm text-gray-500'>

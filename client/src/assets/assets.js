@@ -82,7 +82,7 @@ export const groups = [
     id: 'leashes',
     name: 'Leashes',
     slug: 'leashes',
-    description: 'Leashes premium para máxima segurança e durabilidade. Construídos para suportar as condições mais exigentes.',
+    description: 'Leashes premium para máxima segurança e durabilidade. Construídos para aguentar as condições mais pesadas.',
     image: decks_card,
     bannerImage: 'https://images.unsplash.com/photo-1455264745730-cb3b76250ae8?w=1920&q=80',
   },
@@ -90,7 +90,7 @@ export const groups = [
     id: 'capas',
     name: 'Capas',
     slug: 'capas',
-    description: 'Protege a tua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
+    description: 'Proteja sua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
     image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
     bannerImage: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=1920&q=80',
   },
@@ -120,20 +120,20 @@ export const categories = [
   { text: 'Fu Wax Cool', path: 'Fuwax-Cool', group: 'wax' },
   { text: 'Bull Wax Cool', path: 'Bullwax-Cool', group: 'wax' },
   
-  // ═══ LEASHES ═══ (adicionar quando tiveres produtos)
-   { text: 'Leash 6ft-6mm', path: 'Leash-6ft-6mm', group: 'leashes' },
-   { text: 'Leash 6ft-7mm', path: 'Leash-6ft-6mm', group: 'leashes' },
-   { text: 'Leash 7ft-7mm', path: 'Leash-7ft-7mm', group: 'leashes' },
-   { text: 'Leash 8ft-7mm', path: 'Leash-8ft-7mm', group: 'leashes' },
+  // ═══ LEASHES ═══
+  { text: 'Leash 6ft-6mm', path: 'Leash-6ft-6mm', group: 'leashes' },
+  { text: 'Leash 6ft-7mm', path: 'Leash-6ft-6mm', group: 'leashes' },
+  { text: 'Leash 7ft-7mm', path: 'Leash-7ft-7mm', group: 'leashes' },
+  { text: 'Leash 8ft-7mm', path: 'Leash-8ft-7mm', group: 'leashes' },
   
-  // ═══ CAPAS ═══ (adicionar quando tiveres produtos)
-   { text: 'Capa Shortboard 5-8', path: 'Capa-Shortboard-5-8', group: 'capas' },
-   { text: 'Capa Shortboard 6-0', path: 'Capa-Shortboard-6-0', group: 'capas' },
-   { text: 'Capa Shortboard 6-4', path: 'Capa-Shortboard-6-4', group: 'capas' },
-   { text: 'Capa Fish-Hibrid 5-8', path: 'Capa-Fish-Hibrid-5-8', group: 'capas' },
-   { text: 'Capa Fish-Hibrid 6-0', path: 'Capa-Fish-Hibrid-6-0', group: 'capas' },
-   { text: 'Capa Fish-Hibrid 6-4', path: 'Capa-Fish-Hibrid-6-4', group: 'capas' },
-   { text: 'Capa Fish-Hibrid 6-8', path: 'Capa-Fish-Hibrid-6-8', group: 'capas' },
+  // ═══ CAPAS ═══
+  { text: 'Capa Shortboard 5-8', path: 'Capa-Shortboard-5-8', group: 'capas' },
+  { text: 'Capa Shortboard 6-0', path: 'Capa-Shortboard-6-0', group: 'capas' },
+  { text: 'Capa Shortboard 6-4', path: 'Capa-Shortboard-6-4', group: 'capas' },
+  { text: 'Capa Fish-Hibrid 5-8', path: 'Capa-Fish-Hibrid-5-8', group: 'capas' },
+  { text: 'Capa Fish-Hibrid 6-0', path: 'Capa-Fish-Hibrid-6-0', group: 'capas' },
+  { text: 'Capa Fish-Hibrid 6-4', path: 'Capa-Fish-Hibrid-6-4', group: 'capas' },
+  { text: 'Capa Fish-Hibrid 6-8', path: 'Capa-Fish-Hibrid-6-8', group: 'capas' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -173,30 +173,30 @@ export const getGroupsWithCategories = () => {
 // ═══════════════════════════════════════════════════════════════════
 export const footerLinks = [
   {
-    title: 'Quick Links',
+    title: 'Links Rápidos',
     links: [
-      { text: 'Home', url: '#' },
-      { text: 'Best Sellers', url: '#' },
-      { text: 'Offers & Deals', url: '#' },
-      { text: 'Contact Us', url: '#' },
-      { text: 'FAQs', url: '#' },
+      { text: 'Início', url: '/' },
+      { text: 'Mais Vendidos', url: '/products' },
+      { text: 'Ofertas', url: '/products' },
+      { text: 'Fale Conosco', url: '/contact' },
+      { text: 'Perguntas Frequentes', url: '/faq' },
     ],
   },
   {
-    title: 'Need help?',
+    title: 'Precisa de ajuda?',
     links: [
-      { text: 'Delivery Information', url: '#' },
-      { text: 'Return & Refund Policy', url: '#' },
-      { text: 'Payment Methods', url: '#' },
-      { text: 'Track your Order', url: '#' },
-      { text: 'Contact Us', url: '#' },
+      { text: 'Informações de Entrega', url: '/faq' },
+      { text: 'Política de Devolução', url: '/refund-policy' },
+      { text: 'Formas de Pagamento', url: '/faq' },
+      { text: 'Acompanhe seu Pedido', url: '/my-orders' },
+      { text: 'Fale Conosco', url: '/contact' },
     ],
   },
   {
-    title: 'Follow Us',
+    title: 'Siga-nos',
     links: [
-      { text: 'Instagram', url: '#' },
-      { text: 'Twitter', url: '#' },
+      { text: 'Instagram', url: 'https://instagram.com/elitesurfingbrasil' },
+      { text: 'TikTok', url: '#' },
       { text: 'Facebook', url: '#' },
       { text: 'YouTube', url: '#' },
     ],
@@ -209,22 +209,22 @@ export const footerLinks = [
 export const features = [
   {
     icon: delivery_truck_icon,
-    title: 'Fastest Delivery',
-    description: 'Groceries delivered in under 30 minutes.',
+    title: 'Entrega para todo Brasil',
+    description: 'Enviamos para todos os estados com rastreamento.',
   },
   {
     icon: leaf_icon,
-    title: 'Freshness Guaranteed',
-    description: 'Fresh produce straight from the source.',
+    title: 'Qualidade Premium',
+    description: 'Produtos selecionados das melhores marcas de surf.',
   },
   {
     icon: coin_icon,
-    title: 'Affordable Prices',
-    description: 'Quality groceries at unbeatable prices.',
+    title: 'Melhor Preço',
+    description: 'Preços competitivos e promoções exclusivas.',
   },
   {
     icon: trust_icon,
-    title: 'Trusted by Thousands',
-    description: 'Loved by 10,000+ happy customers.',
+    title: 'Compra Segura',
+    description: 'PIX, cartão e boleto com total segurança.',
   },
 ];

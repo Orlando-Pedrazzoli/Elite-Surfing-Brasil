@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     
     <!-- =====================================================
-         Elite Surfing Portugal - SEO Optimized
-         Última atualização: 2026-01-28
+         Elite Surfing Brasil - SEO Optimizado para o Brasil
+         Última atualização: 2026-02-10
          ===================================================== -->
     
     <!-- Favicon - Completo para todos os dispositivos -->
@@ -22,28 +22,36 @@
          ===================================================== -->
     
     <!-- Meta tags base (sobrescritas pelo React-Helmet-Async por página) -->
-    <title>Elite Surfing Portugal - Loja Online de Acessórios de Surf</title>
-    <meta name="description" content="Loja online de equipamento de surf em Portugal. Decks, leashes, quilhas, capas, wax e acessórios. Entregas em Portugal Continental." />
+    <title>Elite Surfing - Loja de Surf - Equipamentos e Acessórios</title>
+    <meta name="description" content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil. Compre agora!" />
+    
+    <!-- Keywords relevantes para o mercado BR -->
+    <meta name="keywords" content="deck surf, leash surf, capa prancha surf, acessórios surf, deck fresado, traction pad, wax surf, loja surf online, comprar deck surf brasil, capa prancha shortboard, leash premium surf" />
     
     <!-- Robots base -->
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     
     <!-- Author & Copyright -->
-    <meta name="author" content="Elite Surfing Portugal" />
-    <meta name="copyright" content="Elite Surfing Portugal" />
+    <meta name="author" content="Elite Surfing Brasil" />
+    <meta name="copyright" content="Elite Surfing Brasil" />
     
     <!-- Open Graph base -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Elite Surfing Portugal" />
-    <meta property="og:locale" content="pt_PT" />
-    <meta property="og:image" content="https://www.elitesurfing.pt/og-image.jpg" />
+    <meta property="og:site_name" content="Elite Surfing Brasil" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:title" content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios" />
+    <meta property="og:description" content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil!" />
+    <meta property="og:image" content="https://www.elitesurfing.com.br/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Elite Surfing Portugal - Loja Online de Surf" />
+    <meta property="og:image:alt" content="Elite Surfing Brasil - Loja Online de Acessórios de Surf" />
+    <meta property="og:url" content="https://www.elitesurfing.com.br" />
     
     <!-- Twitter Card base -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://www.elitesurfing.pt/og-image.jpg" />
+    <meta name="twitter:title" content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios" />
+    <meta name="twitter:description" content="Decks, leashes, capas de prancha e acessórios de surf. Até 10x sem juros. Frete para todo Brasil!" />
+    <meta name="twitter:image" content="https://www.elitesurfing.com.br/og-image.jpg" />
     
     <!-- Theme Color - Com suporte para dark mode -->
     <meta name="theme-color" content="#f85032" media="(prefers-color-scheme: light)" />
@@ -51,14 +59,14 @@
     <meta name="msapplication-TileColor" content="#f85032" />
     <meta name="msapplication-TileImage" content="/favicon-96x96.png" />
     
-    <!-- Geo & Location -->
-    <meta name="geo.region" content="PT-11" />
-    <meta name="geo.placename" content="Oeiras, Lisboa, Portugal" />
-    <meta name="geo.position" content="38.6979;-9.3107" />
-    <meta name="ICBM" content="38.6979, -9.3107" />
+    <!-- Geo & Location - Brasil -->
+    <meta name="geo.region" content="BR-SP" />
+    <meta name="geo.placename" content="São Paulo, Brasil" />
+    <meta name="geo.position" content="-23.5505;-46.6333" />
+    <meta name="ICBM" content="-23.5505, -46.6333" />
     
     <!-- Language -->
-    <meta http-equiv="content-language" content="pt-PT" />
+    <meta http-equiv="content-language" content="pt-BR" />
     
     <!-- Mobile App Capable -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -73,21 +81,24 @@
          Preconnect & DNS Prefetch - Performance
          ===================================================== -->
     
-    <!-- Backend API -->
-    <link rel="preconnect" href="https://elitesurfingeu-backend.vercel.app" crossorigin />
-    <link rel="dns-prefetch" href="https://elitesurfingeu-backend.vercel.app" />
+    <!-- Backend API (atualizar para URL de produção no deploy) -->
+    <link rel="preconnect" href="https://elitesurfingbr-backend.vercel.app" crossorigin />
+    <link rel="dns-prefetch" href="https://elitesurfingbr-backend.vercel.app" />
     
     <!-- Cloudinary (imagens) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
     <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     
-    <!-- Google Analytics (descomentar quando ativar) -->
+    <!-- ViaCEP (auto-preenchimento de endereço) -->
+    <link rel="dns-prefetch" href="https://viacep.com.br" />
+    
+    <!-- Google Analytics -->
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
     <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
     
-    <!-- Meta/Facebook (descomentar quando ativar) -->
+    <!-- Meta/Facebook -->
     <link rel="dns-prefetch" href="https://connect.facebook.net" />
     
     <!-- =====================================================
@@ -95,7 +106,7 @@
          
          INSTRUÇÕES:
          1. Criar conta em https://analytics.google.com
-         2. Criar propriedade para elitesurfing.pt
+         2. Criar propriedade para elitesurfing.com.br
          3. Copiar o ID de medição (G-XXXXXXXXX)
          4. Substituir 'G-XXXXXXXXX' abaixo pelo ID real
          5. Descomentar o bloco de código
@@ -146,11 +157,11 @@
     -->
     
     <!-- =====================================================
-         Google Site Verification
+         Google Search Console
          
          INSTRUÇÕES:
          1. Ir a https://search.google.com/search-console
-         2. Adicionar propriedade https://www.elitesurfing.pt
+         2. Adicionar propriedade https://www.elitesurfing.com.br
          3. Escolher verificação por "Tag HTML"
          4. Copiar o content="XXXXX" 
          5. Substituir abaixo e descomentar
@@ -160,16 +171,49 @@
     <meta name="google-site-verification" content="CODIGO_DO_SEARCH_CONSOLE" />
     -->
     
+    <!-- =====================================================
+         Structured Data - LocalBusiness + Ecommerce (JSON-LD)
+         ===================================================== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Store",
+      "name": "Elite Surfing Brasil",
+      "description": "Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas de prancha, wax e mais.",
+      "url": "https://www.elitesurfing.com.br",
+      "logo": "https://www.elitesurfing.com.br/logoes.png",
+      "image": "https://www.elitesurfing.com.br/og-image.jpg",
+      "telephone": "+5511999999999",
+      "email": "contato@elitesurfing.com.br",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "São Paulo",
+        "addressRegion": "SP",
+        "addressCountry": "BR"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": -23.5505,
+        "longitude": -46.6333
+      },
+      "priceRange": "R$",
+      "currenciesAccepted": "BRL",
+      "paymentAccepted": "PIX, Cartão de Crédito, Boleto Bancário",
+      "openingHours": "Mo-Fr 09:00-18:00",
+      "sameAs": [
+        "https://www.instagram.com/elitesurfingbrasil",
+        "https://www.facebook.com/elitesurfingbrasil"
+      ],
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.elitesurfing.com.br/products?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
   </head>
   <body>
-    <!-- Noscript fallback para Meta Pixel -->
-    <!--
-    <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXX&ev=PageView&noscript=1"/>
-    </noscript>
-    -->
-    
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

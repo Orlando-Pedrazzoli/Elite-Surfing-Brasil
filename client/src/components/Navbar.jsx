@@ -144,7 +144,7 @@ const Navbar = () => {
             : `${isTransparent ? 'placeholder-white/70 text-white' : 'placeholder-gray-500'}`
         }`}
         type='text'
-        placeholder='Pesquisar produtos'
+        placeholder='Buscar produtos'
         onKeyDown={e => {
           if (e.key === 'Enter' && localSearchInput.trim()) {
             if (isMobile) {
@@ -165,14 +165,14 @@ const Navbar = () => {
           className={`w-4 h-4 flex items-center justify-center transition-colors ${
             isTransparent ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'
           }`}
-          aria-label='Limpar pesquisa'
+          aria-label='Limpar busca'
         >
           ✕
         </button>
       ) : (
         <img
           src={assets.search_icon}
-          alt='Pesquisar'
+          alt='Buscar'
           className={`w-4 h-4 cursor-pointer transition-opacity ${
             isTransparent ? 'invert opacity-70 hover:opacity-100' : 'opacity-60 hover:opacity-100'
           }`}
@@ -220,14 +220,14 @@ const Navbar = () => {
       <NavLink 
         to='/' 
         onClick={() => setOpen(false)}
-        aria-label='Elite Surfing Portugal - Página Inicial'
+        aria-label='Elite Surfing Brasil - Página Inicial'
         title='Ir para página inicial'
         className='hidden sm:block'
       >
         <img 
           className={`h-9 transition-all duration-300 ${isTransparent ? 'brightness-0 invert' : ''}`}
           src={assets.logo_es} 
-          alt='Elite Surfing Portugal - Loja de Surf'
+          alt='Elite Surfing Brasil - Loja de Surf'
         />
       </NavLink>
 
@@ -235,14 +235,14 @@ const Navbar = () => {
       <NavLink 
         to='/' 
         onClick={() => setOpen(false)}
-        aria-label='Elite Surfing Portugal - Página Inicial'
+        aria-label='Elite Surfing Brasil - Página Inicial'
         title='Ir para página inicial'
         className='sm:hidden'
       >
         <img 
           className={`h-9 transition-all duration-300 ${isTransparent ? 'brightness-0 invert' : ''}`}
           src={assets.logo_es} 
-          alt='Elite Surfing Portugal - Loja de Surf'
+          alt='Elite Surfing Brasil - Loja de Surf'
         />
       </NavLink>
 
@@ -318,7 +318,7 @@ const Navbar = () => {
             }`
           }
         >
-          Contacto
+          Contato
         </NavLink>
 
         <div className='hidden lg:flex items-center'>{renderSearchInput()}</div>
@@ -344,7 +344,7 @@ const Navbar = () => {
             <div className='hidden group-hover:block absolute top-full right-0 pt-2 z-50'>
               <div className='bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm'>
                 <div className='px-4 py-2 border-b border-gray-100'>
-                  <p className='font-semibold text-gray-800'>Admin Panel</p>
+                  <p className='font-semibold text-gray-800'>Painel Admin</p>
                   <p className='text-xs text-gray-500'>Sessão ativa</p>
                 </div>
                 <button
@@ -352,7 +352,7 @@ const Navbar = () => {
                   className='w-full px-4 py-2 text-left hover:bg-red-50 text-red-600 flex items-center gap-2 transition-colors'
                 >
                   <LogOut className='w-4 h-4' />
-                  Logout Admin
+                  Sair do Admin
                 </button>
               </div>
             </div>
@@ -413,7 +413,7 @@ const Navbar = () => {
                 {/* Header com nome */}
                 <div className='px-4 py-3 border-b border-gray-100'>
                   <p className='font-semibold text-gray-800 truncate'>{user.name}</p>
-                  <p className='text-xs text-gray-400 mt-0.5'>A minha conta</p>
+                  <p className='text-xs text-gray-400 mt-0.5'>Minha conta</p>
                 </div>
                 
                 {/* Menu Items */}
@@ -423,14 +423,14 @@ const Navbar = () => {
                     className='w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors'
                   >
                     <Package className='w-4 h-4 text-gray-400' />
-                    <span>Os meus Pedidos</span>
+                    <span>Meus Pedidos</span>
                   </button>
                   <button
                     onClick={() => navigate('/write-review')}
                     className='w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors'
                   >
                     <Star className='w-4 h-4 text-gray-400' />
-                    <span>Escrever Reviews</span>
+                    <span>Escrever Avaliações</span>
                   </button>
                 </div>
                 
@@ -441,7 +441,7 @@ const Navbar = () => {
                     className='w-full px-4 py-2.5 text-left hover:bg-red-50 flex items-center gap-3 text-red-600 transition-colors'
                   >
                     <LogOut className='w-4 h-4' />
-                    <span>Terminar Sessão</span>
+                    <span>Sair da Conta</span>
                   </button>
                 </div>
               </div>
@@ -586,7 +586,7 @@ const Navbar = () => {
                   }
                   onClick={() => handleNavLinkClick('/contact')}
                 >
-                  Contacto
+                  Contato
                 </NavLink>
 
                 <button
@@ -608,7 +608,7 @@ const Navbar = () => {
                     className='flex items-center gap-2 w-full mt-3 py-3 px-3 bg-red-50 text-red-600 hover:bg-red-100 text-sm font-medium rounded-lg border border-red-200 transition-colors'
                   >
                     <LogOut className='w-4 h-4' />
-                    <span>Logout Admin</span>
+                    <span>Sair do Admin</span>
                   </button>
                 )}
               </nav>
@@ -646,7 +646,7 @@ const Navbar = () => {
                       onClick={() => handleNavLinkClick('/my-orders')}
                     >
                       <Package className='w-4 h-4 text-gray-400' />
-                      Os meus Pedidos
+                      Meus Pedidos
                     </NavLink>
 
                     <NavLink
@@ -661,7 +661,7 @@ const Navbar = () => {
                       onClick={() => handleNavLinkClick('/write-review')}
                     >
                       <Star className='w-4 h-4 text-gray-400' />
-                      Escrever Reviews
+                      Escrever Avaliações
                     </NavLink>
 
                     {/* Logout Button */}
@@ -670,7 +670,7 @@ const Navbar = () => {
                       className='w-full flex items-center justify-center gap-2 py-3 mt-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors'
                     >
                       <LogOut className='w-4 h-4' />
-                      <span>Terminar Sessão</span>
+                      <span>Sair da Conta</span>
                     </button>
                   </div>
                 ) : (
@@ -681,7 +681,7 @@ const Navbar = () => {
                     }}
                     className='w-full py-3 bg-primary hover:bg-primary-dull text-white rounded-lg text-base font-semibold transition-colors'
                   >
-                    Entrar / Registar
+                    Entrar / Cadastrar
                   </button>
                 )}
               </div>
