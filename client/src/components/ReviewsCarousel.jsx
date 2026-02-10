@@ -5,7 +5,6 @@ import { useAppContext } from '../context/AppContext';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
-// Updated ChevronLeftIcon with smaller size
 const ChevronLeftIcon = () => (
   <svg
     xmlns='http://www.w3.org/2000/svg'
@@ -23,7 +22,6 @@ const ChevronLeftIcon = () => (
   </svg>
 );
 
-// Updated ChevronRightIcon with smaller size
 const ChevronRightIcon = () => (
   <svg
     xmlns='http://www.w3.org/2000/svg'
@@ -44,48 +42,48 @@ const ChevronRightIcon = () => (
 // Fallback reviews se não houver reviews reais
 const fallbackReviews = [
   {
-    userName: 'João Silva',
-    userLocation: 'Cascais, Portugal',
+    userName: 'Rafael Oliveira',
+    userLocation: 'Florianópolis, SC',
     createdAt: '2025-02-10T10:30:00Z',
     rating: 5,
     title: 'Produto de alta qualidade',
-    comment: 'Produto de alta qualidade, superou as minhas expectativas!',
+    comment: 'Produto de alta qualidade, superou minhas expectativas! O deck veio muito bem embalado e a aderência é incrível.',
     isVerifiedPurchase: true,
   },
   {
-    userName: 'Mariana Lopes',
-    userLocation: 'Lisboa, Portugal',
+    userName: 'Camila Santos',
+    userLocation: 'Rio de Janeiro, RJ',
     createdAt: '2025-02-18T14:20:00Z',
     rating: 4,
     title: 'Entrega rápida',
-    comment: 'Entrega rápida e atendimento excelente. Recomendo!',
+    comment: 'Entrega rápida e atendimento excelente pelo WhatsApp. Recomendo!',
     isVerifiedPurchase: true,
   },
   {
-    userName: 'Miguel Fernandes',
-    userLocation: 'Porto, Portugal',
+    userName: 'Lucas Ferreira',
+    userLocation: 'Ubatuba, SP',
     createdAt: '2025-03-05T09:15:00Z',
     rating: 5,
-    title: 'Perfeito para surf',
-    comment: 'Perfeito para quem ama surf, produto durável e funcional.',
+    title: 'Perfeito para o surf',
+    comment: 'Perfeito para quem ama surf, produto durável e funcional. Já é minha segunda compra aqui.',
     isVerifiedPurchase: true,
   },
   {
-    userName: 'Sofia Martins',
-    userLocation: 'Ericeira, Portugal',
+    userName: 'Juliana Almeida',
+    userLocation: 'Itajaí, SC',
     createdAt: '2025-03-12T16:45:00Z',
     rating: 5,
     title: 'Equipe atenciosa',
-    comment: 'Equipe muito atenciosa e produto entregue dentro do prazo.',
+    comment: 'Equipe muito atenciosa e produto entregue dentro do prazo. A capa refletiva é show!',
     isVerifiedPurchase: true,
   },
   {
-    userName: 'Pedro Costa',
-    userLocation: 'Oeiras, Portugal',
+    userName: 'Thiago Souza',
+    userLocation: 'Saquarema, RJ',
     createdAt: '2025-04-07T11:30:00Z',
     rating: 4,
     title: 'Ótimo custo-benefício',
-    comment: 'Ótimo custo-benefício e qualidade garantida.',
+    comment: 'Ótimo custo-benefício e qualidade garantida. O leash aguenta ondas pesadas tranquilo.',
     isVerifiedPurchase: true,
   },
 ];
@@ -103,7 +101,6 @@ export default function ReviewsCarousel() {
     try {
       setLoading(true);
 
-      // ✅ BUSCAR REVIEWS REAIS DA API
       const response = await axios.get('/api/reviews/recent?limit=10');
 
       if (response.data.success && response.data.reviews.length > 0) {
@@ -111,14 +108,13 @@ export default function ReviewsCarousel() {
       }
     } catch (error) {
       console.log('Usando reviews padrão:', error);
-      // Mantém os reviews fallback se der erro
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = dateString => {
-    return new Date(dateString).toLocaleDateString('pt-PT', {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -147,7 +143,7 @@ export default function ReviewsCarousel() {
   return (
     <div className='relative py-16 bg-gray-50 mt-10 px-6 md:px-16 lg:px-24 xl:px-32 overflow-hidden w-full max-w-full'>
       <h2 className='text-3xl sm:text-4xl font-bold text-gray-800 text-center mb-12'>
-        O que os nossos clientes dizem sobre a Elite Surfing
+        O que nossos clientes dizem sobre a Elite Surfing
       </h2>
 
       <Swiper
@@ -206,7 +202,7 @@ export default function ReviewsCarousel() {
         ))}
       </Swiper>
 
-      {/* Custom Navigation Arrows - posicionadas dentro do padding */}
+      {/* Custom Navigation Arrows */}
       <div className='swiper-button-prev-custom absolute top-1/2 -translate-y-1/2 left-8 md:left-20 lg:left-28 xl:left-36 z-10 cursor-pointer bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white transition-colors duration-200 hidden sm:block'>
         <ChevronLeftIcon />
       </div>

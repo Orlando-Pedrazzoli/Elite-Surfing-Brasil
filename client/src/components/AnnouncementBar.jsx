@@ -25,7 +25,7 @@ const AnnouncementBar = () => {
   }, []);
 
   return (
-    <div className='bg-black overflow-hidden'>
+    <div className='bg-gray-900 overflow-hidden'>
       <div className='max-w-7xl mx-auto px-4 py-2.5'>
         <Link 
           to='/products'

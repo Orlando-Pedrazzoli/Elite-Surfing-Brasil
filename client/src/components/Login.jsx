@@ -25,7 +25,6 @@ const Login = () => {
     setCartItems,
     saveCartToStorage,
     saveUserToStorage,
-    // ✅ REMOVIDO: loadCartFromStorage - não precisamos mais
   } = useAppContext();
 
   const [state, setState] = useState('login');
@@ -89,7 +88,7 @@ const Login = () => {
       });
 
       if (data.success) {
-        // Salvar email se "Lembrar-me" estiver marcado
+        // Salvar email se "Lembrar de mim" estiver marcado
         if (rememberMe) {
           localStorage.setItem('user_email', email);
         } else {
@@ -110,9 +109,7 @@ const Login = () => {
         // Save user data to localStorage
         saveUserToStorage(data.user);
 
-        // ✅ CORREÇÃO: Usar APENAS os cartItems do servidor
-        // O servidor já tem o carrinho do usuário salvo no banco de dados
-        // Não fazer merge com localStorage (que está vazio após logout)
+        // ✅ Usar APENAS os cartItems do servidor
         const serverCart = data.user.cartItems || {};
         
         // Atualizar estado e localStorage com os dados do servidor
@@ -215,7 +212,6 @@ const Login = () => {
               {/* Header com Logo */}
               <div>
                 <div className='flex items-center gap-3 mb-6'>
-                  {/* 🆕 Logo da loja */}
                   <div className='w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-lg'>
                     <img 
                       src='/logo.png' 
@@ -225,7 +221,7 @@ const Login = () => {
                   </div>
                   <div>
                     <h1 className='text-xl font-bold'>Elite Surfing</h1>
-                    <p className='text-white/70 text-xs'>Surf Shop Premium</p>
+                    <p className='text-white/70 text-xs'>Loja de Surf - Equipamentos e Acessórios</p>
                   </div>
                 </div>
               </div>
@@ -265,7 +261,7 @@ const Login = () => {
                   alt='Elite Surfing' 
                   className='w-4 h-4 object-contain opacity-50'
                 />
-                <p>© 2025 Elite Surfing Portugal</p>
+                <p>© 2026 Elite Surfing Brasil</p>
               </div>
             </div>
           </div>
@@ -274,7 +270,6 @@ const Login = () => {
           <div className='w-full md:w-7/12 p-6 sm:p-8 md:p-10 overflow-y-auto max-h-[95vh] md:max-h-none'>
             {/* Header Mobile com Logo */}
             <div className='md:hidden text-center mb-6'>
-              {/* 🆕 Logo para mobile */}
               <div className='inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 shadow-sm'>
                 <img 
                   src='/logo.png' 
@@ -283,7 +278,7 @@ const Login = () => {
                 />
               </div>
               <h1 className='text-xl font-bold text-gray-900'>Elite Surfing</h1>
-              <p className='text-sm text-gray-500'>Surf Shop Premium</p>
+              <p className='text-sm text-gray-500'>Loja de Surf - Equipamentos e Acessórios</p>
             </div>
 
             {/* Tabs */}
@@ -322,7 +317,7 @@ const Login = () => {
               <p className='text-gray-500 mt-1'>
                 {state === 'login'
                   ? 'Entre com suas credenciais para continuar'
-                  : 'Preencha os dados abaixo para se registar'}
+                  : 'Preencha os dados abaixo para se cadastrar'}
               </p>
             </div>
 
@@ -404,13 +399,13 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Campo Password */}
+              {/* Campo Senha */}
               <div className='space-y-2'>
                 <label
                   htmlFor='password'
                   className='block text-sm font-medium text-gray-700'
                 >
-                  Password
+                  Senha
                 </label>
                 <div className='relative'>
                   <div
@@ -491,7 +486,7 @@ const Login = () => {
                       </div>
                     </div>
                     <span className='text-sm text-gray-600 group-hover:text-gray-800 transition-colors'>
-                      Lembrar-me
+                      Lembrar de mim
                     </span>
                   </label>
                 </div>
@@ -566,7 +561,7 @@ const Login = () => {
                   <>
                     <Loader2 className='w-5 h-5 animate-spin' />
                     <span>
-                      {state === 'login' ? 'A entrar...' : 'A criar conta...'}
+                      {state === 'login' ? 'Entrando...' : 'Criando conta...'}
                     </span>
                   </>
                 ) : (
@@ -617,7 +612,7 @@ const Login = () => {
             {/* Segurança */}
             <div className='mt-6 flex items-center justify-center gap-2 text-xs text-gray-400'>
               <Lock className='w-3 h-3' />
-              <span>Conexão segura e encriptada</span>
+              <span>Conexão segura e criptografada</span>
             </div>
           </div>
         </div>
