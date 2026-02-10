@@ -1,4 +1,4 @@
-// server.js - Baseado no código que funciona
+// server.js - Elite Surfing Brasil
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
@@ -17,14 +17,14 @@ import { stripeWebhooks } from './controllers/orderController.js';
 const app = express();
 const port = process.env.PORT || 4001;
 
-// ✅ Conexões (igual ao código que funciona)
+// ✅ Conexões
 await connectDB();
 await connectCloudinary();
 
 console.log('✅ Database connected successfully');
 console.log('✅ Cloudinary connected successfully');
 
-// ✅ Middleware configuration (baseado no código que funciona)
+// ✅ Allowed Origins
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4001',
@@ -34,10 +34,10 @@ const allowedOrigins = [
   'https://elitesurfingbr-backend.vercel.app',
 ];
 
+// ✅ Stripe webhook ANTES de express.json (precisa de raw body)
 app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
 
-app.use(express.json({ limit: '10mb' }));
-app.use(cookieParser());
+// ✅ CORS PRIMEIRO - antes de qualquer body parsing
 app.use(
   cors({
     origin: allowedOrigins,
@@ -47,18 +47,18 @@ app.use(
   })
 );
 
+// ✅ Depois CORS, body parsing e cookies
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
+
 // ✅ Health check
 app.get('/', (req, res) => {
   res.json({
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '2.0.0', // ✅ Nova versão para confirmar deploy
-    webhook: '/webhook/stripe',
-    webhookEvents: [
-      'payment_intent.succeeded',
-      'payment_intent.payment_failed',
-    ],
+    version: '2.0.0',
+    webhook: '/stripe',
   });
 });
 
@@ -73,7 +73,7 @@ app.use('/api/reviews', reviewRouter);
 
 console.log('✅ All routes registered');
 
-// ✅ 404 handler (no final)
+// ✅ 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -87,7 +87,6 @@ const isVercel = !!process.env.VERCEL;
 if (!isVercel) {
   app.listen(port, () => {
     console.log(`🚀 Server running on PORT: ${port}`);
-    console.log('🎯 Webhook: /webhook/stripe');
   });
 }
 
