@@ -28,7 +28,7 @@ const CartSidebar = () => {
   const [loadedProducts, setLoadedProducts] = useState({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
-  // Estado para countdown de fecho automático
+  // Estado para countdown de fechamento automático
   const [closeCountdown, setCloseCountdown] = useState(3);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ const CartSidebar = () => {
       setIsLoadingProducts(true);
       
       try {
-        // Buscar produtos em falta do servidor
+        // Buscar produtos faltantes do servidor
         const { data } = await axios.post('/api/product/by-ids', { ids: missingIds });
         
         if (data.success && data.products) {
@@ -110,7 +110,7 @@ const CartSidebar = () => {
   // Verificar se carrinho está vazio
   const isCartEmpty = cartArray.length === 0 && !hasUnloadedProducts && !isLoadingProducts;
 
-  // Fecho automático quando carrinho está vazio
+  // Fechamento automático quando carrinho está vazio
   useEffect(() => {
     if (showCartSidebar && isCartEmpty) {
       const timer = setInterval(() => {
@@ -192,7 +192,7 @@ const CartSidebar = () => {
     navigate(`/products/${product.category.toLowerCase()}/${product._id}`);
   };
 
-  // Validar stock antes de aumentar
+  // Validar estoque antes de aumentar
   const handleIncrease = (product) => {
     const availableStock = product.stock || 0;
     const currentQty = product.quantity;
@@ -284,7 +284,7 @@ const CartSidebar = () => {
           <div className='flex items-center gap-3'>
             <ShoppingBag className='w-5 h-5 text-primary' />
             <h2 className='text-lg font-bold text-gray-800'>
-              O Meu Carrinho
+              Meu Carrinho
             </h2>
             <span className='bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
               {getCartCount()}
@@ -305,7 +305,7 @@ const CartSidebar = () => {
           {isLoadingProducts && hasUnloadedProducts ? (
             <div className='flex flex-col items-center justify-center h-full px-6 text-center'>
               <Loader2 className='w-10 h-10 text-primary animate-spin mb-4' />
-              <p className='text-gray-600'>A carregar produtos...</p>
+              <p className='text-gray-600'>Carregando produtos...</p>
             </div>
           ) : isCartEmpty ? (
             <div className='flex flex-col items-center justify-center h-full px-6 text-center'>
@@ -313,10 +313,10 @@ const CartSidebar = () => {
                 <ShoppingBag className='w-10 h-10 text-gray-400' />
               </div>
               <h3 className='text-lg font-semibold text-gray-800 mb-2'>
-                O seu carrinho está vazio
+                Seu carrinho está vazio
               </h3>
               <p className='text-gray-500 text-sm mb-4'>
-                Ainda não adicionou produtos ao carrinho
+                Você ainda não adicionou produtos ao carrinho
               </p>
               
               {/* Countdown indicator */}
@@ -325,7 +325,7 @@ const CartSidebar = () => {
                   <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' fill='none' />
                   <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' />
                 </svg>
-                <span className='text-sm'>A fechar em {closeCountdown}s...</span>
+                <span className='text-sm'>Fechando em {closeCountdown}s...</span>
               </div>
 
               <button
@@ -387,14 +387,14 @@ const CartSidebar = () => {
                           {currency} {product.offerPrice.toFixed(2)}
                         </p>
 
-                        {/* Badge Stock Baixo */}
+                        {/* Badge Estoque Baixo */}
                         {isLowStock && (
                           <p className='text-xs text-orange-600 font-medium mt-0.5'>
-                            Últimas {availableStock}!
+                            {availableStock === 1 ? 'Último em estoque!' : `Últimas ${availableStock} unidades!`}
                           </p>
                         )}
 
-                        {/* Controlos de Quantidade */}
+                        {/* Controles de Quantidade */}
                         <div className='flex items-center justify-between mt-2'>
                           <div className='flex items-center border border-gray-200 rounded-lg overflow-hidden'>
                             <button
@@ -411,7 +411,7 @@ const CartSidebar = () => {
                             <span className='px-3 py-1 text-sm font-medium min-w-[36px] text-center'>
                               {product.quantity}
                             </span>
-                            {/* Botão + com validação de stock */}
+                            {/* Botão + com validação de estoque */}
                             <button
                               onClick={() => handleIncrease(product)}
                               disabled={!canIncrease}
@@ -420,7 +420,7 @@ const CartSidebar = () => {
                                   ? 'hover:bg-gray-100' 
                                   : 'opacity-50 cursor-not-allowed bg-gray-50'
                               }`}
-                              title={!canIncrease ? 'Stock máximo atingido' : 'Adicionar mais'}
+                              title={!canIncrease ? 'Estoque máximo atingido' : 'Adicionar mais'}
                             >
                               <Plus className='w-3.5 h-3.5 text-gray-600' />
                             </button>
@@ -441,11 +441,11 @@ const CartSidebar = () => {
                 );
               })}
               
-              {/* Indicador de itens ainda a carregar */}
+              {/* Indicador de itens ainda carregando */}
               {hasUnloadedProducts && !isLoadingProducts && (
                 <div className='p-4 text-center text-gray-500 text-sm'>
                   <Loader2 className='w-4 h-4 animate-spin inline mr-2' />
-                  A carregar mais itens...
+                  Carregando mais itens...
                 </div>
               )}
             </div>
@@ -463,7 +463,7 @@ const CartSidebar = () => {
             </div>
 
             <p className='text-xs text-gray-500 text-center'>
-              Portes e descontos calculados no checkout
+              Frete e descontos calculados no checkout
             </p>
 
             <div className='space-y-3'>
@@ -479,7 +479,7 @@ const CartSidebar = () => {
                 onClick={handleContinueShopping}
                 className='w-full py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer'
               >
-                Continuar a Comprar
+                Continuar Comprando
               </button>
             </div>
 

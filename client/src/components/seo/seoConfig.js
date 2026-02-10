@@ -1,280 +1,331 @@
 /**
- * SEO Configuration - Elite Surfing Portugal
- * Versão: 2.0.0
- * Última atualização: 2026-01-28
+ * SEO Config - Elite Surfing Brasil
+ * Versão: 2.0.0 BR
+ * Última atualização: 2026-02-10
  * 
- * REGRAS:
- * 1. URLs SEM trailing slash (exceto homepage que usa '')
- * 2. URLs devem ser idênticas às do sitemap.xml
- * 3. Descrições entre 120-160 caracteres para melhor exibição no Google
- * 4. Títulos máximo 60 caracteres
+ * Otimizado para competir com: wetdreams.com.br, expans.com.br, onlysurf.com.br
+ * Keywords pesquisadas: deck surf, leash surf, capa prancha, acessórios surf brasil
  */
 
-const BASE_URL = 'https://www.elitesurfing.pt';
+const BASE_URL = 'https://www.elitesurfing.com.br';
+const DEFAULT_IMAGE = '/og-image.jpg';
 
 /**
- * Configuração SEO para páginas estáticas
+ * Truncar texto para SEO (max 155 caracteres)
  */
+const truncateForSeo = (text, max = 155) => {
+  if (!text || text.length <= max) return text;
+  return text.substring(0, max - 3).trim() + '...';
+};
+
 const seoConfig = {
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🏠 HOME PAGE
+  // ═══════════════════════════════════════════════════════════════
   home: {
-    title: null, // Usa título padrão do SEO.jsx
-    description: 'Loja online de equipamento de surf em Portugal. Decks, leashes, quilhas, capas, wax e acessórios de surf. Entregas em Portugal Continental. Qualidade e preços competitivos.',
-    url: '', // Homepage - será convertido para https://www.elitesurfing.pt
-    keywords: ['surf', 'loja surf portugal', 'acessórios surf', 'decks', 'leashes']
+    title: null, // Usa o default do SEO.jsx: "Elite Surfing - Loja de Surf - Equipamentos e Acessórios"
+    description: 'Elite Surfing Brasil - Sua loja online de acessórios de surf. Decks fresados, leashes premium, capas de prancha e wax. Até 10x sem juros. PIX com 10% OFF. Frete para todo Brasil!',
+    url: '/',
+    keywords: 'loja surf online, acessórios surf brasil, deck surf, leash surf, capa prancha, comprar surf online',
   },
-  
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🛍️ PRODUTOS - LISTAGEM
+  // ═══════════════════════════════════════════════════════════════
   products: {
-    title: 'Todos os Produtos',
-    description: 'Descubra a nossa coleção completa de equipamento de surf. Decks de tracção, leashes, quilhas, capas para prancha, wax e acessórios. Envio rápido para todo Portugal.',
+    title: 'Produtos de Surf - Decks, Leashes, Capas e Wax',
+    description: 'Confira todos os acessórios de surf da Elite Surfing Brasil. Decks fresados de alta performance, leashes premium, capas reflexivas e wax. Parcelamento em até 10x sem juros!',
     url: '/products',
-    keywords: ['produtos surf', 'equipamento surf', 'comprar surf portugal']
+    keywords: 'deck surf comprar, leash surf comprar, capa prancha surf, wax surf, acessórios prancha surf',
   },
-  
+
+  // ═══════════════════════════════════════════════════════════════
+  // 📦 GRUPOS / COLEÇÕES
+  // ═══════════════════════════════════════════════════════════════
+  groups: {
+    decks: {
+      title: 'Deck para Prancha de Surf - Traction Pad Fresado EVA Premium',
+      description: 'Decks fresados de alta performance para prancha de surf. Tecnologia EVA premium com texturas que garantem aderência máxima. Até 10x sem juros. Frete grátis!',
+      url: '/collection/decks',
+      keywords: 'deck surf, deck fresado, traction pad, grip surf, antiderrapante prancha, deck EVA premium',
+    },
+    leashes: {
+      title: 'Leash para Prancha de Surf - Cordinha Premium',
+      description: 'Leashes premium com PU importado de alta memória elástica. Máxima segurança e durabilidade. Diversos tamanhos: 6ft, 7ft, 8ft. Até 10x sem juros!',
+      url: '/collection/leashes',
+      keywords: 'leash surf, cordinha surf, leash prancha, strep surf, leash premium, leash 6ft, leash 7ft',
+    },
+    capas: {
+      title: 'Capa de Prancha de Surf - Proteção Premium Reflexiva',
+      description: 'Capas de prancha de surf com proteção premium. Shortboard, fish, evolution e sarcófago. Lona reflexiva de alta gramatura. Frete para todo Brasil!',
+      url: '/collection/capas',
+      keywords: 'capa prancha surf, capa shortboard, capa fish, capa prancha reflexiva, sarcófago prancha, proteção prancha',
+    },
+    wax: {
+      title: 'Wax e Parafina de Surf - Grip Perfeito',
+      description: 'Parafina de surf premium para grip perfeito em qualquer temperatura. Fu Wax, Bull Wax e mais. Fórmulas para águas frias, temperadas e tropicais.',
+      url: '/collection/wax',
+      keywords: 'wax surf, parafina surf, fu wax, bull wax, parafina prancha, wax cold, wax tropical',
+    },
+    quilhas: {
+      title: 'Quilhas para Prancha de Surf - FCS e Compatíveis',
+      description: 'Quilhas de alta performance para prancha de surf. Modelos FCS I e FCS II compatíveis. Fibra de vidro e materiais premium. Até 10x sem juros!',
+      url: '/collection/quilhas',
+      keywords: 'quilha surf, quilha FCS, quilha prancha, quilha fibra, quilha FCS II, jogo quilha',
+    },
+    acessorios: {
+      title: 'Acessórios de Surf - Racks, Protetores e Mais',
+      description: 'Acessórios essenciais para surf. Racks, protetores de bico e rabeta, estojos para quilhas, raspadores e mais. Tudo para seu surf!',
+      url: '/collection/acessorios',
+      keywords: 'acessórios surf, rack prancha, protetor bico prancha, raspador parafina, estojo quilha',
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🏷️ CATEGORIAS (PRODUTOS ESPECÍFICOS)
+  // ═══════════════════════════════════════════════════════════════
+  categories: {
+    // DECKS
+    'Deck-J-Bay': {
+      title: 'Deck J-Bay Fresado - Traction Pad Premium',
+      description: 'Deck J-Bay fresado com EVA premium de alta aderência. Design inspirado nas ondas de Jeffrey\'s Bay. Parcele em até 10x sem juros!',
+      keywords: 'deck j-bay, deck fresado j-bay, traction pad j-bay',
+    },
+    'Deck-Fiji-Classic': {
+      title: 'Deck Fiji Classic - Traction Pad Fresado',
+      description: 'Deck Fiji Classic com acabamento fresado CNC. EVA premium para máximo grip. Design clássico e funcional. Até 10x sem juros!',
+      keywords: 'deck fiji classic, deck fresado fiji, traction pad fiji',
+    },
+    'Deck-Noronha': {
+      title: 'Deck Noronha - Traction Pad Fresado Premium',
+      description: 'Deck Noronha com tecnologia de fresagem CNC. EVA de alta resistência e aderência. Inspirado em Fernando de Noronha. Compre agora!',
+      keywords: 'deck noronha, deck fresado noronha, traction pad noronha',
+    },
+    'Deck-Saquarema': {
+      title: 'Deck Saquarema - Traction Pad Premium',
+      description: 'Deck Saquarema fresado para alta performance. Perfeito para as ondas brasileiras. EVA premium. Parcele em até 10x sem juros!',
+      keywords: 'deck saquarema, deck fresado saquarema, traction pad saquarema',
+    },
+    'Deck-Hawaii-Grom': {
+      title: 'Deck Hawaii Grom - Traction Pad Júnior',
+      description: 'Deck Hawaii Grom para surfistas jovens. Tamanho otimizado, EVA premium e máxima aderência. Ideal para pranchas menores!',
+      keywords: 'deck hawaii grom, deck junior, traction pad grom, deck infantil surf',
+    },
+    'Deck-Tahiti': {
+      title: 'Deck Tahiti - Traction Pad Premium Pro',
+      description: 'Deck Tahiti pro com fresagem CNC avançada. Projetado para ondas de alta performance. EVA premium de máxima aderência!',
+      keywords: 'deck tahiti, deck fresado tahiti, traction pad tahiti pro',
+    },
+
+    // WAX / PARAFINA
+    'Fuwax-Cool': {
+      title: 'Fu Wax Cool - Parafina para Águas Frias',
+      description: 'Fu Wax Cool para águas frias. A parafina favorita dos surfistas profissionais. Grip excepcional e longa duração. Confira!',
+      keywords: 'fu wax cool, parafina fria, wax cool, fu wax brasil',
+    },
+    'Fuwax-Warm': {
+      title: 'Fu Wax Warm - Parafina para Águas Mornas',
+      description: 'Fu Wax Warm para águas mornas e temperadas. Parafina premium com aderência superior. Ideal para o litoral brasileiro!',
+      keywords: 'fu wax warm, parafina morna, wax warm, fu wax tropical',
+    },
+    'Fuwax-Tropical': {
+      title: 'Fu Wax Tropical - Parafina para Águas Quentes',
+      description: 'Fu Wax Tropical para águas quentes. Fórmula que não derrete no calor brasileiro. Grip perfeito para o verão. Compre agora!',
+      keywords: 'fu wax tropical, parafina tropical, wax quente, fu wax verão',
+    },
+    'Bullwax-Cool': {
+      title: 'Bull Wax Cool - Parafina Premium Águas Frias',
+      description: 'Bull Wax Cool para águas frias e temperadas. Fórmula premium para grip prolongado. Compre agora na Elite Surfing!',
+      keywords: 'bull wax cool, parafina surf, bull wax brasil',
+    },
+
+    // LEASHES
+    'Leash-6ft-6mm': {
+      title: 'Leash 6ft 6mm - Cordinha Comp',
+      description: 'Leash 6ft x 6mm modelo competição. Ultra leve com PU importado de alta memória elástica. Ideal para pranchas até 6\'2. Até 10x sem juros!',
+      keywords: 'leash 6ft, leash 6mm, cordinha surf comp, leash competição',
+    },
+    'Leash-6ft-7mm': {
+      title: 'Leash 6ft 7mm - Cordinha Premium',
+      description: 'Leash 6ft x 7mm premium para uso diário. PU importado, giradores duplos. Equilíbrio perfeito entre leveza e resistência!',
+      keywords: 'leash 6ft 7mm, cordinha surf, leash premium, leash dia a dia',
+    },
+    'Leash-7ft-7mm': {
+      title: 'Leash 7ft 7mm - Cordinha para Ondas Maiores',
+      description: 'Leash 7ft x 7mm premium para ondas médias a grandes. PU importado, giradores duplos. Máxima segurança e durabilidade!',
+      keywords: 'leash 7ft, leash 7mm, cordinha surf, leash premium, leash ondas grandes',
+    },
+    'Leash-8ft-7mm': {
+      title: 'Leash 8ft 7mm - Cordinha para Funboard e Long',
+      description: 'Leash 8ft x 7mm para funboards, evolutions e longboards. Construção reforçada com PU de alta resistência. Segurança máxima!',
+      keywords: 'leash 8ft, leash grande, cordinha funboard, leash long, leash evolution',
+    },
+
+    // CAPAS
+    'Capa-Shortboard': {
+      title: 'Capa de Prancha Shortboard - Proteção Reflexiva',
+      description: 'Capa para prancha shortboard com lona reflexiva de alta gramatura. Espuma de 6mm, reforço no bico e rabeta. Proteção total!',
+      keywords: 'capa shortboard, capa prancha surf, capa reflexiva, capa shortboard reflexiva',
+    },
+    'Capa-Fish': {
+      title: 'Capa de Prancha Fish / Evolution - Proteção Premium',
+      description: 'Capa para prancha fish e evolution com lona reflexiva. Espuma protetora de 6mm. Modelos de 5\'8 a 7\'0. Frete para todo Brasil!',
+      keywords: 'capa fish, capa evolution, capa prancha fish, capa prancha evolution',
+    },
+    'Capa-Sarcofago': {
+      title: 'Capa Sarcófago - Transporte Múltiplas Pranchas',
+      description: 'Capa sarcófago para transportar 2 a 5 pranchas. Nylon reforçado com rodas. Ideal para viagens e day use. Confira!',
+      keywords: 'capa sarcófago, sarcófago prancha, capa tripla surf, capa viagem surf, capa quíntupla',
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 📄 PÁGINAS INSTITUCIONAIS
+  // ═══════════════════════════════════════════════════════════════
+  contact: {
+    title: 'Contato - Fale Conosco',
+    description: 'Entre em contato com a Elite Surfing Brasil. Atendimento por WhatsApp, email e redes sociais. Seg-Sex 9h-18h. Estamos prontos para ajudar!',
+    url: '/contact',
+  },
+
+  privacy: {
+    title: 'Política de Privacidade - LGPD',
+    description: 'Política de Privacidade da Elite Surfing Brasil em conformidade com a LGPD. Saiba como protegemos seus dados pessoais.',
+    url: '/privacy',
+  },
+
+  terms: {
+    title: 'Termos e Condições de Uso',
+    description: 'Termos e Condições de uso da loja online Elite Surfing Brasil. Informações sobre compras, entregas, devoluções e garantias.',
+    url: '/terms',
+  },
+
+  refundPolicy: {
+    title: 'Política de Devolução e Reembolso',
+    description: 'Política de devolução da Elite Surfing Brasil. Direito de arrependimento de 7 dias conforme o Código de Defesa do Consumidor (CDC).',
+    url: '/refund-policy',
+  },
+
+  faq: {
+    title: 'Perguntas Frequentes - FAQ',
+    description: 'Tire suas dúvidas sobre compras, entregas, formas de pagamento, devoluções e mais. Tudo sobre a Elite Surfing Brasil.',
+    url: '/faq',
+  },
+
+  about: {
+    title: 'Sobre Nós - Elite Surfing Brasil',
+    description: 'Conheça a Elite Surfing Brasil. Somos apaixonados por surf e comprometidos em oferecer os melhores acessórios com qualidade e preço justo.',
+    url: '/about',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🛒 PÁGINAS DE COMPRA (noindex)
+  // ═══════════════════════════════════════════════════════════════
   cart: {
     title: 'Carrinho de Compras',
-    description: 'O seu carrinho de compras na Elite Surfing Portugal. Finalize a sua encomenda de equipamento de surf.',
+    description: 'Seu carrinho de compras na Elite Surfing Brasil. Finalize sua compra com PIX, cartão ou boleto.',
     url: '/cart',
-    noindex: true // Página privada - não indexar
+    noindex: true,
   },
-  
-  contact: {
-    title: 'Contacto',
-    description: 'Entre em contacto com a Elite Surfing Portugal. Atendimento por WhatsApp, email ou telefone. Estamos disponíveis para ajudar com as suas dúvidas sobre equipamento de surf.',
-    url: '/contact',
-    keywords: ['contacto', 'elite surfing contacto', 'loja surf portugal contacto']
-  },
-  
-  faq: {
-    title: 'Perguntas Frequentes',
-    description: 'Encontre respostas para as perguntas mais frequentes sobre compras, envios, devoluções e produtos na Elite Surfing Portugal.',
-    url: '/faq',
-    keywords: ['faq', 'perguntas frequentes', 'ajuda', 'dúvidas']
-  },
-  
-  privacy: {
-    title: 'Política de Privacidade',
-    description: 'Política de privacidade da Elite Surfing Portugal. Saiba como protegemos os seus dados pessoais e informações de pagamento.',
-    url: '/privacy',
-    noindex: false
-  },
-  
-  terms: {
-    title: 'Termos e Condições',
-    description: 'Termos e condições de utilização da loja online Elite Surfing Portugal. Informações sobre compras, envios, garantias e devoluções.',
-    url: '/terms',
-    noindex: false
-  },
-  
-  refund: {
-    title: 'Política de Reembolso',
-    description: 'Política de reembolso e devoluções da Elite Surfing Portugal. Conheça os seus direitos, prazos e o processo de devolução de produtos.',
-    url: '/refund-policy',
-    noindex: false
-  },
-  
-  // Páginas privadas - não indexar
+
   myOrders: {
-    title: 'Os Meus Pedidos',
-    description: 'Consulte o histórico dos seus pedidos na Elite Surfing Portugal.',
+    title: 'Meus Pedidos',
+    description: 'Acompanhe seus pedidos na Elite Surfing Brasil.',
     url: '/my-orders',
-    noindex: true
+    noindex: true,
   },
-  
-  addAddress: {
-    title: 'Adicionar Morada',
-    description: 'Adicione uma nova morada de entrega na Elite Surfing Portugal.',
-    url: '/add-address',
-    noindex: true
-  },
-  
-  writeReview: {
-    title: 'Escrever Review',
-    description: 'Partilhe a sua opinião sobre os produtos Elite Surfing Portugal.',
-    url: '/write-review',
-    noindex: true
-  },
-  
+
   orderSuccess: {
-    title: 'Encomenda Confirmada',
-    description: 'A sua encomenda foi confirmada com sucesso na Elite Surfing Portugal.',
-    url: '/order-success',
-    noindex: true
-  }
-};
+    title: 'Pedido Confirmado',
+    description: 'Seu pedido foi confirmado com sucesso! Acompanhe o status da entrega.',
+    url: '/order-placed',
+    noindex: true,
+  },
 
-/**
- * Descrições SEO para páginas de COLLECTIONS (grupos principais)
- * Rotas: /collections/{slug}
- * Estas são as páginas de categoria de alto nível
- */
-export const collectionDescriptions = {
-  'decks': {
-    title: 'Decks de Surf - Traction Pads',
-    description: 'Decks de tracção de alta qualidade para surf. Traction pads em E.V.A premium com diversas texturas e cores. Modelos Tahiti, Hawaii, Saquarema, Noronha, Fiji e J-Bay.',
-    url: '/collections/decks',
-    keywords: ['decks surf', 'traction pad', 'grip surf', 'pad prancha'],
-    image: '/og-image.jpg'
+  login: {
+    title: 'Login - Acesse sua Conta',
+    description: 'Faça login na Elite Surfing Brasil para acompanhar seus pedidos e acessar ofertas exclusivas.',
+    url: '/login',
+    noindex: true,
   },
-  
-  'leashes': {
-    title: 'Leashes de Surf',
-    description: 'Leashes de surf premium para máxima segurança e durabilidade. Vários tamanhos disponíveis: 6ft, 7ft e 8ft. Construídos para suportar as condições mais exigentes.',
-    url: '/collections/leashes',
-    keywords: ['leash surf', 'amarração prancha', 'leash 6ft', 'leash 7ft'],
-    image: '/og-image.jpg'
-  },
-  
-  'capas': {
-    title: 'Capas para Prancha de Surf',
-    description: 'Capas de protecção para pranchas de surf. Modelos para shortboard, fish e híbridas. Materiais resistentes e designs funcionais para proteger a tua prancha.',
-    url: '/collections/capas',
-    keywords: ['capa prancha surf', 'boardbag', 'proteção prancha'],
-    image: '/og-image.jpg'
-  },
-  
-  'wax': {
-    title: 'Wax para Surf - Parafina',
-    description: 'Wax e parafina premium para surf. Fu Wax Cool Water para águas entre 11°C e 17°C. Utilizada por surfistas profissionais. Alto desempenho garantido.',
-    url: '/collections/wax',
-    keywords: ['wax surf', 'parafina surf', 'fu wax', 'cera prancha'],
-    image: '/og-image.jpg'
-  }
-};
 
-/**
- * Descrições SEO para páginas de CATEGORIAS (modelos/subcategorias)
- * Rotas: /products/{slug}
- * Estas são as páginas que listam variantes de um modelo
- */
-export const categoryDescriptions = {
-  'deck-tahiti': {
-    title: 'Deck Tahiti - Decks de Tracção',
-    description: 'Decks Tahiti de alta qualidade com E.V.A fresado em ângulo diamantado. Peça única com kicktail de 26mm. Várias cores disponíveis. Envio rápido para Portugal.',
-    url: '/products/deck-tahiti',
-    keywords: ['deck tahiti', 'deck surf tahiti', 'traction pad tahiti']
+  register: {
+    title: 'Criar Conta',
+    description: 'Crie sua conta na Elite Surfing Brasil e aproveite ofertas exclusivas, acompanhamento de pedidos e mais.',
+    url: '/register',
+    noindex: true,
   },
-  
-  'deck-hawaii-grom': {
-    title: 'Deck Hawaii Grom - Decks de Surf',
-    description: 'Decks Hawaii Grom em 3 partes com E.V.A fresado em ângulo diamantado. Kicktail de 26mm e fita adesiva alemã. Ideal para groms e surfistas de todos os níveis.',
-    url: '/products/deck-hawaii-grom',
-    keywords: ['deck hawaii grom', 'deck grom', 'deck surf criança']
-  },
-  
-  'deck-saquarema': {
-    title: 'Deck Saquarema - Decks Premium',
-    description: 'Decks Saquarema com EVA lixado e fresa dupla (Double Square Groove). 3 partes, barra central super soft e kicktail rígido de 25mm. Fita adesiva 3M.',
-    url: '/products/deck-saquarema',
-    keywords: ['deck saquarema', 'deck premium', 'deck 3m']
-  },
-  
-  'deck-noronha': {
-    title: 'Deck Noronha - Decks de Tracção',
-    description: 'Decks Noronha com EVA lixado e fresa dupla em formato de quadrados. Barra central super soft com detalhes CNC. Várias cores disponíveis.',
-    url: '/products/deck-noronha',
-    keywords: ['deck noronha', 'deck cnc', 'deck eva lixado']
-  },
-  
-  'deck-fiji-classic': {
-    title: 'Deck Fiji Classic - Decks Clássicos',
-    description: 'Decks Fiji Classic em 3 partes com E.V.A fresado em ângulo diamantado. Design clássico com várias combinações de cores. Kicktail de 26mm.',
-    url: '/products/deck-fiji-classic',
-    keywords: ['deck fiji', 'deck classic', 'deck fiji classic']
-  },
-  
-  'deck-j-bay': {
-    title: 'Deck J-Bay - Decks de Surf',
-    description: 'Decks J-Bay em 3 partes com E.V.A fresado em ângulo diamantado. Inspirados na famosa onda sul-africana. Várias cores e combinações disponíveis.',
-    url: '/products/deck-j-bay',
-    keywords: ['deck j-bay', 'deck jbay', 'deck surf j-bay']
-  },
-  
-  'fuwax-cool': {
-    title: 'Fu Wax Cool - Parafina para Surf',
-    description: 'Parafina Fu Wax Cool Water para águas entre 11°C e 17°C. Utilizada por surfistas profissionais como Kelly Slater e Gabriel Medina. Alto desempenho garantido.',
-    url: '/products/fuwax-cool',
-    keywords: ['fu wax', 'fuwax cool', 'parafina surf', 'wax portugal']
-  },
-  
-  // Adicionar novas categorias aqui conforme necessário
-  'leash-6ft-6mm': {
-    title: 'Leash 6ft 6mm - Leashes Comp',
-    description: 'Leash competição 6ft com 6mm de espessura. Ideal para pranchas até 6\'6". Swivel duplo anti-torção. Material ultra-resistente.',
-    url: '/products/leash-6ft-6mm',
-    keywords: ['leash 6ft', 'leash comp', 'leash 6mm']
-  }
-};
 
-/**
- * Helper: Obter configuração SEO para uma collection (grupo)
- * @param {string} collectionSlug - Slug da coleção (ex: 'decks')
- * @returns {object} Configuração SEO
- */
-export const getCollectionSEO = (collectionSlug) => {
-  const slug = (collectionSlug || '').toLowerCase().trim();
+  // ═══════════════════════════════════════════════════════════════
+  // 🔧 HELPERS
+  // ═══════════════════════════════════════════════════════════════
   
-  if (collectionDescriptions[slug]) {
-    return collectionDescriptions[slug];
-  }
-  
-  // Fallback para coleções não definidas
-  const formattedName = slug.charAt(0).toUpperCase() + slug.slice(1);
-  return {
-    title: `${formattedName} - Elite Surfing Portugal`,
-    description: `Coleção ${formattedName} na Elite Surfing Portugal. Equipamento de surf de alta qualidade com envio rápido para todo Portugal.`,
-    url: `/collections/${slug}`,
-    keywords: [slug, 'surf', 'portugal']
-  };
-};
-
-/**
- * Helper: Obter configuração SEO para uma categoria (subcategoria/modelo)
- * @param {string} categorySlug - Slug da categoria (ex: 'deck-tahiti')
- * @returns {object} Configuração SEO
- */
-export const getCategorySEO = (categorySlug) => {
-  const slug = (categorySlug || '').toLowerCase().trim();
-  
-  if (categoryDescriptions[slug]) {
-    return categoryDescriptions[slug];
-  }
-  
-  // Fallback para categorias não definidas
-  const formattedName = slug
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  /**
+   * Gerar SEO dinâmico para página de produto individual
+   */
+  getProductSeo: (product) => {
+    if (!product) return {};
     
-  return {
-    title: `${formattedName} - Elite Surfing Portugal`,
-    description: `Produtos ${formattedName} na Elite Surfing Portugal. Equipamento de surf de alta qualidade com envio rápido para todo Portugal.`,
-    url: `/products/${slug}`,
-    keywords: [slug, 'surf', 'portugal']
-  };
-};
+    const price = product.offerPrice 
+      ? `R$ ${product.offerPrice.toFixed(2).replace('.', ',')}`
+      : '';
+    
+    const categoryName = product.category || '';
+    const productName = product.name || 'Produto';
+    
+    return {
+      title: `${productName}${price ? ' - ' + price : ''} | Até 10x sem Juros`,
+      description: truncateForSeo(
+        product.description || 
+        `${productName}. ${categoryName} de alta performance. ${price ? 'A partir de ' + price + '.' : ''} Parcele em até 10x sem juros. PIX com 10% OFF. Frete para todo Brasil!`
+      ),
+      url: `/products/${categoryName.toLowerCase()}/${product._id}`,
+      image: product.image?.[0] || DEFAULT_IMAGE,
+      type: 'product',
+      product: {
+        price: product.offerPrice,
+        inStock: (product.stock || 0) > 0,
+      },
+    };
+  },
 
-/**
- * Helper: Gerar meta tags para produto individual
- * @param {object} product - Objeto do produto
- * @returns {object} Configuração SEO
- */
-export const getProductSEO = (product) => {
-  if (!product) return seoConfig.products;
-  
-  const category = (product.category || '').toLowerCase();
-  const price = product.offerPrice || product.price;
-  
-  return {
-    title: product.name,
-    description: `${product.name} - €${price}. ${Array.isArray(product.description) ? product.description[0] : (product.description || '')}`.slice(0, 155),
-    url: `/products/${category}/${product._id}`,
-    image: product.image?.[0] || '/og-image.jpg',
-    type: 'product',
-    product: {
-      price: price,
-      inStock: product.inStock
+  /**
+   * Gerar SEO dinâmico para página de coleção/grupo
+   */
+  getGroupSeo: (groupSlug) => {
+    const groupConfig = seoConfig.groups[groupSlug];
+    if (groupConfig) return groupConfig;
+    
+    // Fallback genérico
+    const name = groupSlug.charAt(0).toUpperCase() + groupSlug.slice(1);
+    return {
+      title: `${name} - Acessórios de Surf`,
+      description: `Confira nossa coleção de ${name.toLowerCase()} para surf. Produtos de alta qualidade com até 10x sem juros. Frete para todo Brasil!`,
+      url: `/collection/${groupSlug}`,
+    };
+  },
+
+  /**
+   * Gerar SEO dinâmico para categoria
+   */
+  getCategorySeo: (categoryPath) => {
+    const catConfig = seoConfig.categories[categoryPath];
+    if (catConfig) {
+      return {
+        ...catConfig,
+        url: `/products/${categoryPath.toLowerCase()}`,
+      };
     }
-  };
+    
+    // Fallback genérico
+    const name = categoryPath.replace(/-/g, ' ');
+    return {
+      title: `${name} - Elite Surfing Brasil`,
+      description: `Confira ${name} na Elite Surfing Brasil. Produtos de alta performance. Parcele em até 10x sem juros!`,
+      url: `/products/${categoryPath.toLowerCase()}`,
+    };
+  },
 };
 
 export default seoConfig;

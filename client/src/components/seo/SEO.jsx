@@ -1,24 +1,24 @@
 import { Helmet } from 'react-helmet-async';
 
 /**
- * SEO Component - Elite Surfing Portugal
- * Versão: 2.0.0
- * Última atualização: 2026-01-28
+ * SEO Component - Elite Surfing Brasil
+ * Versão: 2.0.0 BR
+ * Última atualização: 2026-02-10
  * 
  * REGRAS CRÍTICAS PARA CANONICAL TAGS:
- * 1. Usar SEMPRE URL absoluta completa (https://www.elitesurfing.pt/...)
+ * 1. Usar SEMPRE URL absoluta completa (https://www.elitesurfing.com.br/...)
  * 2. Usar SEMPRE o mesmo formato que o sitemap.xml
  * 3. SEM trailing slash (exceto para a homepage que é /)
  * 4. Cada página DEVE ter self-referencing canonical
  * 5. prioritizeSeoTags garante que canonical é renderizada primeiro
  */
 
-const BASE_URL = 'https://www.elitesurfing.pt';
+const BASE_URL = 'https://www.elitesurfing.com.br';
 const DEFAULT_IMAGE = '/og-image.jpg';
-const SITE_NAME = 'Elite Surfing Portugal';
+const SITE_NAME = 'Elite Surfing Brasil';
 
 /**
- * Normaliza a URL para formato canónico consistente
+ * Normaliza a URL para formato canônico consistente
  * - Remove trailing slash (exceto para /)
  * - Garante que começa com /
  * - Remove parâmetros de query desnecessários
@@ -74,11 +74,14 @@ const SEO = ({
   const fullImage = image.startsWith('http') ? image : `${BASE_URL}${image}`;
   
   // Formatar título - máximo 60 caracteres para Google
-  const pageTitle = title ? title : 'Loja Online de Surf';
-  const fullTitle = `${pageTitle} | ${SITE_NAME}`;
+  // Homepage: "Elite Surfing - Loja de Surf - Equipamentos e Acessórios"
+  // Outras páginas: "Título da Página | Elite Surfing"
+  const fullTitle = title 
+    ? `${title} | Elite Surfing` 
+    : 'Elite Surfing - Loja de Surf - Equipamentos e Acessórios';
   
   // Garantir descrição com fallback e truncamento
-  const defaultDescription = 'Loja online de equipamento de surf em Portugal. Decks, leashes, quilhas, capas, wax e acessórios de surf. Entregas em Portugal Continental.';
+  const defaultDescription = 'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil!';
   const metaDescription = truncateDescription(description || defaultDescription);
   
   // Data atual para freshness
@@ -89,7 +92,7 @@ const SEO = ({
       {/* 
         prioritizeSeoTags: Garante que tags SEO críticas (title, canonical, og:*) 
         são renderizadas ANTES de outras tags menos importantes.
-        Isto é crucial para o Google processar correctamente as canonicals.
+        Isto é crucial para o Google processar corretamente as canonicals.
       */}
       <Helmet prioritizeSeoTags>
         {/* ===== TAGS CRÍTICAS ===== */}
@@ -121,7 +124,7 @@ const SEO = ({
         <meta property="og:url" content={fullUrl} />
         <meta property="og:type" content={type} />
         <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:locale" content="pt_PT" />
+        <meta property="og:locale" content="pt_BR" />
         
         {/* Artigo específico */}
         {article && (
@@ -139,7 +142,7 @@ const SEO = ({
         {product && (
           <>
             <meta property="product:price:amount" content={product.price} />
-            <meta property="product:price:currency" content="EUR" />
+            <meta property="product:price:currency" content="BRL" />
             <meta property="product:availability" content={product.inStock ? "in stock" : "out of stock"} />
             <meta property="product:brand" content="Elite Surfing" />
           </>
@@ -153,10 +156,9 @@ const SEO = ({
         <meta name="twitter:image:alt" content={pageTitle} />
         
         {/* ===== IDIOMA E REGIÃO ===== */}
-        <link rel="alternate" hrefLang="pt-PT" href={fullUrl} />
+        <link rel="alternate" hrefLang="pt-BR" href={fullUrl} />
         <link rel="alternate" hrefLang="pt" href={fullUrl} />
         <link rel="alternate" hrefLang="x-default" href={fullUrl} />
-        <meta property="og:locale:alternate" content="pt_BR" />
         
         {/* ===== OUTROS META ===== */}
         <meta name="author" content={SITE_NAME} />
@@ -164,9 +166,9 @@ const SEO = ({
         <meta name="rating" content="general" />
         <meta name="revisit-after" content="7 days" />
         
-        {/* Geo tags */}
-        <meta name="geo.region" content="PT-11" />
-        <meta name="geo.placename" content="Oeiras, Portugal" />
+        {/* Geo tags - Brasil */}
+        <meta name="geo.region" content="BR-SP" />
+        <meta name="geo.placename" content="São Paulo, Brasil" />
         
       </Helmet>
       
