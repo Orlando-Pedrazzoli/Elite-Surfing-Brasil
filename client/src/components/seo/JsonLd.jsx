@@ -1,16 +1,16 @@
 /**
- * JSON-LD Structured Data - Elite Surfing Portugal
+ * JSON-LD Structured Data - Elite Surfing Brasil
  * Versão: 2.0.0
- * Última atualização: 2026-01-28
- * 
- * IMPORTANTE: Todas as URLs devem usar www.elitesurfing.pt
+ * Última atualização: 2026-02-10
+ *
+ * IMPORTANTE: Todas as URLs devem usar www.elitesurfing.com.br
  * Referência: https://schema.org/
  * Teste: https://search.google.com/test/rich-results
  */
 
-const BASE_URL = 'https://www.elitesurfing.pt';
-const SITE_NAME = 'Elite Surfing Portugal';
-const LOGO_URL = `${BASE_URL}/logo.png`;
+const BASE_URL = 'https://www.elitesurfing.com.br';
+const SITE_NAME = 'Elite Surfing Brasil';
+const LOGO_URL = `${BASE_URL}/logoes.png`;
 const OG_IMAGE = `${BASE_URL}/og-image.jpg`;
 
 // =====================================================
@@ -18,60 +18,65 @@ const OG_IMAGE = `${BASE_URL}/og-image.jpg`;
 // =====================================================
 export const OrganizationSchema = () => {
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${BASE_URL}/#organization`,
-    "name": SITE_NAME,
-    "alternateName": ["Elite Surfing", "Elite Surfing PT"],
-    "url": BASE_URL,
-    "logo": {
-      "@type": "ImageObject",
-      "url": LOGO_URL,
-      "width": 512,
-      "height": 512
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${BASE_URL}/#organization`,
+    name: SITE_NAME,
+    alternateName: ['Elite Surfing', 'Elite Surfing BR'],
+    url: BASE_URL,
+    logo: {
+      '@type': 'ImageObject',
+      url: LOGO_URL,
+      width: 512,
+      height: 512,
     },
-    "image": OG_IMAGE,
-    "description": "Loja online de equipamento e acessórios de surf em Portugal. Decks, leashes, quilhas, capas, wax e muito mais.",
-    "foundingDate": "2023",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "Avenida Doutor Francisco de Sá Carneiro 3, Apartamento 3D",
-      "addressLocality": "Oeiras",
-      "addressRegion": "Lisboa",
-      "postalCode": "2780-241",
-      "addressCountry": "PT"
+    image: OG_IMAGE,
+    description:
+      'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax, quilhas e mais.',
+    foundingDate: '2023',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'São Paulo',
+      addressRegion: 'SP',
+      postalCode: '00000-000',
+      addressCountry: 'BR',
     },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 38.6979,
-      "longitude": -9.3107
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: -23.5505,
+      longitude: -46.6333,
     },
-    "contactPoint": [
+    contactPoint: [
       {
-        "@type": "ContactPoint",
-        "telephone": "+351-912-164-220",
-        "contactType": "customer service",
-        "availableLanguage": ["Portuguese", "English"],
-        "areaServed": "PT"
+        '@type': 'ContactPoint',
+        telephone: '+55-11-99999-9999',
+        contactType: 'customer service',
+        availableLanguage: ['Portuguese'],
+        areaServed: 'BR',
+        contactOption: 'TollFree',
       },
       {
-        "@type": "ContactPoint",
-        "telephone": "+351-912-164-220",
-        "contactType": "sales",
-        "availableLanguage": ["Portuguese", "English"],
-        "areaServed": "PT"
-      }
+        '@type': 'ContactPoint',
+        telephone: '+55-11-99999-9999',
+        contactType: 'sales',
+        availableLanguage: ['Portuguese'],
+        areaServed: 'BR',
+      },
     ],
-    "sameAs": [
-      "https://wa.me/351912164220"
-      // Adicionar URLs de redes sociais quando existirem:
-      // "https://www.facebook.com/elitesurfingpt",
-      // "https://www.instagram.com/elitesurfingpt"
-    ]
+    sameAs: [
+      'https://www.instagram.com/elitesurfingbrasil',
+      'https://wa.me/5511999999999',
+      // Adicionar quando existirem:
+      // "https://www.facebook.com/elitesurfingbrasil",
+      // "https://www.tiktok.com/@elitesurfingbrasil"
+    ],
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -80,29 +85,33 @@ export const OrganizationSchema = () => {
 // =====================================================
 export const WebSiteSchema = () => {
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${BASE_URL}/#website`,
-    "name": SITE_NAME,
-    "alternateName": "Elite Surfing",
-    "url": BASE_URL,
-    "description": "Loja online de equipamento de surf em Portugal",
-    "inLanguage": "pt-PT",
-    "publisher": {
-      "@id": `${BASE_URL}/#organization`
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${BASE_URL}/#website`,
+    name: SITE_NAME,
+    alternateName: 'Elite Surfing',
+    url: BASE_URL,
+    description:
+      'Loja online de acessórios e equipamentos de surf no Brasil',
+    inLanguage: 'pt-BR',
+    publisher: {
+      '@id': `${BASE_URL}/#organization`,
     },
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": `${BASE_URL}/products?search={search_term_string}`
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${BASE_URL}/products?search={search_term_string}`,
       },
-      "query-input": "required name=search_term_string"
-    }
+      'query-input': 'required name=search_term_string',
+    },
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -111,28 +120,35 @@ export const WebSiteSchema = () => {
 // =====================================================
 export const SiteNavigationSchema = () => {
   const navigationItems = [
-    { name: "Produtos", url: "/products" },
-    { name: "Decks", url: "/collections/decks" },
-    { name: "Leashes", url: "/collections/leashes" },
-    { name: "Capas", url: "/collections/capas" },
-    { name: "Wax", url: "/collections/wax" },
-    { name: "Contacto", url: "/contact" },
-    { name: "FAQ", url: "/faq" }
+    { name: 'Produtos', url: '/products' },
+    { name: 'Decks', url: '/collections/decks' },
+    { name: 'Leashes', url: '/collections/leashes' },
+    { name: 'Capas', url: '/collections/capas' },
+    { name: 'Sarcófagos', url: '/collections/sarcofagos' },
+    { name: 'Acessórios', url: '/collections/acessorios' },
+    { name: 'Bodyboard', url: '/collections/bodyboard' },
+    { name: 'Stand Up Paddle', url: '/collections/sup' },
+    { name: 'Outlet', url: '/collections/outlet' },
+    { name: 'Contato', url: '/contact' },
+    { name: 'FAQ', url: '/faq' },
   ];
 
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "itemListElement": navigationItems.map((item, index) => ({
-      "@type": "SiteNavigationElement",
-      "position": index + 1,
-      "name": item.name,
-      "url": `${BASE_URL}${item.url}`
-    }))
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: navigationItems.map((item, index) => ({
+      '@type': 'SiteNavigationElement',
+      position: index + 1,
+      name: item.name,
+      url: `${BASE_URL}${item.url}`,
+    })),
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -144,122 +160,140 @@ export const ProductSchema = ({ product }) => {
 
   const category = (product.category || '').toLowerCase();
   const productUrl = `${BASE_URL}/products/${category}/${product._id}`;
-  
+
   // Data de validade do preço (1 ano)
   const priceValidUntil = new Date();
   priceValidUntil.setFullYear(priceValidUntil.getFullYear() + 1);
 
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "@id": `${productUrl}#product`,
-    "name": product.name,
-    "description": Array.isArray(product.description) 
-      ? product.description.join(' ') 
-      : (product.description || ''),
-    "image": product.image || [],
-    "sku": product._id,
-    "mpn": product.sku || product._id, // Manufacturer Part Number
-    "brand": {
-      "@type": "Brand",
-      "name": "Elite Surfing"
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    '@id': `${productUrl}#product`,
+    name: product.name,
+    description: Array.isArray(product.description)
+      ? product.description.join(' ')
+      : product.description || '',
+    image: product.image || [],
+    sku: product._id,
+    mpn: product.sku || product._id,
+    brand: {
+      '@type': 'Brand',
+      name: 'Elite Surfing',
     },
-    "manufacturer": {
-      "@type": "Organization",
-      "name": "Elite Surfing Portugal"
+    manufacturer: {
+      '@type': 'Organization',
+      name: 'Elite Surfing Brasil',
     },
-    "category": product.category || "Surf Accessories",
-    "material": product.material || undefined,
-    "color": product.color || undefined,
-    "offers": {
-      "@type": "Offer",
-      "@id": `${productUrl}#offer`,
-      "url": productUrl,
-      "priceCurrency": "EUR",
-      "price": product.offerPrice || product.price,
-      "priceValidUntil": priceValidUntil.toISOString().split('T')[0],
-      "availability": product.inStock 
-        ? "https://schema.org/InStock" 
-        : "https://schema.org/OutOfStock",
-      "itemCondition": "https://schema.org/NewCondition",
-      "seller": {
-        "@type": "Organization",
-        "name": SITE_NAME,
-        "@id": `${BASE_URL}/#organization`
+    category: product.category || 'Acessórios de Surf',
+    material: product.material || undefined,
+    color: product.color || undefined,
+    offers: {
+      '@type': 'Offer',
+      '@id': `${productUrl}#offer`,
+      url: productUrl,
+      priceCurrency: 'BRL',
+      price: product.offerPrice || product.price,
+      priceValidUntil: priceValidUntil.toISOString().split('T')[0],
+      availability:
+        product.inStock || product.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        '@id': `${BASE_URL}/#organization`,
       },
-      "shippingDetails": {
-        "@type": "OfferShippingDetails",
-        "shippingDestination": {
-          "@type": "DefinedRegion",
-          "addressCountry": "PT"
+      shippingDetails: {
+        '@type': 'OfferShippingDetails',
+        shippingDestination: {
+          '@type': 'DefinedRegion',
+          addressCountry: 'BR',
         },
-        "deliveryTime": {
-          "@type": "ShippingDeliveryTime",
-          "businessDays": {
-            "@type": "OpeningHoursSpecification",
-            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        deliveryTime: {
+          '@type': 'ShippingDeliveryTime',
+          businessDays: {
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: [
+              'Monday',
+              'Tuesday',
+              'Wednesday',
+              'Thursday',
+              'Friday',
+            ],
           },
-          "handlingTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 1,
-            "maxValue": 2,
-            "unitCode": "d"
+          handlingTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 1,
+            maxValue: 3,
+            unitCode: 'd',
           },
-          "transitTime": {
-            "@type": "QuantitativeValue",
-            "minValue": 1,
-            "maxValue": 3,
-            "unitCode": "d"
-          }
-        }
+          transitTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 2,
+            maxValue: 7,
+            unitCode: 'd',
+          },
+        },
       },
-      "hasMerchantReturnPolicy": {
-        "@type": "MerchantReturnPolicy",
-        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-        "merchantReturnDays": 14,
-        "returnMethod": "https://schema.org/ReturnByMail",
-        "returnFees": "https://schema.org/FreeReturn"
-      }
-    }
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'BR',
+        returnPolicyCategory:
+          'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 7,
+        returnMethod: 'https://schema.org/ReturnByMail',
+        returnFees: 'https://schema.org/FreeReturn',
+      },
+    },
   };
 
-  // Adicionar GTIN se disponível (código de barras)
+  // Adicionar GTIN se disponível
   if (product.gtin || product.barcode || product.ean) {
     schema.gtin13 = product.gtin || product.barcode || product.ean;
   }
 
   // Adicionar ratings se disponíveis
-  if (product.averageRating && product.reviewCount && product.reviewCount > 0) {
+  if (
+    product.averageRating &&
+    product.reviewCount &&
+    product.reviewCount > 0
+  ) {
     schema.aggregateRating = {
-      "@type": "AggregateRating",
-      "ratingValue": product.averageRating.toFixed(1),
-      "reviewCount": product.reviewCount,
-      "bestRating": 5,
-      "worstRating": 1
+      '@type': 'AggregateRating',
+      ratingValue: product.averageRating.toFixed(1),
+      reviewCount: product.reviewCount,
+      bestRating: 5,
+      worstRating: 1,
     };
   }
 
   // Adicionar reviews se disponíveis
   if (product.reviews && product.reviews.length > 0) {
     schema.review = product.reviews.slice(0, 5).map(review => ({
-      "@type": "Review",
-      "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": review.rating,
-        "bestRating": 5,
-        "worstRating": 1
+      '@type': 'Review',
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: review.rating,
+        bestRating: 5,
+        worstRating: 1,
       },
-      "author": {
-        "@type": "Person",
-        "name": review.userName || "Cliente"
+      author: {
+        '@type': 'Person',
+        name: review.userName || 'Cliente',
       },
-      "reviewBody": review.comment || review.title,
-      "datePublished": review.createdAt ? new Date(review.createdAt).toISOString().split('T')[0] : undefined
+      reviewBody: review.comment || review.title,
+      datePublished: review.createdAt
+        ? new Date(review.createdAt).toISOString().split('T')[0]
+        : undefined,
     }));
   }
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -270,18 +304,21 @@ export const BreadcrumbSchema = ({ items }) => {
   if (!items || items.length === 0) return null;
 
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": items.map((item, index) => ({
-      "@type": "ListItem",
-      "position": index + 1,
-      "name": item.name,
-      "item": item.url ? `${BASE_URL}${item.url}` : undefined
-    }))
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url ? `${BASE_URL}${item.url}` : undefined,
+    })),
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -292,20 +329,23 @@ export const FAQSchema = ({ faqs }) => {
   if (!faqs || faqs.length === 0) return null;
 
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": faqs.map(faq => ({
-      "@type": "Question",
-      "name": faq.question,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.answer
-      }
-    }))
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -314,67 +354,107 @@ export const FAQSchema = ({ faqs }) => {
 // =====================================================
 export const LocalBusinessSchema = () => {
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "Store",
-    "@id": `${BASE_URL}/#store`,
-    "name": SITE_NAME,
-    "image": OG_IMAGE,
-    "url": BASE_URL,
-    "telephone": "+351912164220",
-    "email": "pedrazzoliorlando@gmail.com",
-    "description": "Loja online de equipamento e acessórios de surf em Portugal",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "Avenida Doutor Francisco de Sá Carneiro 3, Apartamento 3D",
-      "addressLocality": "Oeiras",
-      "addressRegion": "Lisboa",
-      "postalCode": "2780-241",
-      "addressCountry": "PT"
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    '@id': `${BASE_URL}/#store`,
+    name: SITE_NAME,
+    image: OG_IMAGE,
+    url: BASE_URL,
+    telephone: '+5511999999999',
+    email: 'contato@elitesurfing.com.br',
+    description:
+      'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, wax, quilhas e mais. PIX com 10% OFF, até 10x sem juros.',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'São Paulo',
+      addressRegion: 'SP',
+      addressCountry: 'BR',
     },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 38.6979,
-      "longitude": -9.3107
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: -23.5505,
+      longitude: -46.6333,
     },
-    "priceRange": "€€",
-    "paymentAccepted": ["Cash", "Credit Card", "Debit Card", "Multibanco", "MB Way"],
-    "currenciesAccepted": "EUR",
-    "areaServed": {
-      "@type": "Country",
-      "name": "Portugal"
+    priceRange: 'R$',
+    paymentAccepted: [
+      'PIX',
+      'Cartão de Crédito',
+      'Cartão de Débito',
+      'Boleto Bancário',
+    ],
+    currenciesAccepted: 'BRL',
+    areaServed: {
+      '@type': 'Country',
+      name: 'Brazil',
     },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Produtos de Surf",
-      "itemListElement": [
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Produtos de Surf',
+      itemListElement: [
         {
-          "@type": "OfferCatalog",
-          "name": "Decks",
-          "itemListElement": {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Product",
-              "name": "Decks de Surf"
-            }
-          }
+          '@type': 'OfferCatalog',
+          name: 'Decks',
+          itemListElement: {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Product',
+              name: 'Decks de Surf - Traction Pads',
+            },
+          },
         },
         {
-          "@type": "OfferCatalog",
-          "name": "Leashes",
-          "itemListElement": {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Product",
-              "name": "Leashes de Surf"
-            }
-          }
-        }
-      ]
-    }
+          '@type': 'OfferCatalog',
+          name: 'Leashes',
+          itemListElement: {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Product',
+              name: 'Leashes de Surf',
+            },
+          },
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Capas',
+          itemListElement: {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Product',
+              name: 'Capas para Prancha de Surf',
+            },
+          },
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Sarcófagos',
+          itemListElement: {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Product',
+              name: 'Sarcófagos para Prancha de Surf',
+            },
+          },
+        },
+        {
+          '@type': 'OfferCatalog',
+          name: 'Acessórios',
+          itemListElement: {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Product',
+              name: 'Acessórios de Surf',
+            },
+          },
+        },
+      ],
+    },
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
@@ -387,54 +467,62 @@ export const CollectionSchema = ({ collection, products = [] }) => {
   const collectionUrl = `${BASE_URL}/collections/${collection.slug}`;
 
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "@id": `${collectionUrl}#collection`,
-    "name": collection.name,
-    "description": collection.description,
-    "url": collectionUrl,
-    "isPartOf": {
-      "@id": `${BASE_URL}/#website`
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${collectionUrl}#collection`,
+    name: collection.name,
+    description: collection.description,
+    url: collectionUrl,
+    inLanguage: 'pt-BR',
+    isPartOf: {
+      '@id': `${BASE_URL}/#website`,
     },
-    "about": {
-      "@type": "Thing",
-      "name": collection.name
+    about: {
+      '@type': 'Thing',
+      name: collection.name,
     },
-    "numberOfItems": products.length,
-    "mainEntity": {
-      "@type": "ItemList",
-      "numberOfItems": products.length,
-      "itemListElement": products.slice(0, 10).map((product, index) => ({
-        "@type": "ListItem",
-        "position": index + 1,
-        "url": `${BASE_URL}/products/${(product.category || '').toLowerCase()}/${product._id}`
-      }))
-    }
+    numberOfItems: products.length,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: products.length,
+      itemListElement: products.slice(0, 10).map((product, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${BASE_URL}/products/${(product.category || '').toLowerCase()}/${product._id}`,
+      })),
+    },
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
 
 // =====================================================
-// ContactPage Schema - Para página de contacto
+// ContactPage Schema - Para página de contato
 // =====================================================
 export const ContactPageSchema = () => {
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "ContactPage",
-    "@id": `${BASE_URL}/contact#contactpage`,
-    "name": "Contacto - Elite Surfing Portugal",
-    "description": "Entre em contacto com a Elite Surfing Portugal",
-    "url": `${BASE_URL}/contact`,
-    "mainEntity": {
-      "@type": "Organization",
-      "@id": `${BASE_URL}/#organization`
-    }
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    '@id': `${BASE_URL}/contact#contactpage`,
+    name: 'Contato - Elite Surfing Brasil',
+    description:
+      'Entre em contato com a Elite Surfing Brasil. Atendimento por WhatsApp, email e telefone.',
+    url: `${BASE_URL}/contact`,
+    mainEntity: {
+      '@type': 'Organization',
+      '@id': `${BASE_URL}/#organization`,
+    },
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
   );
 };
