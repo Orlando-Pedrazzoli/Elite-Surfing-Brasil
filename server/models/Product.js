@@ -31,6 +31,12 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // 🆕 Filtros dinâmicos por grupo (ex: { boardType: "shortboard", thickness: "6mm" })
+    filters: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     inStock: {
       type: Boolean,
       default: true,

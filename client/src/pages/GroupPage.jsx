@@ -1,63 +1,140 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ChevronLeft, SlidersHorizontal, LayoutGrid, Rows3 } from 'lucide-react';
-import { getGroupBySlug, getCategoriesByGroup } from '../assets/assets';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X } from 'lucide-react';
+import { getGroupBySlug, getFiltersByGroup, filterProductsByFilters, getFilterLabel } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 import { SEO, getCollectionSEO, BreadcrumbSchema, OrganizationSchema, CollectionSchema } from '../components/seo';
 
+// ═══════════════════════════════════════════════════════════════
+// 🆕 Componente Accordion de Filtro Individual
+// ═══════════════════════════════════════════════════════════════
+const FilterAccordion = ({ filterDef, activeValues, onToggleValue, productCounts, isMobile = false }) => {
+  const [isOpen, setIsOpen] = useState(true);
+  const selectedCount = activeValues.length;
+
+  return (
+    <div className='border-b border-gray-200 last:border-b-0'>
+      {/* Header do Accordion */}
+      <button
+        type='button'
+        onClick={() => setIsOpen(!isOpen)}
+        className='w-full flex items-center justify-between py-3 text-left group'
+      >
+        <span className={`${isMobile ? 'text-base' : 'text-sm'} font-semibold text-gray-800 group-hover:text-primary transition-colors`}>
+          {filterDef.label}
+          {selectedCount > 0 && (
+            <span className='ml-2 text-xs bg-primary text-white px-1.5 py-0.5 rounded-full'>
+              {selectedCount}
+            </span>
+          )}
+        </span>
+        <ChevronDown 
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Opções */}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className='overflow-hidden'
+          >
+            <div className='pb-3 flex flex-col gap-1.5'>
+              {filterDef.options.map((option) => {
+                const isSelected = activeValues.includes(option.value);
+                const count = productCounts[option.value] ?? 0;
+
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex items-center cursor-pointer py-1 px-1 rounded-md transition-colors duration-150 ${
+                      isSelected ? 'bg-primary/5' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type='checkbox'
+                      checked={isSelected}
+                      onChange={() => onToggleValue(filterDef.key, option.value)}
+                      className={`form-checkbox ${isMobile ? 'h-5 w-5' : 'h-4 w-4'} text-primary rounded border-gray-300 focus:ring-primary transition-colors duration-150`}
+                    />
+                    <span className={`ml-2.5 ${isMobile ? 'text-base' : 'text-sm'} ${
+                      isSelected ? 'font-medium text-primary' : 'text-gray-700'
+                    }`}>
+                      {option.label}
+                    </span>
+                    <span className='ml-auto text-xs text-gray-400'>
+                      ({count})
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 📄 GROUPPAGE PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
 const GroupPage = () => {
   const { group: groupSlug } = useParams();
   const { products, navigate } = useAppContext();
 
   // Estados para filtros e visualização
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [activeFilters, setActiveFilters] = useState({}); // { boardType: ['shortboard'], thickness: ['6mm'] }
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [mobileGridCols, setMobileGridCols] = useState(1); // 1 coluna como padrão
+  const [mobileGridCols, setMobileGridCols] = useState(1);
 
   // Obter dados do grupo
   const group = getGroupBySlug(groupSlug);
 
-  // Obter configuração SEO para esta collection
+  // SEO
   const seoData = getCollectionSEO(groupSlug);
 
-  // Breadcrumbs para structured data
+  // Breadcrumbs
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
     { name: group?.name || groupSlug, url: `/collections/${groupSlug}` }
   ];
 
-  // Obter categorias deste grupo (para filtros)
-  const groupCategories = getCategoriesByGroup(groupSlug);
-  const groupCategoryPaths = groupCategories.map(cat => cat.path.toLowerCase());
+  // 🆕 Obter definições de filtros deste grupo
+  const filterDefs = useMemo(() => {
+    return getFiltersByGroup(groupSlug);
+  }, [groupSlug]);
 
-  // Filtrar produtos deste grupo e aplicar filtros de categoria
-  const groupProducts = useMemo(() => {
-    let filtered = products.filter(product => {
-      // Filtrar por group do produto (se existir)
+  // 🆕 Filtros visíveis (respeita parent-child)
+  const visibleFilterDefs = useMemo(() => {
+    return filterDefs.filter(fd => {
+      if (!fd.parentKey) return true;
+      const parentValues = activeFilters[fd.parentKey] || [];
+      return parentValues.includes(fd.parentValue);
+    });
+  }, [filterDefs, activeFilters]);
+
+  // Todos os produtos deste grupo (sem filtros aplicados)
+  const allGroupProducts = useMemo(() => {
+    return products.filter(product => {
       if (product.group && product.group === groupSlug) {
         return product.isMainVariant !== false;
       }
-      
-      // Fallback: filtrar por categoria (para produtos antigos sem group)
-      const productCategory = (product.category || '').toLowerCase();
-      if (groupCategoryPaths.includes(productCategory)) {
-        return product.isMainVariant !== false;
-      }
-      
       return false;
     });
+  }, [products, groupSlug]);
 
-    // Aplicar filtro de categorias selecionadas
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(product => {
-        const productCategory = (product.category || '').toLowerCase();
-        return selectedCategories.includes(productCategory);
-      });
-    }
+  // Produtos filtrados (com filtros aplicados)
+  const groupProducts = useMemo(() => {
+    let filtered = filterProductsByFilters(allGroupProducts, activeFilters);
 
-    // Ordenar: produtos disponíveis primeiro, esgotados no final
+    // Ordenar: disponíveis primeiro, esgotados no final
     return filtered.sort((a, b) => {
       const aIsInactive = !a.inStock || (a.stock || 0) <= 0;
       const bIsInactive = !b.inStock || (b.stock || 0) <= 0;
@@ -66,40 +143,90 @@ const GroupPage = () => {
       if (!aIsInactive && bIsInactive) return -1;
       return 0;
     });
-  }, [products, groupSlug, groupCategoryPaths, selectedCategories]);
+  }, [allGroupProducts, activeFilters]);
 
-  // Contar produtos por categoria
-  const getCategoryProductCount = (categoryPath) => {
-    return products.filter(product => {
-      if (product.isMainVariant === false) return false;
-      return (product.category || '').toLowerCase() === categoryPath.toLowerCase();
-    }).length;
-  };
+  // 🆕 Contagem de produtos por filtro (baseada nos produtos do grupo, sem considerar o próprio filtro)
+  const getProductCountsForFilter = useCallback((filterKey) => {
+    const counts = {};
+    const filterDef = filterDefs.find(f => f.key === filterKey);
+    if (!filterDef) return counts;
 
-  // Handlers
-  const handleCategoryChange = (categoryPath) => {
-    const lowerCasePath = categoryPath.toLowerCase();
-    setSelectedCategories(prev =>
-      prev.includes(lowerCasePath)
-        ? prev.filter(c => c !== lowerCasePath)
-        : [...prev, lowerCasePath]
-    );
-  };
+    // Filtros ativos excluindo o filtro atual (para contagem cross-filter)
+    const otherFilters = {};
+    Object.entries(activeFilters).forEach(([key, values]) => {
+      if (key !== filterKey && values.length > 0) {
+        otherFilters[key] = values;
+      }
+    });
 
+    // Filtrar produtos pelos "outros" filtros
+    const baseProducts = filterProductsByFilters(allGroupProducts, otherFilters);
+
+    // Contar para cada opção deste filtro
+    filterDef.options.forEach(option => {
+      counts[option.value] = baseProducts.filter(product => {
+        const productFilters = product.filters instanceof Map
+          ? Object.fromEntries(product.filters)
+          : (product.filters || {});
+        return productFilters[filterKey] === option.value;
+      }).length;
+    });
+
+    return counts;
+  }, [filterDefs, activeFilters, allGroupProducts]);
+
+  // 🆕 Toggle um valor de filtro (OR dentro do mesmo filtro)
+  const toggleFilterValue = useCallback((filterKey, value) => {
+    setActiveFilters(prev => {
+      const currentValues = prev[filterKey] || [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+      
+      const updated = { ...prev, [filterKey]: newValues };
+
+      // Se desmarcou um parent, limpar filhos dependentes
+      if (newValues.length === 0 || !currentValues.includes(value)) {
+        filterDefs.forEach(fd => {
+          if (fd.parentKey === filterKey) {
+            // Verificar se o parentValue ainda está selecionado
+            if (!newValues.includes(fd.parentValue)) {
+              delete updated[fd.key];
+            }
+          }
+        });
+      }
+
+      // Limpar keys vazias
+      Object.keys(updated).forEach(key => {
+        if (updated[key].length === 0) delete updated[key];
+      });
+
+      return updated;
+    });
+  }, [filterDefs]);
+
+  // Limpar todos os filtros
   const clearAllFilters = () => {
-    setSelectedCategories([]);
+    setActiveFilters({});
     setShowFilterPanel(false);
   };
 
-  const totalActiveFilters = selectedCategories.length;
+  // Total de filtros ativos
+  const totalActiveFilters = Object.values(activeFilters).reduce(
+    (sum, values) => sum + values.length, 0
+  );
 
-  // Se grupo não existe, mostrar erro
+  // Verificar se tem filtros disponíveis
+  const hasFilters = filterDefs.length > 0;
+
+  // Se grupo não existe
   if (!group) {
     return (
       <>
         <SEO
           title="Coleção não encontrada"
-          description="A coleção que procura não existe na Elite Surfing Portugal."
+          description="A coleção que procura não existe na Elite Surfing Brasil."
           url={`/collections/${groupSlug}`}
           noindex={true}
         />
@@ -124,37 +251,27 @@ const GroupPage = () => {
     slug: groupSlug
   };
 
-  // Componente de filtro por categoria (dentro do grupo)
-  const FilterSection = ({ isMobile = false }) => (
-    <div className='flex flex-col gap-3'>
-      {groupCategories.map(category => {
-        const isSelected = selectedCategories.includes(category.path.toLowerCase());
-        const productCount = getCategoryProductCount(category.path);
-
-        return (
-          <label
-            key={category.path}
-            className='flex items-center cursor-pointer text-gray-700 hover:text-primary transition-colors duration-200'
-          >
-            <input
-              type='checkbox'
-              checked={isSelected}
-              onChange={() => handleCategoryChange(category.path)}
-              className={`form-checkbox ${isMobile ? 'h-6 w-6' : 'h-5 w-5'} text-primary rounded-md border-gray-300 focus:ring-primary transition-colors duration-200`}
-            />
-            <span className={`ml-3 ${isMobile ? 'text-base' : 'text-sm'} ${isSelected ? 'font-medium text-primary' : ''}`}>
-              {category.text}
-            </span>
-            <span className='ml-2 text-xs text-gray-400'>({productCount})</span>
-          </label>
-        );
-      })}
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 Componente de Filtros (Desktop e Mobile usam o mesmo)
+  // ═══════════════════════════════════════════════════════════════
+  const FilterPanel = ({ isMobile = false }) => (
+    <div className='flex flex-col'>
+      {visibleFilterDefs.map((filterDef) => (
+        <FilterAccordion
+          key={filterDef.key}
+          filterDef={filterDef}
+          activeValues={activeFilters[filterDef.key] || []}
+          onToggleValue={toggleFilterValue}
+          productCounts={getProductCountsForFilter(filterDef.key)}
+          isMobile={isMobile}
+        />
+      ))}
     </div>
   );
 
   return (
     <>
-      {/* SEO Completo para Collection */}
+      {/* SEO */}
       <SEO
         title={seoData.title}
         description={seoData.description}
@@ -168,10 +285,9 @@ const GroupPage = () => {
       </SEO>
 
       <div className='min-h-screen'>
-        {/* Conteúdo */}
         <div className='px-6 md:px-16 lg:px-24 xl:px-32 py-6 md:py-8'>
           
-          {/* Breadcrumbs - Mobile apenas */}
+          {/* Breadcrumbs - Mobile */}
           <motion.nav
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -186,8 +302,7 @@ const GroupPage = () => {
 
           {/* Mobile Controls Bar */}
           <div className='flex sm:hidden items-center justify-between mb-4'>
-            {/* Botão Filtro - só mostra se há categorias */}
-            {groupCategories.length > 1 ? (
+            {hasFilters ? (
               <button
                 onClick={() => setShowFilterPanel(true)}
                 className='flex items-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200'
@@ -201,10 +316,10 @@ const GroupPage = () => {
                 )}
               </button>
             ) : (
-              <div /> 
+              <div />
             )}
 
-            {/* Toggle Visualização 1/2 colunas */}
+            {/* Toggle 1/2 colunas */}
             <div className='flex items-center gap-1'>
               <button
                 onClick={() => setMobileGridCols(1)}
@@ -231,9 +346,12 @@ const GroupPage = () => {
             </div>
           </div>
 
-          {/* Filter Panel for Mobile - Fullscreen */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* 🆕 Mobile Filter Panel - Fullscreen com Acordeões      */}
+          {/* ═══════════════════════════════════════════════════════ */}
           {showFilterPanel && (
             <div className='fixed inset-0 bg-white z-50 flex flex-col sm:hidden'>
+              {/* Header */}
               <div className='flex justify-between items-center p-4 border-b'>
                 <h3 className='text-xl font-semibold text-gray-800'>
                   Filtrar {group.name}
@@ -242,17 +360,16 @@ const GroupPage = () => {
                   onClick={() => setShowFilterPanel(false)}
                   className='p-2 text-gray-500 hover:text-gray-800 transition-colors duration-200'
                 >
-                  <svg xmlns='http://www.w3.org/2000/svg' className='h-6 w-6' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
-                  </svg>
+                  <X className='w-6 h-6' />
                 </button>
               </div>
 
-              <div className='flex-1 overflow-y-auto p-4'>
-                <h4 className='text-base font-semibold text-gray-700 mb-4'>Modelos</h4>
-                <FilterSection isMobile={true} />
+              {/* Filtros em Acordeão */}
+              <div className='flex-1 overflow-y-auto px-4 py-2'>
+                <FilterPanel isMobile={true} />
               </div>
 
+              {/* Footer com botões */}
               <div className='p-4 border-t bg-white'>
                 <div className='flex flex-col gap-3'>
                   {totalActiveFilters > 0 && (
@@ -267,18 +384,22 @@ const GroupPage = () => {
                     onClick={() => setShowFilterPanel(false)}
                     className='w-full py-3 px-6 bg-primary text-white font-semibold rounded-lg shadow-md hover:brightness-90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                   >
-                    Ver {groupProducts.length} Produtos
+                    Ver {groupProducts.length} {groupProducts.length === 1 ? 'Produto' : 'Produtos'}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* Layout Principal: Sidebar + Grid                       */}
+          {/* ═══════════════════════════════════════════════════════ */}
           <div className='flex flex-col md:flex-row gap-8'>
-            {/* Coluna da Esquerda: Breadcrumb + Filtros */}
-            {groupCategories.length > 1 && (
+            
+            {/* Coluna Esquerda: Filtros Desktop */}
+            {hasFilters && (
               <div className='hidden sm:block md:w-1/4 lg:w-1/5 flex-shrink-0'>
-                {/* Breadcrumb - Desktop */}
+                {/* Breadcrumb Desktop */}
                 <motion.nav
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -291,18 +412,18 @@ const GroupPage = () => {
                   <span className='text-gray-800 font-medium' aria-current="page">{group.name}</span>
                 </motion.nav>
 
-                {/* Filtros */}
-                <div className='bg-white rounded-lg shadow-md p-6 sticky top-32'>
-                  <h3 className='text-lg font-semibold text-gray-800 mb-4'>
-                    Filtrar por Modelo
+                {/* Sidebar de Filtros */}
+                <div className='bg-white rounded-lg shadow-md p-5 sticky top-32'>
+                  <h3 className='text-lg font-semibold text-gray-800 mb-3'>
+                    Filtros
                   </h3>
                   
-                  <FilterSection />
+                  <FilterPanel />
 
                   {totalActiveFilters > 0 && (
                     <button
                       onClick={clearAllFilters}
-                      className='mt-6 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200 text-sm w-full'
+                      className='mt-4 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200 text-sm w-full'
                     >
                       Limpar Filtros ({totalActiveFilters})
                     </button>
@@ -311,7 +432,7 @@ const GroupPage = () => {
               </div>
             )}
 
-            {/* Product Grid */}
+            {/* Grid de Produtos */}
             <div className='flex-grow'>
               {/* Desktop: Voltar + Contagem */}
               <div className='hidden sm:flex items-center justify-between mb-6'>
@@ -323,40 +444,62 @@ const GroupPage = () => {
                   <span>Voltar</span>
                 </button>
                 
+                {/* Breadcrumb Desktop (quando não há filtros laterais) */}
+                {!hasFilters && (
+                  <motion.nav
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className='flex items-center gap-2 text-gray-500 text-sm'
+                    aria-label="Breadcrumb"
+                  >
+                    <Link to='/' className='hover:text-primary transition-colors'>Home</Link>
+                    <span>/</span>
+                    <span className='text-gray-800 font-medium'>{group.name}</span>
+                  </motion.nav>
+                )}
+
                 <p className='text-gray-500 text-sm'>
                   {groupProducts.length} {groupProducts.length === 1 ? 'produto' : 'produtos'}
                 </p>
               </div>
 
-              {/* Active Filters Tags */}
+              {/* 🆕 Tags de Filtros Ativos */}
               {totalActiveFilters > 0 && (
                 <div className='flex flex-wrap gap-2 mb-4'>
-                  {selectedCategories.map(catPath => {
-                    const category = groupCategories.find(c => c.path.toLowerCase() === catPath);
-                    if (!category) return null;
-                    return (
-                      <span 
-                        key={catPath}
-                        className='inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-sm rounded-full'
-                      >
-                        {category.text}
-                        <button 
-                          onClick={() => handleCategoryChange(category.path)}
-                          className='ml-1 hover:text-primary-dull'
+                  {Object.entries(activeFilters).map(([filterKey, values]) =>
+                    values.map(value => {
+                      const label = getFilterLabel(groupSlug, filterKey, value);
+                      return (
+                        <span 
+                          key={`${filterKey}-${value}`}
+                          className='inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-sm rounded-full'
                         >
-                          ✕
-                        </button>
-                      </span>
-                    );
-                  })}
+                          {label}
+                          <button 
+                            onClick={() => toggleFilterValue(filterKey, value)}
+                            className='ml-1 hover:text-primary-dull'
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      );
+                    })
+                  )}
+                  <button
+                    onClick={clearAllFilters}
+                    className='inline-flex items-center px-3 py-1 text-gray-500 text-sm rounded-full hover:bg-gray-100 transition-colors'
+                  >
+                    Limpar tudo
+                  </button>
                 </div>
               )}
 
-              {/* Mobile: Contagem de produtos */}
+              {/* Mobile: Contagem */}
               <p className='sm:hidden text-gray-500 text-sm mb-4'>
                 {groupProducts.length} {groupProducts.length === 1 ? 'produto' : 'produtos'}
               </p>
 
+              {/* Produtos ou Empty State */}
               {groupProducts.length === 0 ? (
                 <div className='text-center py-16 bg-gray-50 rounded-lg'>
                   <p className='text-gray-500 text-lg mb-4'>

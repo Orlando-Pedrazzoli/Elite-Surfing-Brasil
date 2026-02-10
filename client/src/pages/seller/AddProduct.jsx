@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { assets, categories, groups, getCategoriesByGroup } from '../../assets/assets';
+import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 
@@ -50,7 +50,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
       title={title}
     >
       {isDual ? (
-        // Bolinha dividida na diagonal
         <div 
           className='w-full h-full rounded-full overflow-hidden'
           style={{
@@ -59,7 +58,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
           }}
         />
       ) : (
-        // Bolinha simples
         <div 
           className='w-full h-full rounded-full'
           style={{ 
@@ -87,13 +85,16 @@ const AddProduct = () => {
   // STOCK
   const [stock, setStock] = useState('');
   
+  // 🆕 FILTROS DINÂMICOS (baseados no grupo selecionado)
+  const [productFilters, setProductFilters] = useState({});
+
   // SISTEMA DE FAMÍLIA/COR
   const [productFamily, setProductFamily] = useState('');
   const [hasColor, setHasColor] = useState(false);
   const [color, setColor] = useState('');
   const [colorCode, setColorCode] = useState('#000000');
   
-  // 🆕 COR DUPLA
+  // COR DUPLA
   const [isDualColor, setIsDualColor] = useState(false);
   const [colorCode2, setColorCode2] = useState('#2563EB');
   
@@ -107,11 +108,44 @@ const AddProduct = () => {
     return getCategoriesByGroup(selectedGroup);
   }, [selectedGroup]);
 
-  // Quando o grupo muda, limpar a categoria selecionada
+  // 🆕 Obter filtros disponíveis para o grupo selecionado
+  const groupFilterDefs = useMemo(() => {
+    if (!selectedGroup) return [];
+    return getFiltersByGroup(selectedGroup);
+  }, [selectedGroup]);
+
+  // 🆕 Filtros visíveis (respeita parent-child)
+  const visibleFilters = useMemo(() => {
+    return groupFilterDefs.filter(filterDef => {
+      // Se não tem parentKey, sempre visível
+      if (!filterDef.parentKey) return true;
+      // Só visível se o valor do parent combinar
+      return productFilters[filterDef.parentKey] === filterDef.parentValue;
+    });
+  }, [groupFilterDefs, productFilters]);
+
+  // Quando o grupo muda, limpar a categoria e filtros
   const handleGroupChange = (e) => {
     const newGroup = e.target.value;
     setSelectedGroup(newGroup);
     setCategory('');
+    setProductFilters({}); // 🆕 Limpar filtros ao trocar grupo
+  };
+
+  // 🆕 Atualizar valor de um filtro
+  const handleFilterChange = (filterKey, value) => {
+    setProductFilters(prev => {
+      const updated = { ...prev, [filterKey]: value };
+      
+      // Se mudou um parent, limpar os filhos que dependem dele
+      groupFilterDefs.forEach(fd => {
+        if (fd.parentKey === filterKey && fd.parentValue !== value) {
+          delete updated[fd.key];
+        }
+      });
+      
+      return updated;
+    });
   };
 
   // GERAR SLUG PARA FAMÍLIA
@@ -124,14 +158,14 @@ const AddProduct = () => {
       .replace(/(^-|-$)/g, '');
   };
 
-  // 🎯 SELECIONAR COR SIMPLES
+  // SELECIONAR COR SIMPLES
   const selectPresetColor = (preset) => {
     setColor(preset.name);
     setColorCode(preset.code);
     setIsDualColor(false);
   };
 
-  // 🆕 SELECIONAR COR DUPLA
+  // SELECIONAR COR DUPLA
   const selectPresetDualColor = (preset) => {
     setColor(preset.name);
     setColorCode(preset.code1);
@@ -179,6 +213,15 @@ const AddProduct = () => {
         isMainVariant,
       };
 
+      // 🆕 Adicionar filtros se algum foi preenchido
+      const filledFilters = {};
+      Object.entries(productFilters).forEach(([key, value]) => {
+        if (value) filledFilters[key] = value;
+      });
+      if (Object.keys(filledFilters).length > 0) {
+        productData.filters = filledFilters;
+      }
+
       // Adicionar dados de família/cor se definidos
       if (productFamily.trim()) {
         productData.productFamily = generateFamilySlug(productFamily);
@@ -188,12 +231,10 @@ const AddProduct = () => {
         productData.color = color;
         productData.colorCode = colorCode;
         
-        // 🆕 Adicionar segunda cor se for dual
         if (isDualColor && colorCode2) {
           productData.colorCode2 = colorCode2;
         }
         
-        // Se tem cor mas não tem família, usar o nome base como família
         if (!productFamily.trim()) {
           const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
           if (baseName) {
@@ -224,6 +265,7 @@ const AddProduct = () => {
         setOfferPrice('');
         setStock('');
         setFiles([]);
+        setProductFilters({}); // 🆕 Reset filtros
         setProductFamily('');
         setHasColor(false);
         setColor('');
@@ -367,11 +409,78 @@ const AddProduct = () => {
           </div>
         </div>
 
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 🆕 FILTROS DINÂMICOS — Aparece após selecionar o grupo    */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {selectedGroup && visibleFilters.length > 0 && (
+          <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
+            <div className='flex items-center gap-2 mb-1'>
+              <svg className='w-5 h-5 text-blue-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' />
+              </svg>
+              <h3 className='text-base font-semibold text-blue-800'>
+                Filtros do Produto
+              </h3>
+            </div>
+            <p className='text-xs text-blue-600 -mt-2'>
+              Esses filtros permitem que o cliente encontre o produto na página da coleção
+            </p>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+              {visibleFilters.map((filterDef) => (
+                <div key={filterDef.key} className='flex flex-col gap-1'>
+                  <label className='text-sm font-medium text-gray-700'>
+                    {filterDef.label}
+                  </label>
+                  <select
+                    value={productFilters[filterDef.key] || ''}
+                    onChange={e => handleFilterChange(filterDef.key, e.target.value)}
+                    className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
+                  >
+                    <option value=''>— Selecionar —</option>
+                    {filterDef.options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            {/* Preview dos filtros preenchidos */}
+            {Object.keys(productFilters).filter(k => productFilters[k]).length > 0 && (
+              <div className='flex flex-wrap gap-2 pt-2 border-t border-blue-200'>
+                {Object.entries(productFilters).map(([key, value]) => {
+                  if (!value) return null;
+                  const filterDef = groupFilterDefs.find(f => f.key === key);
+                  const option = filterDef?.options.find(o => o.value === value);
+                  return (
+                    <span 
+                      key={key}
+                      className='inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium'
+                    >
+                      {filterDef?.label}: {option?.label || value}
+                      <button
+                        type='button'
+                        onClick={() => handleFilterChange(key, '')}
+                        className='ml-0.5 hover:text-blue-600'
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Preços */}
         <div className='flex items-center gap-5 flex-wrap'>
           <div className='flex-1 flex flex-col gap-1 min-w-[140px]'>
             <label className='text-base font-medium' htmlFor='product-price'>
-              Preço Original (€)
+              Preço Original (R$)
             </label>
             <input
               onChange={e => setPrice(e.target.value)}
@@ -386,7 +495,7 @@ const AddProduct = () => {
           </div>
           <div className='flex-1 flex flex-col gap-1 min-w-[140px]'>
             <label className='text-base font-medium' htmlFor='offer-price'>
-              Preço de Venda (€)
+              Preço de Venda (R$)
             </label>
             <input
               onChange={e => setOfferPrice(e.target.value)}
@@ -465,7 +574,7 @@ const AddProduct = () => {
           {hasColor && (
             <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
               
-              {/* 🆕 Toggle Cor Simples / Dupla */}
+              {/* Toggle Cor Simples / Dupla */}
               <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
                 <label className='flex items-center gap-2 cursor-pointer'>
                   <input
@@ -506,9 +615,8 @@ const AddProduct = () => {
                 />
               </div>
 
-              {/* 🆕 Seletor de Cores - Simples ou Dupla */}
+              {/* Seletor de Cores - Simples ou Dupla */}
               {!isDualColor ? (
-                // COR ÚNICA
                 <>
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium'>Código da Cor</label>
@@ -547,10 +655,8 @@ const AddProduct = () => {
                   </div>
                 </>
               ) : (
-                // 🆕 DUAS CORES
                 <>
                   <div className='grid grid-cols-2 gap-4'>
-                    {/* Cor 1 */}
                     <div className='flex flex-col gap-1'>
                       <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
                       <div className='flex items-center gap-2'>
@@ -570,7 +676,6 @@ const AddProduct = () => {
                       </div>
                     </div>
                     
-                    {/* Cor 2 */}
                     <div className='flex flex-col gap-1'>
                       <label className='text-sm font-medium'>Cor 2 (Direita)</label>
                       <div className='flex items-center gap-2'>
