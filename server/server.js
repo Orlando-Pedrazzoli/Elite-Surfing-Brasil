@@ -27,6 +27,7 @@ console.log('✅ Cloudinary connected successfully');
 // ✅ Allowed Origins
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://elitesurfingbr.vercel.app',
   'http://localhost:4001',
   'http://localhost:3000',
   'https://elitesurfing.com.br',
