@@ -10,6 +10,24 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
+    // 🆕 SKU - Código do produto (único)
+    sku: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+    // 🆕 Peso líquido em gramas (para cálculo de frete)
+    weight: {
+      type: Number,
+      default: null,
+    },
+    // 🆕 Dimensões da embalagem em cm (para cálculo de frete)
+    dimensions: {
+      length: { type: Number, default: null }, // comprimento cm
+      width: { type: Number, default: null },  // largura cm
+      height: { type: Number, default: null }, // altura cm
+    },
     price: {
       type: Number,
       required: true,
@@ -22,16 +40,18 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
+    video: {
+      type: String,
+      default: null,
+    },
     category: {
       type: String,
       required: true,
     },
-    // 🆕 Campo group para hierarquia
     group: {
       type: String,
       default: null,
     },
-    // 🆕 Filtros dinâmicos por grupo (ex: { boardType: "shortboard", thickness: "6mm" })
     filters: {
       type: Map,
       of: String,
@@ -58,7 +78,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // 🆕 Segunda cor para produtos bicolor
     colorCode2: {
       type: String,
       default: null,
@@ -77,7 +96,7 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ category: 1, inStock: 1 });
 productSchema.index({ productFamily: 1 });
 productSchema.index({ group: 1 });
+productSchema.index({ sku: 1 });
 
 const Product = mongoose.model('Product', productSchema);
-
 export default Product;

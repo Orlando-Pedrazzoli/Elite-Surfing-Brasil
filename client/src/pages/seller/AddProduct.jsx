@@ -84,6 +84,11 @@ const AddProduct = () => {
   
   // STOCK
   const [stock, setStock] = useState('');
+
+  // 🆕 SKU + PESO + DIMENSÕES
+  const [sku, setSku] = useState('');
+  const [weight, setWeight] = useState('');
+  const [dimensions, setDimensions] = useState({ length: '', width: '', height: '' });
   
   // 🆕 FILTROS DINÂMICOS (baseados no grupo selecionado)
   const [productFilters, setProductFilters] = useState({});
@@ -117,9 +122,7 @@ const AddProduct = () => {
   // 🆕 Filtros visíveis (respeita parent-child)
   const visibleFilters = useMemo(() => {
     return groupFilterDefs.filter(filterDef => {
-      // Se não tem parentKey, sempre visível
       if (!filterDef.parentKey) return true;
-      // Só visível se o valor do parent combinar
       return productFilters[filterDef.parentKey] === filterDef.parentValue;
     });
   }, [groupFilterDefs, productFilters]);
@@ -129,23 +132,38 @@ const AddProduct = () => {
     const newGroup = e.target.value;
     setSelectedGroup(newGroup);
     setCategory('');
-    setProductFilters({}); // 🆕 Limpar filtros ao trocar grupo
+    setProductFilters({});
   };
 
   // 🆕 Atualizar valor de um filtro
   const handleFilterChange = (filterKey, value) => {
     setProductFilters(prev => {
       const updated = { ...prev, [filterKey]: value };
-      
-      // Se mudou um parent, limpar os filhos que dependem dele
       groupFilterDefs.forEach(fd => {
         if (fd.parentKey === filterKey && fd.parentValue !== value) {
           delete updated[fd.key];
         }
       });
-      
       return updated;
     });
+  };
+
+  // 🆕 GERAR SKU AUTOMÁTICO
+  const generateSku = () => {
+    const groupPrefix = {
+      decks: 'DK',
+      leashes: 'LS',
+      capas: 'CP',
+      sarcofagos: 'SF',
+      bodyboard: 'BB',
+      sup: 'SP',
+      acessorios: 'AC',
+      outlet: 'OT',
+    };
+    const prefix = groupPrefix[selectedGroup] || 'XX';
+    const random = Math.floor(1000 + Math.random() * 9000);
+    const generated = `ES-${prefix}-${random}`;
+    setSku(generated);
   };
 
   // GERAR SLUG PARA FAMÍLIA
@@ -193,7 +211,7 @@ const AddProduct = () => {
       }
 
       if (stock === '' || parseInt(stock) < 0) {
-        toast.error('Defina a quantidade em stock');
+        toast.error('Defina a quantidade em estoque');
         return;
       }
 
@@ -211,9 +229,21 @@ const AddProduct = () => {
         offerPrice: Number(offerPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
+        // 🆕 SKU
+        sku: sku.trim() || undefined,
+        // 🆕 Peso
+        weight: weight ? Number(weight) : undefined,
+        // 🆕 Dimensões
+        dimensions: (dimensions.length || dimensions.width || dimensions.height)
+          ? {
+              length: Number(dimensions.length) || 0,
+              width: Number(dimensions.width) || 0,
+              height: Number(dimensions.height) || 0,
+            }
+          : undefined,
       };
 
-      // 🆕 Adicionar filtros se algum foi preenchido
+      // Adicionar filtros se algum foi preenchido
       const filledFilters = {};
       Object.entries(productFilters).forEach(([key, value]) => {
         if (value) filledFilters[key] = value;
@@ -264,8 +294,11 @@ const AddProduct = () => {
         setPrice('');
         setOfferPrice('');
         setStock('');
+        setSku('');
+        setWeight('');
+        setDimensions({ length: '', width: '', height: '' });
         setFiles([]);
-        setProductFilters({}); // 🆕 Reset filtros
+        setProductFilters({});
         setProductFamily('');
         setHasColor(false);
         setColor('');
@@ -282,8 +315,8 @@ const AddProduct = () => {
   };
 
   return (
-    <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll flex flex-col justify-between'>
-      <form onSubmit={onSubmitHandler} className='md:p-10 p-4 space-y-5 max-w-2xl'>
+    <div className='flex-1 h-[95vh] overflow-y-auto'>
+      <form onSubmit={onSubmitHandler} className='p-6 md:p-8 space-y-5 max-w-2xl'>
         
         <h2 className='text-2xl font-bold text-gray-800 mb-6'>Adicionar Produto</h2>
 
@@ -410,7 +443,7 @@ const AddProduct = () => {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════ */}
-        {/* 🆕 FILTROS DINÂMICOS — Aparece após selecionar o grupo    */}
+        {/* 🆕 FILTROS DINÂMICOS                                      */}
         {/* ═══════════════════════════════════════════════════════════ */}
         {selectedGroup && visibleFilters.length > 0 && (
           <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
@@ -513,7 +546,7 @@ const AddProduct = () => {
         {/* STOCK */}
         <div className='flex flex-col gap-1'>
           <label className='text-base font-medium' htmlFor='stock'>
-            Quantidade em Stock
+            Quantidade em Estoque
           </label>
           <input
             onChange={e => setStock(e.target.value)}
@@ -526,6 +559,131 @@ const AddProduct = () => {
             required
           />
           <p className='text-xs text-gray-500'>Defina 0 para produto esgotado</p>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 🆕 SKU + PESO + DIMENSÕES — Dados para Frete              */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div className='border border-gray-200 bg-gray-50/50 rounded-lg p-4 space-y-5'>
+          <div className='flex items-center gap-2'>
+            <svg className='w-5 h-5 text-gray-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' />
+            </svg>
+            <h3 className='text-base font-semibold text-gray-800'>
+              Código, Peso e Dimensões
+            </h3>
+          </div>
+          <p className='text-xs text-gray-500 -mt-3'>
+            Informações necessárias para identificação e cálculo de frete
+          </p>
+
+          {/* SKU + Peso em linha */}
+          <div className='flex items-start gap-4 flex-wrap'>
+            {/* SKU */}
+            <div className='flex-1 flex flex-col gap-1 min-w-[200px]'>
+              <label className='text-sm font-medium text-gray-700' htmlFor='sku'>
+                Código do Produto (SKU)
+              </label>
+              <div className='flex gap-2'>
+                <input
+                  onChange={e => setSku(e.target.value.toUpperCase())}
+                  value={sku}
+                  id='sku'
+                  type='text'
+                  placeholder='ES-DK-1234'
+                  className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono uppercase bg-white'
+                />
+                <button
+                  type='button'
+                  onClick={generateSku}
+                  disabled={!selectedGroup}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    selectedGroup
+                      ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                      : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  }`}
+                  title='Gerar código automático'
+                >
+                  Gerar
+                </button>
+              </div>
+              <p className='text-xs text-gray-500'>
+                Código único — gerado automaticamente ou personalizado
+              </p>
+            </div>
+
+            {/* Peso */}
+            <div className='flex flex-col gap-1 min-w-[160px]'>
+              <label className='text-sm font-medium text-gray-700' htmlFor='weight'>
+                Peso Líquido (gramas)
+              </label>
+              <input
+                onChange={e => setWeight(e.target.value)}
+                value={weight}
+                id='weight'
+                type='number'
+                min='0'
+                step='1'
+                placeholder='0'
+                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+              />
+              {weight && Number(weight) > 0 ? (
+                <p className='text-xs text-gray-500'>
+                  = {(Number(weight) / 1000).toFixed(2)} kg
+                </p>
+              ) : (
+                <p className='text-xs text-gray-500'>Para cálculo de frete</p>
+              )}
+            </div>
+          </div>
+
+          {/* Dimensões */}
+          <div className='flex flex-col gap-1'>
+            <label className='text-sm font-medium text-gray-700'>
+              Dimensões da Embalagem (cm)
+            </label>
+            <div className='flex items-center gap-3'>
+              <div className='flex-1'>
+                <input
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={dimensions.length}
+                  onChange={e => setDimensions(prev => ({ ...prev, length: e.target.value }))}
+                  placeholder='0'
+                  className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                />
+                <p className='text-xs text-gray-400 mt-1 text-center'>Comprimento</p>
+              </div>
+              <span className='text-gray-300 font-bold text-lg'>×</span>
+              <div className='flex-1'>
+                <input
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={dimensions.width}
+                  onChange={e => setDimensions(prev => ({ ...prev, width: e.target.value }))}
+                  placeholder='0'
+                  className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                />
+                <p className='text-xs text-gray-400 mt-1 text-center'>Largura</p>
+              </div>
+              <span className='text-gray-300 font-bold text-lg'>×</span>
+              <div className='flex-1'>
+                <input
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={dimensions.height}
+                  onChange={e => setDimensions(prev => ({ ...prev, height: e.target.value }))}
+                  placeholder='0'
+                  className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                />
+                <p className='text-xs text-gray-400 mt-1 text-center'>Altura</p>
+              </div>
+            </div>
+            <p className='text-xs text-gray-500'>Necessário para cálculo de frete (Correios / transportadoras)</p>
+          </div>
         </div>
 
         {/* FAMÍLIA DE PRODUTOS */}
