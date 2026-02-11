@@ -12,7 +12,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title, 
     if (!code) return false;
     const lightColors = ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA', '#f5f5f5', '#fafafa'];
     if (lightColors.includes(code)) return true;
-    // Verificar luminosidade
     const hex = code.replace('#', '');
     if (hex.length !== 6) return false;
     const r = parseInt(hex.substr(0, 2), 16);
@@ -31,7 +30,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title, 
     : 'rounded-full';
 
   const content = isDual ? (
-    // Bolinha dividida na diagonal
     <div 
       className='w-full h-full rounded-full overflow-hidden'
       style={{
@@ -40,7 +38,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title, 
       }}
     />
   ) : (
-    // Bolinha simples
     <div 
       className='w-full h-full rounded-full'
       style={{ 
@@ -86,16 +83,15 @@ const ProductList = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // 🆕 Filtros melhorados
-  const [selectedGroup, setSelectedGroup] = useState(''); // Filtro principal por group
+  // Filtros
+  const [selectedGroup, setSelectedGroup] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterFamily, setFilterFamily] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // all, active, inactive, low-stock
+  const [filterStatus, setFilterStatus] = useState('');
   const [showOnlyMain, setShowOnlyMain] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // table ou grid
+  const [viewMode, setViewMode] = useState('table');
 
-  // Buscar todos os produtos
   useEffect(() => {
     fetchAllProducts();
   }, []);
@@ -120,7 +116,6 @@ const ProductList = () => {
     await fetchProducts();
   };
 
-  // 🆕 Contar produtos por group
   const getGroupStats = (groupSlug) => {
     const groupCategoryPaths = getCategoriesByGroup(groupSlug).map(cat => cat.path.toLowerCase());
     
@@ -139,12 +134,9 @@ const ProductList = () => {
     };
   };
 
-  // Famílias únicas
   const uniqueFamilies = [...new Set(allProducts.filter(p => p.productFamily).map(p => p.productFamily))];
 
-  // 🆕 Produtos filtrados com lógica melhorada
   const filteredProducts = allProducts.filter(product => {
-    // Filtro por Group
     if (selectedGroup) {
       const groupCategoryPaths = getCategoriesByGroup(selectedGroup).map(cat => cat.path.toLowerCase());
       const belongsToGroup = product.group === selectedGroup || 
@@ -152,37 +144,32 @@ const ProductList = () => {
       if (!belongsToGroup) return false;
     }
 
-    // Filtro por Categoria
     if (filterCategory && (product.category || '').toLowerCase() !== filterCategory.toLowerCase()) {
       return false;
     }
 
-    // Filtro por Família
     if (filterFamily && product.productFamily !== filterFamily) return false;
 
-    // Filtro por Status
     if (filterStatus === 'active' && !product.inStock) return false;
     if (filterStatus === 'inactive' && product.inStock) return false;
     if (filterStatus === 'low-stock' && !((product.stock || 0) <= 3 && (product.stock || 0) > 0)) return false;
     if (filterStatus === 'out-of-stock' && (product.stock || 0) !== 0) return false;
 
-    // Filtro só principais
     if (showOnlyMain && product.isMainVariant === false) return false;
 
-    // Busca por texto
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       const matchesName = product.name?.toLowerCase().includes(search);
       const matchesCategory = product.category?.toLowerCase().includes(search);
       const matchesColor = product.color?.toLowerCase().includes(search);
       const matchesFamily = product.productFamily?.toLowerCase().includes(search);
-      if (!matchesName && !matchesCategory && !matchesColor && !matchesFamily) return false;
+      const matchesSku = product.sku?.toLowerCase().includes(search);
+      if (!matchesName && !matchesCategory && !matchesColor && !matchesFamily && !matchesSku) return false;
     }
 
     return true;
   });
 
-  // Limpar todos os filtros
   const clearAllFilters = () => {
     setSelectedGroup('');
     setFilterCategory('');
@@ -225,12 +212,12 @@ const ProductList = () => {
       });
       if (data.success) {
         await refreshAllProducts();
-        toast.success('Stock atualizado!');
+        toast.success('Estoque atualizado!');
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error('Erro ao atualizar stock');
+      toast.error('Erro ao atualizar estoque');
     }
   };
 
@@ -265,20 +252,16 @@ const ProductList = () => {
   }
 
   return (
-    <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll bg-gray-50'>
+    <div className='flex-1 h-[95vh] overflow-y-auto bg-gray-50'>
       <div className='w-full md:p-8 p-4'>
         
-        {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* HEADER */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className='mb-6'>
           <h1 className='text-2xl font-bold text-gray-900'>Gestão de Produtos</h1>
           <p className='text-gray-500 mt-1'>Gerencie o inventário da sua loja</p>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* ESTATÍSTICAS RÁPIDAS */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-6'>
           <div className='bg-white rounded-xl p-4 border border-gray-200 shadow-sm'>
             <div className='flex items-center gap-3'>
@@ -322,7 +305,7 @@ const ProductList = () => {
                 <p className='text-2xl font-bold text-orange-600'>
                   {allProducts.filter(p => p.inStock && (p.stock || 0) <= 3 && (p.stock || 0) > 0).length}
                 </p>
-                <p className='text-xs text-gray-500'>Stock Baixo</p>
+                <p className='text-xs text-gray-500'>Estoque Baixo</p>
               </div>
             </div>
           </div>
@@ -341,9 +324,7 @@ const ProductList = () => {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* CARDS DE GROUPS - SELEÇÃO PRINCIPAL */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* CARDS DE GROUPS */}
         <div className='mb-6'>
           <h2 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'>
             <Filter className='w-4 h-4' />
@@ -352,10 +333,7 @@ const ProductList = () => {
           <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>
             {/* Card "Todos" */}
             <button
-              onClick={() => {
-                setSelectedGroup('');
-                setFilterCategory('');
-              }}
+              onClick={() => { setSelectedGroup(''); setFilterCategory(''); }}
               className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                 !selectedGroup 
                   ? 'border-primary bg-primary/5 shadow-md' 
@@ -380,7 +358,6 @@ const ProductList = () => {
               )}
             </button>
 
-            {/* Cards dos Groups */}
             {groups.map(group => {
               const stats = getGroupStats(group.slug);
               const isSelected = selectedGroup === group.slug;
@@ -388,10 +365,7 @@ const ProductList = () => {
               return (
                 <button
                   key={group.id}
-                  onClick={() => {
-                    setSelectedGroup(isSelected ? '' : group.slug);
-                    setFilterCategory('');
-                  }}
+                  onClick={() => { setSelectedGroup(isSelected ? '' : group.slug); setFilterCategory(''); }}
                   className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                     isSelected 
                       ? 'border-primary bg-primary/5 shadow-md' 
@@ -400,11 +374,7 @@ const ProductList = () => {
                 >
                   <div className='flex items-center gap-3'>
                     <div className='w-10 h-10 rounded-lg overflow-hidden bg-gray-100'>
-                      <img 
-                        src={group.image} 
-                        alt={group.name}
-                        className='w-full h-full object-cover'
-                      />
+                      <img src={group.image} alt={group.name} className='w-full h-full object-cover' />
                     </div>
                     <div className='flex-1 min-w-0'>
                       <p className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
@@ -430,9 +400,7 @@ const ProductList = () => {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* BARRA DE FILTROS SECUNDÁRIOS */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* BARRA DE FILTROS */}
         <div className='bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm'>
           <div className='flex flex-col lg:flex-row gap-4'>
             {/* Busca */}
@@ -440,7 +408,7 @@ const ProductList = () => {
               <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' />
               <input
                 type='text'
-                placeholder='Buscar por nome, categoria, cor...'
+                placeholder='Buscar por nome, SKU, categoria, cor...'
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className='w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
@@ -457,7 +425,6 @@ const ProductList = () => {
 
             {/* Filtros em linha */}
             <div className='flex flex-wrap items-center gap-3'>
-              {/* Categoria (filtrado pelo group selecionado) */}
               <select
                 value={filterCategory}
                 onChange={e => setFilterCategory(e.target.value)}
@@ -471,7 +438,6 @@ const ProductList = () => {
                 ))}
               </select>
 
-              {/* Família */}
               <select
                 value={filterFamily}
                 onChange={e => setFilterFamily(e.target.value)}
@@ -483,7 +449,6 @@ const ProductList = () => {
                 ))}
               </select>
 
-              {/* Status */}
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value)}
@@ -492,11 +457,10 @@ const ProductList = () => {
                 <option value=''>Todos Status</option>
                 <option value='active'>✓ Ativos</option>
                 <option value='inactive'>✗ Inativos</option>
-                <option value='low-stock'>⚠ Stock Baixo</option>
+                <option value='low-stock'>⚠ Estoque Baixo</option>
                 <option value='out-of-stock'>✗ Esgotados</option>
               </select>
 
-              {/* Toggle principais */}
               <label className='flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200'>
                 <input
                   type='checkbox'
@@ -507,7 +471,6 @@ const ProductList = () => {
                 <span className='text-sm text-gray-700 whitespace-nowrap'>Só principais</span>
               </label>
 
-              {/* View Mode Toggle */}
               <div className='flex items-center border border-gray-300 rounded-lg overflow-hidden'>
                 <button
                   onClick={() => setViewMode('table')}
@@ -525,7 +488,6 @@ const ProductList = () => {
                 </button>
               </div>
 
-              {/* Limpar filtros */}
               {hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
@@ -562,7 +524,7 @@ const ProductList = () => {
               )}
               {filterStatus && (
                 <span className='inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full'>
-                  {filterStatus === 'active' ? 'Ativos' : filterStatus === 'inactive' ? 'Inativos' : filterStatus === 'low-stock' ? 'Stock Baixo' : 'Esgotados'}
+                  {filterStatus === 'active' ? 'Ativos' : filterStatus === 'inactive' ? 'Inativos' : filterStatus === 'low-stock' ? 'Estoque Baixo' : 'Esgotados'}
                   <button onClick={() => setFilterStatus('')}><X className='w-3 h-3' /></button>
                 </span>
               )}
@@ -582,9 +544,7 @@ const ProductList = () => {
           )}
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* CONTADOR DE RESULTADOS */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* CONTADOR */}
         <div className='flex items-center justify-between mb-4'>
           <p className='text-sm text-gray-600'>
             Mostrando <span className='font-semibold text-gray-900'>{filteredProducts.length}</span> 
@@ -592,9 +552,7 @@ const ProductList = () => {
           </p>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* LISTA DE PRODUTOS - TABELA */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ TABELA ═══ */}
         {viewMode === 'table' ? (
           <div className='bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden'>
             <div className='overflow-x-auto'>
@@ -605,7 +563,7 @@ const ProductList = () => {
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider'>Cor</th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell'>Categoria</th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell'>Preço</th>
-                    <th className='px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider'>Stock</th>
+                    <th className='px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider'>Estoque</th>
                     <th className='px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider'>Status</th>
                     <th className='px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider'>Ações</th>
                   </tr>
@@ -617,7 +575,6 @@ const ProductList = () => {
                     const currentStock = product.stock || 0;
                     const isLowStock = currentStock > 0 && currentStock <= 3;
                     const isMainVariant = product.isMainVariant !== false;
-                    // 🆕 Verificar se tem cor dupla
                     const hasDualColor = product.colorCode && product.colorCode2 && product.colorCode !== product.colorCode2;
 
                     return (
@@ -630,17 +587,16 @@ const ProductList = () => {
                         {/* Produto */}
                         <td className='px-4 py-3'>
                           <div className='flex items-center gap-3'>
+                            {/* 🆕 Imagem SEM blur/grayscale — apenas badge de inativo */}
                             <div className='relative w-14 h-14 rounded-lg border border-gray-200 bg-white overflow-hidden flex-shrink-0'>
                               <img
                                 src={product.image[0]}
                                 alt={product.name}
-                                className={`w-full h-full object-contain p-1 ${
-                                  !isActive ? 'opacity-40 grayscale' : ''
-                                }`}
+                                className='w-full h-full object-contain p-1'
                               />
                               {!isActive && (
-                                <div className='absolute inset-0 flex items-center justify-center bg-black/10'>
-                                  <EyeOff className='w-4 h-4 text-gray-500' />
+                                <div className='absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[9px] font-bold text-center py-0.5'>
+                                  INATIVO
                                 </div>
                               )}
                             </div>
@@ -653,16 +609,38 @@ const ProductList = () => {
                                   <span className='px-1.5 py-0.5 bg-gray-200 text-gray-500 text-[10px] font-bold rounded'>V</span>
                                 )}
                               </div>
-                              {product.productFamily && (
-                                <p className='text-xs text-gray-500 mt-0.5'>
-                                  {product.productFamily}
-                                </p>
+                              {/* 🆕 SKU + Família */}
+                              <div className='flex items-center gap-2 mt-0.5'>
+                                {product.sku && (
+                                  <span className='text-[11px] text-gray-400 font-mono'>{product.sku}</span>
+                                )}
+                                {product.sku && product.productFamily && (
+                                  <span className='text-gray-300'>·</span>
+                                )}
+                                {product.productFamily && (
+                                  <span className='text-xs text-gray-500'>{product.productFamily}</span>
+                                )}
+                              </div>
+                              {/* 🆕 Peso + Dimensões (compacto) */}
+                              {(product.weight || product.dimensions?.length) && (
+                                <div className='flex items-center gap-2 mt-0.5'>
+                                  {product.weight && (
+                                    <span className='text-[10px] text-gray-400'>
+                                      {product.weight}g
+                                    </span>
+                                  )}
+                                  {product.dimensions?.length && (
+                                    <span className='text-[10px] text-gray-400'>
+                                      {product.dimensions.length}×{product.dimensions.width}×{product.dimensions.height}cm
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
                         </td>
 
-                        {/* 🆕 Cor - Atualizado para suportar dual colors */}
+                        {/* Cor */}
                         <td className='px-4 py-3'>
                           {product.colorCode ? (
                             <div className='flex items-center gap-2'>
@@ -705,7 +683,7 @@ const ProductList = () => {
                           </div>
                         </td>
 
-                        {/* Stock */}
+                        {/* Estoque */}
                         <td className='px-4 py-3'>
                           <div className='flex flex-col items-center gap-1'>
                             <div className='flex items-center gap-1'>
@@ -818,9 +796,7 @@ const ProductList = () => {
             )}
           </div>
         ) : (
-          /* ═══════════════════════════════════════════════════════════════════ */
-          /* LISTA DE PRODUTOS - GRID */
-          /* ═══════════════════════════════════════════════════════════════════ */
+          /* ═══ GRID ═══ */
           <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'>
             {filteredProducts.map(product => {
               const isUpdating = updatingProducts.has(product._id);
@@ -834,14 +810,14 @@ const ProductList = () => {
                   key={product._id}
                   className={`bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all ${
                     isUpdating ? 'opacity-50' : ''
-                  } ${!isActive ? 'opacity-75' : ''}`}
+                  }`}
                 >
-                  {/* Imagem */}
+                  {/* 🆕 Imagem SEM blur/grayscale */}
                   <div className='relative aspect-square bg-gray-50 p-4'>
                     <img
                       src={product.image[0]}
                       alt={product.name}
-                      className={`w-full h-full object-contain ${!isActive ? 'grayscale opacity-50' : ''}`}
+                      className='w-full h-full object-contain'
                     />
                     
                     {/* Badges */}
@@ -851,7 +827,10 @@ const ProductList = () => {
                       ) : (
                         <span className='px-2 py-0.5 bg-gray-500 text-white text-[10px] font-bold rounded'>VARIANTE</span>
                       )}
-                      {currentStock === 0 && (
+                      {!isActive && (
+                        <span className='px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded'>INATIVO</span>
+                      )}
+                      {currentStock === 0 && isActive && (
                         <span className='px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded'>ESGOTADO</span>
                       )}
                       {isLowStock && (
@@ -859,7 +838,7 @@ const ProductList = () => {
                       )}
                     </div>
 
-                    {/* 🆕 Cor - Atualizado para suportar dual colors */}
+                    {/* Cor */}
                     {product.colorCode && (
                       <ColorBall
                         code1={product.colorCode}
@@ -887,7 +866,14 @@ const ProductList = () => {
                   {/* Info */}
                   <div className='p-3'>
                     <p className='font-medium text-gray-900 text-sm truncate'>{product.name}</p>
-                    <p className='text-xs text-gray-500 truncate mt-0.5'>{product.category}</p>
+                    <div className='flex items-center gap-2 mt-0.5'>
+                      {product.sku && (
+                        <span className='text-[10px] text-gray-400 font-mono'>{product.sku}</span>
+                      )}
+                      {!product.sku && (
+                        <span className='text-xs text-gray-500 truncate'>{product.category}</span>
+                      )}
+                    </div>
                     
                     <div className='flex items-center justify-between mt-2'>
                       <p className='font-bold text-primary'>{currency}{product.offerPrice.toFixed(2)}</p>

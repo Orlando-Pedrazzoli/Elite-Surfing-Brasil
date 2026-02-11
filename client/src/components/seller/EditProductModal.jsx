@@ -32,7 +32,7 @@ const PRESET_DUAL_COLORS = [
   { name: 'Preto/Vermelho', code1: '#000000', code2: '#dc2333' },
 ];
 
-// 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
+// Componente para renderizar bolinha de cor
 const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }) => {
   const isDual = code2 && code2 !== code1;
   const isLight = (code) => {
@@ -61,7 +61,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
       title={title}
     >
       {isDual ? (
-        // Bolinha dividida na diagonal
         <div 
           className='w-full h-full rounded-full overflow-hidden'
           style={{
@@ -70,7 +69,6 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
           }}
         />
       ) : (
-        // Bolinha simples
         <div 
           className='w-full h-full rounded-full'
           style={{ 
@@ -95,13 +93,18 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   // CAMPOS DE STOCK
   const [stock, setStock] = useState('');
 
+  // 🆕 SKU + PESO + DIMENSÕES
+  const [sku, setSku] = useState('');
+  const [weight, setWeight] = useState('');
+  const [dimensions, setDimensions] = useState({ length: '', width: '', height: '' });
+
   // CAMPOS DE FAMÍLIA/COR
   const [productFamily, setProductFamily] = useState('');
   const [hasColor, setHasColor] = useState(false);
   const [color, setColor] = useState('');
   const [colorCode, setColorCode] = useState('#000000');
   
-  // 🆕 COR DUPLA
+  // COR DUPLA
   const [isDualColor, setIsDualColor] = useState(false);
   const [colorCode2, setColorCode2] = useState('#2563EB');
   
@@ -115,10 +118,19 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       setPrice(product.price.toString());
       setOfferPrice(product.offerPrice.toString());
       
-      // Carregar campos de stock
+      // Stock
       setStock((product.stock || 0).toString());
       
-      // Carregar campos de família/cor
+      // 🆕 SKU + Peso + Dimensões
+      setSku(product.sku || '');
+      setWeight(product.weight ? product.weight.toString() : '');
+      setDimensions({
+        length: product.dimensions?.length ? product.dimensions.length.toString() : '',
+        width: product.dimensions?.width ? product.dimensions.width.toString() : '',
+        height: product.dimensions?.height ? product.dimensions.height.toString() : '',
+      });
+      
+      // Família/cor
       setProductFamily(product.productFamily || '');
       setIsMainVariant(product.isMainVariant !== false);
       
@@ -127,7 +139,6 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         setColor(product.color || '');
         setColorCode(product.colorCode || '#000000');
         
-        // 🆕 Carregar segunda cor se existir
         if (product.colorCode2 && product.colorCode2 !== product.colorCode) {
           setIsDualColor(true);
           setColorCode2(product.colorCode2);
@@ -155,14 +166,25 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       .replace(/(^-|-$)/g, '');
   };
 
-  // 🎯 SELECIONAR COR SIMPLES
+  // 🆕 GERAR SKU AUTOMÁTICO
+  const generateSku = () => {
+    const groupPrefix = {
+      decks: 'DK', leashes: 'LS', capas: 'CP', sarcofagos: 'SF',
+      bodyboard: 'BB', sup: 'SP', acessorios: 'AC', outlet: 'OT',
+    };
+    const prefix = groupPrefix[product.group] || 'XX';
+    const random = Math.floor(1000 + Math.random() * 9000);
+    setSku(`ES-${prefix}-${random}`);
+  };
+
+  // SELECIONAR COR SIMPLES
   const selectPresetColor = (preset) => {
     setColor(preset.name);
     setColorCode(preset.code);
     setIsDualColor(false);
   };
 
-  // 🆕 SELECIONAR COR DUPLA
+  // SELECIONAR COR DUPLA
   const selectPresetDualColor = (preset) => {
     setColor(preset.name);
     setColorCode(preset.code1);
@@ -176,7 +198,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
     try {
       if (stock === '' || parseInt(stock) < 0) {
-        toast.error('Defina a quantidade em stock');
+        toast.error('Defina a quantidade em estoque');
         setIsSubmitting(false);
         return;
       }
@@ -195,9 +217,21 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         offerPrice: parseFloat(offerPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
+        // 🆕 SKU
+        sku: sku.trim() || null,
+        // 🆕 Peso
+        weight: weight ? Number(weight) : null,
+        // 🆕 Dimensões
+        dimensions: (dimensions.length || dimensions.width || dimensions.height)
+          ? {
+              length: Number(dimensions.length) || 0,
+              width: Number(dimensions.width) || 0,
+              height: Number(dimensions.height) || 0,
+            }
+          : null,
       };
 
-      // Adicionar dados de família/cor
+      // Dados de família/cor
       if (productFamily.trim()) {
         productData.productFamily = generateFamilySlug(productFamily);
       } else {
@@ -208,14 +242,12 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         productData.color = color;
         productData.colorCode = colorCode;
         
-        // 🆕 Adicionar segunda cor se for dual
         if (isDualColor && colorCode2) {
           productData.colorCode2 = colorCode2;
         } else {
           productData.colorCode2 = null;
         }
         
-        // Se tem cor mas não tem família, usar o nome base como família
         if (!productFamily.trim()) {
           const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
           if (baseName) {
@@ -232,7 +264,6 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       formData.append('id', product._id);
       formData.append('productData', JSON.stringify(productData));
 
-      // Adicionar apenas as novas imagens
       for (let i = 0; i < files.length; i++) {
         if (files[i]) {
           formData.append('images', files[i]);
@@ -240,9 +271,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       }
 
       const { data } = await axios.post('/api/product/update', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       if (data.success) {
@@ -262,13 +291,18 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'>
-      <div className='bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'>
+      <div className='bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto'>
         {/* Header */}
-        <div className='sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10'>
-          <h2 className='text-xl font-bold text-gray-800'>Editar Produto</h2>
+        <div className='sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 rounded-t-xl'>
+          <div>
+            <h2 className='text-xl font-bold text-gray-800'>Editar Produto</h2>
+            {product.sku && (
+              <p className='text-xs text-gray-400 font-mono mt-0.5'>{product.sku}</p>
+            )}
+          </div>
           <button
             onClick={onClose}
-            className='text-gray-500 hover:text-gray-700 transition-colors'
+            className='text-gray-500 hover:text-gray-700 transition-colors p-1 hover:bg-gray-100 rounded-lg'
             disabled={isSubmitting}
           >
             <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -279,20 +313,20 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className='p-6 space-y-5'>
-          {/* Product Images */}
+          {/* Imagens do Produto */}
           <div>
             <p className='text-base font-medium mb-2'>Imagens do Produto</p>
             <p className='text-sm text-gray-600 mb-3'>
               Imagens atuais serão mantidas se não adicionar novas
             </p>
 
-            {/* Current Images Preview */}
+            {/* Imagens Atuais */}
             <div className='mb-3 flex flex-wrap gap-2'>
               {product.image.map((img, index) => (
                 <div key={index} className='relative'>
                   <img
                     src={img}
-                    alt={`Current ${index}`}
+                    alt={`Atual ${index}`}
                     className='w-20 h-20 object-contain border border-gray-300 rounded-lg p-1'
                   />
                   <div className='absolute -top-1 -right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full'>
@@ -302,10 +336,10 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               ))}
             </div>
 
-            {/* New Images Upload */}
+            {/* Upload Novas Imagens */}
             <div className='flex flex-wrap items-center gap-3'>
               {Array(8).fill('').map((_, index) => (
-                <label key={index} htmlFor={`image${index}`}>
+                <label key={index} htmlFor={`edit-image${index}`}>
                   <input
                     onChange={e => {
                       const updatedFiles = [...files];
@@ -313,15 +347,16 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                       setFiles(updatedFiles);
                     }}
                     type='file'
-                    id={`image${index}`}
+                    id={`edit-image${index}`}
                     hidden
+                    accept='image/*'
                     disabled={isSubmitting}
                   />
                   <div className='relative'>
                     <img
                       className='max-w-24 cursor-pointer border border-gray-300 rounded-lg p-2'
                       src={files[index] ? URL.createObjectURL(files[index]) : assets.upload_area}
-                      alt='uploadArea'
+                      alt='Upload'
                       width={100}
                       height={100}
                     />
@@ -336,99 +371,215 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             </div>
           </div>
 
-          {/* Product Name */}
+          {/* Nome do Produto */}
           <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='product-name'>Nome do Produto</label>
+            <label className='text-base font-medium' htmlFor='edit-product-name'>Nome do Produto</label>
             <input
               onChange={e => setName(e.target.value)}
               value={name}
-              id='product-name'
+              id='edit-product-name'
               type='text'
               placeholder='Digite o nome'
-              className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors'
+              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
               required
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Product Description */}
+          {/* Descrição */}
           <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='product-description'>Descrição do Produto</label>
+            <label className='text-base font-medium' htmlFor='edit-product-description'>Descrição do Produto</label>
             <textarea
               onChange={e => setDescription(e.target.value)}
               value={description}
-              id='product-description'
+              id='edit-product-description'
               rows={4}
-              className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors resize-none'
+              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors resize-none'
               placeholder='Digite a descrição'
               disabled={isSubmitting}
             ></textarea>
           </div>
 
-          {/* Category */}
+          {/* Categoria */}
           <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='category'>Categoria</label>
+            <label className='text-base font-medium' htmlFor='edit-category'>Categoria</label>
             <select
               onChange={e => setCategory(e.target.value)}
               value={category}
-              id='category'
-              className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors'
+              id='edit-category'
+              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
               disabled={isSubmitting}
             >
               <option value=''>Selecione a Categoria</option>
               {categories.map((item, index) => (
-                <option key={index} value={item.path}>{item.path}</option>
+                <option key={index} value={item.path}>{item.text}</option>
               ))}
             </select>
           </div>
 
-          {/* Prices */}
+          {/* Preços */}
           <div className='flex items-center gap-5 flex-wrap'>
             <div className='flex-1 flex flex-col gap-1 min-w-[120px]'>
-              <label className='text-base font-medium' htmlFor='product-price'>Preço Original (€)</label>
+              <label className='text-base font-medium' htmlFor='edit-product-price'>Preço Original (R$)</label>
               <input
                 onChange={e => setPrice(e.target.value)}
                 value={price}
-                id='product-price'
+                id='edit-product-price'
                 type='number'
                 step='0.01'
                 placeholder='0.00'
-                className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors'
+                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
                 required
                 disabled={isSubmitting}
               />
             </div>
             <div className='flex-1 flex flex-col gap-1 min-w-[120px]'>
-              <label className='text-base font-medium' htmlFor='offer-price'>Preço de Venda (€)</label>
+              <label className='text-base font-medium' htmlFor='edit-offer-price'>Preço de Venda (R$)</label>
               <input
                 onChange={e => setOfferPrice(e.target.value)}
                 value={offerPrice}
-                id='offer-price'
+                id='edit-offer-price'
                 type='number'
                 step='0.01'
                 placeholder='0.00'
-                className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors'
+                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
                 required
                 disabled={isSubmitting}
               />
             </div>
           </div>
 
-          {/* STOCK */}
+          {/* Estoque */}
           <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='stock'>Quantidade em Stock</label>
+            <label className='text-base font-medium' htmlFor='edit-stock'>Quantidade em Estoque</label>
             <input
               onChange={e => setStock(e.target.value)}
               value={stock}
-              id='stock'
+              id='edit-stock'
               type='number'
               min='0'
               placeholder='0'
-              className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors max-w-[200px]'
+              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors max-w-[200px]'
               required
               disabled={isSubmitting}
             />
             <p className='text-xs text-gray-500'>Defina 0 para produto esgotado</p>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* 🆕 CÓDIGO, PESO E DIMENSÕES                               */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          <div className='border border-gray-200 bg-gray-50/50 rounded-lg p-4 space-y-5'>
+            <div className='flex items-center gap-2'>
+              <svg className='w-5 h-5 text-gray-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' />
+              </svg>
+              <h3 className='text-base font-semibold text-gray-800'>
+                Código, Peso e Dimensões
+              </h3>
+            </div>
+            <p className='text-xs text-gray-500 -mt-3'>
+              Informações para identificação e cálculo de frete
+            </p>
+
+            {/* SKU + Peso */}
+            <div className='flex items-start gap-4 flex-wrap'>
+              {/* SKU */}
+              <div className='flex-1 flex flex-col gap-1 min-w-[200px]'>
+                <label className='text-sm font-medium text-gray-700' htmlFor='edit-sku'>
+                  Código do Produto (SKU)
+                </label>
+                <div className='flex gap-2'>
+                  <input
+                    onChange={e => setSku(e.target.value.toUpperCase())}
+                    value={sku}
+                    id='edit-sku'
+                    type='text'
+                    placeholder='ES-DK-1234'
+                    className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono uppercase bg-white'
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type='button'
+                    onClick={generateSku}
+                    className='px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50'
+                    title='Gerar código automático'
+                    disabled={isSubmitting}
+                  >
+                    Gerar
+                  </button>
+                </div>
+                <p className='text-xs text-gray-500'>Código único do produto</p>
+              </div>
+
+              {/* Peso */}
+              <div className='flex flex-col gap-1 min-w-[160px]'>
+                <label className='text-sm font-medium text-gray-700' htmlFor='edit-weight'>
+                  Peso Líquido (gramas)
+                </label>
+                <input
+                  onChange={e => setWeight(e.target.value)}
+                  value={weight}
+                  id='edit-weight'
+                  type='number'
+                  min='0'
+                  step='1'
+                  placeholder='0'
+                  className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                  disabled={isSubmitting}
+                />
+                {weight && Number(weight) > 0 ? (
+                  <p className='text-xs text-gray-500'>= {(Number(weight) / 1000).toFixed(2)} kg</p>
+                ) : (
+                  <p className='text-xs text-gray-500'>Para cálculo de frete</p>
+                )}
+              </div>
+            </div>
+
+            {/* Dimensões */}
+            <div className='flex flex-col gap-1'>
+              <label className='text-sm font-medium text-gray-700'>
+                Dimensões da Embalagem (cm)
+              </label>
+              <div className='flex items-center gap-3'>
+                <div className='flex-1'>
+                  <input
+                    type='number' min='0' step='0.1'
+                    value={dimensions.length}
+                    onChange={e => setDimensions(prev => ({ ...prev, length: e.target.value }))}
+                    placeholder='0'
+                    className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                    disabled={isSubmitting}
+                  />
+                  <p className='text-xs text-gray-400 mt-1 text-center'>Comprimento</p>
+                </div>
+                <span className='text-gray-300 font-bold text-lg'>×</span>
+                <div className='flex-1'>
+                  <input
+                    type='number' min='0' step='0.1'
+                    value={dimensions.width}
+                    onChange={e => setDimensions(prev => ({ ...prev, width: e.target.value }))}
+                    placeholder='0'
+                    className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                    disabled={isSubmitting}
+                  />
+                  <p className='text-xs text-gray-400 mt-1 text-center'>Largura</p>
+                </div>
+                <span className='text-gray-300 font-bold text-lg'>×</span>
+                <div className='flex-1'>
+                  <input
+                    type='number' min='0' step='0.1'
+                    value={dimensions.height}
+                    onChange={e => setDimensions(prev => ({ ...prev, height: e.target.value }))}
+                    placeholder='0'
+                    className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
+                    disabled={isSubmitting}
+                  />
+                  <p className='text-xs text-gray-400 mt-1 text-center'>Altura</p>
+                </div>
+              </div>
+              <p className='text-xs text-gray-500'>Para cálculo de frete (Correios / transportadoras)</p>
+            </div>
           </div>
 
           {/* FAMÍLIA DE PRODUTOS */}
@@ -437,14 +588,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
             {/* Nome da Família */}
             <div className='flex flex-col gap-1 mb-4'>
-              <label className='text-base font-medium' htmlFor='product-family'>Nome da Família</label>
+              <label className='text-base font-medium' htmlFor='edit-product-family'>Nome da Família</label>
               <input
                 onChange={e => setProductFamily(e.target.value)}
                 value={productFamily}
-                id='product-family'
+                id='edit-product-family'
                 type='text'
                 placeholder='Ex: Deck J-Bay (deixe em branco se não aplicável)'
-                className='outline-none py-2.5 px-3 rounded border border-gray-500/40 focus:border-primary transition-colors'
+                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
                 disabled={isSubmitting}
               />
               <p className='text-xs text-gray-500'>Produtos com o mesmo nome de família serão agrupados</p>
@@ -454,13 +605,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             <div className='flex items-center gap-3 mb-4'>
               <input
                 type='checkbox'
-                id='hasColor'
+                id='edit-hasColor'
                 checked={hasColor}
                 onChange={e => setHasColor(e.target.checked)}
                 className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                 disabled={isSubmitting}
               />
-              <label htmlFor='hasColor' className='text-base font-medium cursor-pointer'>
+              <label htmlFor='edit-hasColor' className='text-base font-medium cursor-pointer'>
                 Este produto tem uma cor específica
               </label>
             </div>
@@ -469,12 +620,12 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             {hasColor && (
               <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
                 
-                {/* 🆕 Toggle Cor Simples / Dupla */}
+                {/* Toggle Cor Simples / Dupla */}
                 <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
                   <label className='flex items-center gap-2 cursor-pointer'>
                     <input
                       type='radio'
-                      name='colorType'
+                      name='editColorType'
                       checked={!isDualColor}
                       onChange={() => setIsDualColor(false)}
                       className='w-4 h-4 text-primary focus:ring-primary'
@@ -486,7 +637,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                   <label className='flex items-center gap-2 cursor-pointer'>
                     <input
                       type='radio'
-                      name='colorType'
+                      name='editColorType'
                       checked={isDualColor}
                       onChange={() => setIsDualColor(true)}
                       className='w-4 h-4 text-primary focus:ring-primary'
@@ -513,9 +664,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                   />
                 </div>
 
-                {/* 🆕 Seletor de Cores - Simples ou Dupla */}
+                {/* Seletor de Cores */}
                 {!isDualColor ? (
-                  // COR ÚNICA
                   <>
                     <div className='flex flex-col gap-1'>
                       <label className='text-sm font-medium'>Código da Cor</label>
@@ -537,8 +687,6 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                         />
                       </div>
                     </div>
-
-                    {/* Cores Rápidas - Simples */}
                     <div>
                       <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
                       <div className='flex flex-wrap gap-2'>
@@ -556,23 +704,19 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                     </div>
                   </>
                 ) : (
-                  // 🆕 DUAS CORES
                   <>
                     <div className='grid grid-cols-2 gap-4'>
-                      {/* Cor 1 */}
                       <div className='flex flex-col gap-1'>
                         <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
                         <div className='flex items-center gap-2'>
                           <input
-                            type='color'
-                            value={colorCode}
+                            type='color' value={colorCode}
                             onChange={e => setColorCode(e.target.value)}
                             className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
                             disabled={isSubmitting}
                           />
                           <input
-                            type='text'
-                            value={colorCode}
+                            type='text' value={colorCode}
                             onChange={e => setColorCode(e.target.value)}
                             placeholder='#000000'
                             className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
@@ -580,21 +724,17 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                           />
                         </div>
                       </div>
-                      
-                      {/* Cor 2 */}
                       <div className='flex flex-col gap-1'>
                         <label className='text-sm font-medium'>Cor 2 (Direita)</label>
                         <div className='flex items-center gap-2'>
                           <input
-                            type='color'
-                            value={colorCode2}
+                            type='color' value={colorCode2}
                             onChange={e => setColorCode2(e.target.value)}
                             className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
                             disabled={isSubmitting}
                           />
                           <input
-                            type='text'
-                            value={colorCode2}
+                            type='text' value={colorCode2}
                             onChange={e => setColorCode2(e.target.value)}
                             placeholder='#2563EB'
                             className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
@@ -603,8 +743,6 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                         </div>
                       </div>
                     </div>
-
-                    {/* Cores Rápidas - Duplas */}
                     <div>
                       <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
                       <div className='flex flex-wrap gap-2'>
@@ -647,14 +785,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             <div className='flex items-center gap-3 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200'>
               <input
                 type='checkbox'
-                id='isMainVariant'
+                id='edit-isMainVariant'
                 checked={isMainVariant}
                 onChange={e => setIsMainVariant(e.target.checked)}
                 className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                 disabled={isSubmitting}
               />
               <div>
-                <label htmlFor='isMainVariant' className='text-base font-medium cursor-pointer'>
+                <label htmlFor='edit-isMainVariant' className='text-base font-medium cursor-pointer'>
                   Produto Principal da Família
                 </label>
                 <p className='text-xs text-gray-600 mt-0.5'>
@@ -664,19 +802,19 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Botões */}
           <div className='flex items-center gap-3 pt-4 border-t border-gray-200'>
             <button
               type='button'
               onClick={onClose}
-              className='flex-1 px-6 py-2.5 bg-gray-200 text-gray-700 font-medium rounded hover:bg-gray-300 transition-colors'
+              className='flex-1 px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors'
               disabled={isSubmitting}
             >
               Cancelar
             </button>
             <button
               type='submit'
-              className='flex-1 px-6 py-2.5 bg-primary text-white font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+              className='flex-1 px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
               disabled={isSubmitting}
             >
               {isSubmitting ? (

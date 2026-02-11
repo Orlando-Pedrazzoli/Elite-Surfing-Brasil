@@ -9,6 +9,11 @@ import ShareProduct from '../components/ShareProduct';
 import { SEO, ProductSchema, BreadcrumbSchema } from '../components/seo';
 import toast from 'react-hot-toast';
 
+// 🆕 NOVOS COMPONENTES
+import ProductPriceDisplay from '../components/ProductPriceDisplay';
+import ProductInfoTabs from '../components/ProductInfoTabs';
+import ShippingCalculator from '../components/ShippingCalculator';
+
 const ProductDetails = () => {
   const {
     products,
@@ -27,13 +32,6 @@ const ProductDetails = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [isDescriptionOpen, setIsDescriptionOpen] = useState(() => {
-    // Aberto por padrão em desktop, fechado em mobile
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 640;
-    }
-    return true;
-  });
   const [reviewStats, setReviewStats] = useState({
     averageRating: 0,
     totalReviews: 0,
@@ -98,7 +96,6 @@ const ProductDetails = () => {
     const fetchFamily = async () => {
       if (product?.productFamily) {
         const family = await getProductFamily(product.productFamily);
-        // Ordenar: produto atual primeiro
         const sorted = [...family].sort((a, b) => {
           if (a._id === product._id) return -1;
           if (b._id === product._id) return 1;
@@ -129,13 +126,13 @@ const ProductDetails = () => {
       ? product.description[0] 
       : product.description;
     return desc?.substring(0, 155) + (desc?.length > 155 ? '...' : '') || 
-      `${product.name} - Compre na Elite Surfing Portugal.`;
+      `${product.name} - Compre na Elite Surfing.`;
   };
 
   const getBreadcrumbs = () => {
     if (!displayProduct) return [];
     return [
-      { name: 'Home', url: '/' },
+      { name: 'Início', url: '/' },
       { name: 'Produtos', url: '/products' },
       { name: displayProduct.category, url: `/products/${displayProduct.category?.toLowerCase()}` },
       { name: displayProduct.name }
@@ -195,7 +192,6 @@ const ProductDetails = () => {
     const newProduct = familyProducts.find(p => p._id === familyProductId);
     if (!newProduct) return;
 
-    // Iniciar transição
     setIsColorTransitioning(true);
     
     setTimeout(() => {
@@ -204,7 +200,6 @@ const ProductDetails = () => {
       setThumbStartIndex(0);
       setQuantity(1);
       
-      // Atualizar URL sem recarregar
       window.history.replaceState(
         null, 
         '', 
@@ -401,41 +396,33 @@ const ProductDetails = () => {
     }
   };
 
-  // ✅ ADICIONAR AO CARRINHO - Adiciona a quantidade selecionada
+  // ✅ ADICIONAR AO CARRINHO
   const handleAddToCart = () => {
     if (isInactive || !displayProduct || availableToAdd <= 0) return;
     
     const newTotal = cartQuantity + quantity;
     
-    // Validar stock
     if (newTotal > currentStock) {
       toast.error(`Apenas ${currentStock} unidade(s) disponível(eis)`);
       return;
     }
     
-    // Usar updateCartItem para definir a quantidade total
     updateCartItem(displayProduct._id, newTotal);
-    
     toast.success(`${quantity} ${quantity === 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho!`);
-    
-    // Reset quantity para 1 após adicionar
     setQuantity(1);
   };
 
-  // ✅ COMPRAR AGORA - Vai para o carrinho (adiciona se ainda não estiver)
+  // ✅ COMPRAR AGORA
   const handleBuyNow = () => {
     if (isInactive || !displayProduct) return;
     
-    // Se ainda pode adicionar, adiciona a quantidade selecionada
     if (availableToAdd > 0 && quantity > 0) {
       const newTotal = cartQuantity + quantity;
-      
       if (newTotal <= currentStock) {
         updateCartItem(displayProduct._id, newTotal);
       }
     }
     
-    // Navegar para o carrinho (mesmo que não tenha adicionado mais)
     navigate('/cart');
   };
 
@@ -505,36 +492,27 @@ const ProductDetails = () => {
     return brightness > 200;
   };
 
-  // Helper: gerar texto de stock de forma clara
+  // Helper: texto de stock
   const getStockText = () => {
     if (isInactive) return 'Produto Indisponível';
-    
-    if (availableToAdd <= 0) {
-      return 'Stock máximo no carrinho';
-    }
-    
-    if (isLowStock || availableToAdd <= 3) {
-      return `Últimas ${availableToAdd} unidades!`;
-    }
-    
-    return `Em Stock - ${availableToAdd} disponíveis`;
+    if (availableToAdd <= 0) return 'Estoque máximo no carrinho';
+    if (isLowStock || availableToAdd <= 3) return `Últimas ${availableToAdd} unidades!`;
+    return `Em Estoque — ${availableToAdd} disponíveis`;
   };
 
-  // Helper: cor do status de stock
   const getStockStatusColor = () => {
     if (isInactive) return 'text-red-700';
     if (availableToAdd <= 0) return 'text-orange-600';
     return 'text-green-700';
   };
 
-  // Helper: cor do indicador de stock
   const getStockIndicatorColor = () => {
     if (isInactive) return 'bg-red-500 animate-pulse shadow-lg shadow-red-500/50';
     if (availableToAdd <= 0) return 'bg-orange-500 shadow-lg shadow-orange-500/50';
     return 'bg-green-500 shadow-lg shadow-green-500/50';
   };
 
-  // Componente para renderizar bolinha de cor (simples ou dupla)
+  // Componente ColorBall (inline)
   const ColorBall = ({ code1, code2, size = 40, isSelected = false, isOutOfStock = false, onClick, title }) => {
     const isDual = code2 && code2 !== code1;
     const isLight1 = isLightColor(code1);
@@ -557,22 +535,17 @@ const ProductDetails = () => {
         style={{ width: size, height: size }}
       >
         {isDual ? (
-          // Bolinha dividida na diagonal
           <div 
             className='w-full h-full rounded-full overflow-hidden'
-            style={{
-              background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
-            }}
+            style={{ background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)` }}
           />
         ) : (
-          // Bolinha simples
           <div 
             className='w-full h-full rounded-full'
             style={{ backgroundColor: code1 || '#ccc' }}
           />
         )}
         
-        {/* X para esgotado */}
         {isOutOfStock && (
           <span className='absolute inset-0 flex items-center justify-center'>
             <svg className='w-5 h-5 text-gray-600 drop-shadow' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
@@ -581,7 +554,6 @@ const ProductDetails = () => {
           </span>
         )}
         
-        {/* Check para selecionado */}
         {isSelected && !isOutOfStock && (
           <span className='absolute inset-0 flex items-center justify-center'>
             <svg className={`w-5 h-5 drop-shadow ${(isLight1 && !isDual) || (isDual && isLight1 && isLight2) ? 'text-gray-800' : 'text-white'}`} viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
@@ -723,7 +695,7 @@ const ProductDetails = () => {
                             : 'border-transparent opacity-70 hover:opacity-100'
                         }`}
                       >
-                        <img src={image} alt={`Thumbnail ${index + 1}`} className='w-12 h-12 sm:w-16 sm:h-16 object-cover' />
+                        <img src={image} alt={`Miniatura ${index + 1}`} className='w-12 h-12 sm:w-16 sm:h-16 object-cover' />
                       </button>
                     ))}
                   </div>
@@ -733,11 +705,13 @@ const ProductDetails = () => {
           </div>
         )}
 
-        {/* Breadcrumbs */}
+        {/* ═══════════════════════════════════════════════ */}
+        {/* 🆕 BREADCRUMBS — PT-BR                         */}
+        {/* ═══════════════════════════════════════════════ */}
         <nav className='text-sm md:text-base mb-6'>
-          <Link to='/' className='hover:text-primary transition-colors duration-200'>Home</Link>
+          <Link to='/' className='hover:text-primary transition-colors duration-200'>Início</Link>
           <span className='mx-2 text-gray-400'>/</span>
-          <Link to='/products' className='hover:text-primary transition-colors duration-200'>Products</Link>
+          <Link to='/products' className='hover:text-primary transition-colors duration-200'>Produtos</Link>
           <span className='mx-2 text-gray-400'>/</span>
           <Link to={`/products/${displayProduct.category.toLowerCase()}`} className='hover:text-primary transition-colors duration-200'>
             {displayProduct.category}
@@ -748,7 +722,9 @@ const ProductDetails = () => {
 
         {/* Product Content */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16'>
-          {/* Images Section */}
+          {/* ═══════════════════════════════════════════════ */}
+          {/* IMAGES SECTION (inalterado)                     */}
+          {/* ═══════════════════════════════════════════════ */}
           <div className='flex flex-col gap-4'>
             {/* Main Image Container */}
             <div className='relative w-full max-w-[450px] h-[350px] sm:h-[450px] mx-auto'>
@@ -758,7 +734,6 @@ const ProductDetails = () => {
                 onScroll={() => handleImageScroll(imageScrollRef)}
                 className='flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide sm:hidden border border-gray-200 rounded-xl shadow-sm relative'
               >
-                {/* Vídeo como primeiro slide (se existir) */}
                 {displayProduct.video && (
                   <div className='relative w-full h-full flex-shrink-0 snap-center bg-black'>
                     <video
@@ -783,7 +758,6 @@ const ProductDetails = () => {
 
               {/* Desktop Main Image */}
               <div className='relative border border-gray-200 w-full h-full rounded-xl overflow-hidden hidden sm:block shadow-sm'>
-                {/* Vídeo Player */}
                 {showVideo && displayProduct.video ? (
                   <video
                     src={displayProduct.video}
@@ -802,8 +776,6 @@ const ProductDetails = () => {
                     onClick={() => openModal(currentImageIndex)}
                   />
                 )}
-
-
 
                 <div className='absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg text-xs opacity-0 hover:opacity-100 transition-opacity'>
                   Clique para ampliar
@@ -829,7 +801,6 @@ const ProductDetails = () => {
 
               {/* Mobile Dots */}
               <div className='flex justify-center gap-2 mt-4 sm:hidden'>
-                {/* Dot do Vídeo */}
                 {displayProduct.video && (
                   <button
                     onClick={() => {
@@ -855,93 +826,84 @@ const ProductDetails = () => {
 
             {/* Desktop Thumbnails */}
             <div className='hidden sm:flex justify-center'>
-                <div className='flex items-center gap-2 max-w-[550px]'>
-                  {displayProduct.image.length > 5 && (
-                    <button onClick={scrollThumbsLeft} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
-                      <img src={assets.arrow_left} alt='Anterior' className='w-4 h-4' />
-                    </button>
-                  )}
+              <div className='flex items-center gap-2 max-w-[550px]'>
+                {displayProduct.image.length > 5 && (
+                  <button onClick={scrollThumbsLeft} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
+                    <img src={assets.arrow_left} alt='Anterior' className='w-4 h-4' />
+                  </button>
+                )}
 
-                  <div className='flex gap-3 overflow-hidden'>
-                    {/* Thumbnail do Vídeo */}
-                    {displayProduct.video && (
-                      <div
-                        onClick={() => { setShowVideo(true); }}
-                        className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 relative ${
-                          showVideo
-                            ? 'border-primary scale-105 shadow-lg'
-                            : 'border-gray-300 hover:scale-105 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className='w-full h-full bg-gray-900 flex items-center justify-center'>
-                          <svg className='w-8 h-8 text-white' fill='currentColor' viewBox='0 0 24 24'>
-                            <path d='M8 5v14l11-7z' />
-                          </svg>
-                        </div>
-                        <div className='absolute bottom-1 left-1 right-1 text-center'>
-                          <span className='text-[10px] text-white bg-black/60 px-1 rounded'>Vídeo</span>
-                        </div>
+                <div className='flex gap-3 overflow-hidden'>
+                  {displayProduct.video && (
+                    <div
+                      onClick={() => { setShowVideo(true); }}
+                      className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 relative ${
+                        showVideo
+                          ? 'border-primary scale-105 shadow-lg'
+                          : 'border-gray-300 hover:scale-105 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className='w-full h-full bg-gray-900 flex items-center justify-center'>
+                        <svg className='w-8 h-8 text-white' fill='currentColor' viewBox='0 0 24 24'>
+                          <path d='M8 5v14l11-7z' />
+                        </svg>
                       </div>
-                    )}
-                    {displayProduct.image.slice(thumbStartIndex, thumbStartIndex + (displayProduct.video ? 4 : 5)).map((image, index) => (
-                      <div
-                        key={thumbStartIndex + index}
-                        onClick={() => { setShowVideo(false); selectThumbnail(thumbStartIndex + index); }}
-                        className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 ${
-                          !showVideo && currentImageIndex === thumbStartIndex + index
-                            ? 'border-primary scale-105 shadow-lg'
-                            : 'border-gray-300 hover:scale-105 hover:border-gray-400'
-                        }`}
-                      >
-                        <img src={image} alt={`Thumbnail ${thumbStartIndex + index + 1}`} className='w-full h-full object-cover transition-transform duration-300' />
+                      <div className='absolute bottom-1 left-1 right-1 text-center'>
+                        <span className='text-[10px] text-white bg-black/60 px-1 rounded'>Vídeo</span>
                       </div>
-                    ))}
-                  </div>
-
-                  {displayProduct.image.length > 5 && (
-                    <button onClick={scrollThumbsRight} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
-                      <img src={assets.arrow_right} alt='Próxima' className='w-4 h-4' />
-                    </button>
+                    </div>
                   )}
+                  {displayProduct.image.slice(thumbStartIndex, thumbStartIndex + (displayProduct.video ? 4 : 5)).map((image, index) => (
+                    <div
+                      key={thumbStartIndex + index}
+                      onClick={() => { setShowVideo(false); selectThumbnail(thumbStartIndex + index); }}
+                      className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 ${
+                        !showVideo && currentImageIndex === thumbStartIndex + index
+                          ? 'border-primary scale-105 shadow-lg'
+                          : 'border-gray-300 hover:scale-105 hover:border-gray-400'
+                      }`}
+                    >
+                      <img src={image} alt={`Miniatura ${thumbStartIndex + index + 1}`} className='w-full h-full object-cover transition-transform duration-300' />
+                    </div>
+                  ))}
                 </div>
-              </div>
 
-            {/* Especificações - Desktop */}
+                {displayProduct.image.length > 5 && (
+                  <button onClick={scrollThumbsRight} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
+                    <img src={assets.arrow_right} alt='Próxima' className='w-4 h-4' />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════ */}
+            {/* 🆕 TABS: Especificações + Informações — Desktop */}
+            {/* ═══════════════════════════════════════════════ */}
             <div className='hidden sm:flex justify-center'>
               <div className='w-full max-w-[550px]'>
-                <button
-                  onClick={() => setIsDescriptionOpen(!isDescriptionOpen)}
-                  className='flex items-center justify-between w-full p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200'
-                >
-                  <h3 className='text-base md:text-lg font-semibold text-gray-900'>Especificações Técnicas</h3>
-                  <svg className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
-                  </svg>
-                </button>
-                {isDescriptionOpen && (
-                  <div className='mt-3 p-3 border border-gray-200 rounded-lg bg-white'>
-                    <ul className='space-y-2'>
-                      {displayProduct.description.map((desc, index) => (
-                        <li key={index} className='flex items-start gap-2 text-gray-700 text-sm'>
-                          <span className='text-primary mt-1 text-xs'>●</span>
-                          <span className='leading-relaxed'>{desc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <ProductInfoTabs product={displayProduct} />
               </div>
             </div>
           </div>
 
-          {/* Product Details */}
+          {/* ═══════════════════════════════════════════════ */}
+          {/* PRODUCT DETAILS SECTION                         */}
+          {/* ═══════════════════════════════════════════════ */}
           <div className='space-y-4'>
-            {/* Título com transição e botão de partilha */}
+            {/* 🆕 Título + SKU + Partilha */}
             <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}>
               <div className='flex items-start justify-between gap-4'>
-                <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight flex-1'>
-                  {displayProduct.name}
-                </h1>
+                <div className='flex-1'>
+                  <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight'>
+                    {displayProduct.name}
+                  </h1>
+                  {/* 🆕 SKU / Código do produto */}
+                  {displayProduct.sku && (
+                    <p className='text-xs text-gray-400 mt-1 font-mono'>
+                      Cód: {displayProduct.sku}
+                    </p>
+                  )}
+                </div>
                 
                 {/* Botão de Partilha */}
                 <ShareProduct product={displayProduct} className="flex-shrink-0 mt-1" />
@@ -969,8 +931,8 @@ const ProductDetails = () => {
                 {!reviewStats.loading && (
                   <span className='text-gray-600 text-sm'>
                     {reviewStats.totalReviews > 0
-                      ? `(${reviewStats.averageRating.toFixed(1)}) ${reviewStats.totalReviews} ${reviewStats.totalReviews === 1 ? 'review' : 'reviews'}`
-                      : '(Sem reviews)'}
+                      ? `(${reviewStats.averageRating.toFixed(1)}) ${reviewStats.totalReviews} ${reviewStats.totalReviews === 1 ? 'avaliação' : 'avaliações'}`
+                      : '(Sem avaliações)'}
                   </span>
                 )}
               </div>
@@ -1008,42 +970,20 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {/* Preço com transição */}
-            <div className={`bg-gray-50 p-3 md:p-4 rounded-lg transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-              <div className='space-y-1'>
-                <p className='text-gray-500 text-sm line-through'>
-                  De: {displayProduct.price.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
-                </p>
-                <p className='text-xl md:text-2xl font-bold text-gray-900'>
-                  {displayProduct.offerPrice.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
-                </p>
-                <p className='text-xs text-gray-600'>(Impostos incluídos)</p>
-              </div>
+            {/* ═══════════════════════════════════════════════ */}
+            {/* 🆕 PREÇO — PIX/Boleto + Cartão + Parcelas     */}
+            {/* ═══════════════════════════════════════════════ */}
+            <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+              <ProductPriceDisplay 
+                price={displayProduct.price}
+                offerPrice={displayProduct.offerPrice}
+                currency={currency}
+              />
             </div>
 
-            {/* Especificações - Mobile */}
+            {/* 🆕 TABS: Especificações + Info — Mobile */}
             <div className='sm:hidden'>
-              <button
-                onClick={() => setIsDescriptionOpen(!isDescriptionOpen)}
-                className='flex items-center justify-between w-full p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200'
-              >
-                <h3 className='text-base md:text-lg font-semibold text-gray-900'>Especificações Técnicas</h3>
-                <svg className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isDescriptionOpen ? 'rotate-180' : ''}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
-                </svg>
-              </button>
-              {isDescriptionOpen && (
-                <div className='mt-3 p-3 border border-gray-200 rounded-lg bg-white'>
-                  <ul className='space-y-2'>
-                    {displayProduct.description.map((desc, index) => (
-                      <li key={index} className='flex items-start gap-2 text-gray-700 text-sm'>
-                        <span className='text-primary mt-1 text-xs'>●</span>
-                        <span className='leading-relaxed'>{desc}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <ProductInfoTabs product={displayProduct} />
             </div>
 
             {/* Stock e Quantidade */}
@@ -1057,7 +997,7 @@ const ProductDetails = () => {
                   </span>
                 </div>
 
-                {/* Seletor de Quantidade - Só mostra se pode adicionar */}
+                {/* Seletor de Quantidade */}
                 {!isInactive && availableToAdd > 0 && (
                   <div>
                     <label className='block text-sm font-semibold text-gray-900 mb-2'>Quantidade</label>
@@ -1087,7 +1027,6 @@ const ProductDetails = () => {
 
             {/* Botões de Ação */}
             <div className='space-y-3'>
-              {/* Botão Adicionar ao Carrinho */}
               <button 
                 onClick={handleAddToCart} 
                 disabled={isInactive || availableToAdd <= 0}
@@ -1097,10 +1036,9 @@ const ProductDetails = () => {
                     : 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
                 }`}
               >
-                {isInactive ? 'Produto Indisponível' : availableToAdd <= 0 ? 'Stock Máximo no Carrinho' : `Adicionar ${quantity} ao Carrinho`}
+                {isInactive ? 'Produto Indisponível' : availableToAdd <= 0 ? 'Estoque Máximo no Carrinho' : `Adicionar ${quantity} ao Carrinho`}
               </button>
               
-              {/* Botão Comprar Agora - Ativo se há itens no carrinho OU pode adicionar */}
               <button 
                 onClick={handleBuyNow} 
                 disabled={isInactive || (!hasItemsInCart && availableToAdd <= 0)}
@@ -1114,33 +1052,47 @@ const ProductDetails = () => {
               </button>
             </div>
 
-            {/* Info Adicional */}
+            {/* ═══════════════════════════════════════════════ */}
+            {/* 🆕 CALCULADORA DE FRETE                        */}
+            {/* ═══════════════════════════════════════════════ */}
+            <ShippingCalculator 
+              product={displayProduct}
+              orderTotal={displayProduct.offerPrice * quantity}
+            />
+
+            {/* 🆕 Info Adicional — PT-BR adaptado */}
             <div className='p-3 md:p-4 rounded-lg bg-blue-50 border border-blue-200'>
               <div className='space-y-2'>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Envio grátis para Portugal Continental</span>
+                  <span className='text-xs md:text-sm text-gray-700'>Frete grátis para Sul e Sudeste acima de R$ 299</span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Garantia de 24 meses</span>
+                  <span className='text-xs md:text-sm text-gray-700'>Parcele em até 10x sem juros no cartão</span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Devolução gratuita em 30 dias</span>
+                  <span className='text-xs md:text-sm text-gray-700'>5% de desconto no PIX ou Boleto</span>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
+                    <span className='text-white text-xs'>✓</span>
+                  </div>
+                  <span className='text-xs md:text-sm text-gray-700'>Troca ou devolução em até 7 dias</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Reviews */}
+        {/* Avaliações */}
         <div className='mt-16'>
           <ProductReviews productId={displayProduct._id} />
         </div>
