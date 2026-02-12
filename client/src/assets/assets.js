@@ -32,6 +32,8 @@ import decks_card from './decks-card1.jpg';
 import decks_card2 from './decktop.png';
 import quilhas_card from './quilhas-card.png';
 import sarcofago_card from './sarcofago.png';
+import capas_card from './capas.png';
+import leash_card from './leash-card.png';
 
 export const assets = {
   logo,
@@ -68,6 +70,8 @@ export const assets = {
   decks_card2,
   quilhas_card,
   sarcofago_card,
+  capas_card,
+  leash_card,
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -379,7 +383,7 @@ export const groups = [
     name: 'Leashes',
     slug: 'leashes',
     description: 'Leashes premium para máxima segurança e durabilidade. Construídos para aguentar as condições mais pesadas.',
-    image: decks_card,
+    image: leash_card,
   },
   {
     id: 'decks',
@@ -393,7 +397,7 @@ export const groups = [
     name: 'Capas',
     slug: 'capas',
     description: 'Proteja sua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
-    image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
+    image: capas_card,
   },
   {
     id: 'sarcofagos',
