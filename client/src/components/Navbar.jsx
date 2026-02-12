@@ -56,6 +56,7 @@ const quilhaSublinks = [
   { text: 'Quilha Shortboard', path: 'Quilha-Shortboard' },
   { text: 'Quilha Longboard', path: 'Quilha-Longboard' },
   { text: 'Quilha SUP', path: 'Quilha-SUP' },
+  { text: 'Chave / Parafuso', path: 'Chave-Parafuso' },
 ];
 
 const Navbar = () => {

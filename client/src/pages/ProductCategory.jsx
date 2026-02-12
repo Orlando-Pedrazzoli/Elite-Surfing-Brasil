@@ -32,10 +32,17 @@ const categoryRedirectMap = {
   'Refletiva-Premium': { group: 'capas', filters: { modelo: 'refletiva-premium' } },
   'Capa-Toalha':       { group: 'capas', filters: { modelo: 'capa-toalha' } },
 
+  // ═══ SARCÓFAGOS ═══
+  'Sarcofago-Combate':       { group: 'sarcofagos', filters: { modelo: 'sarcofago-combate' } },
+  'Sarcofago-Premium':       { group: 'sarcofagos', filters: { modelo: 'sarcofago-premium' } },
+  'Sarcofago-Combate-Rodas': { group: 'sarcofagos', filters: { modelo: 'sarcofago-combate-rodas' } },
+  'Sarcofago-Premium-Rodas': { group: 'sarcofagos', filters: { modelo: 'sarcofago-premium-rodas' } },
+
   // ═══ QUILHAS ═══
   'Quilha-Shortboard': { group: 'quilhas', filters: { tipo: 'shortboard' } },
   'Quilha-Longboard':  { group: 'quilhas', filters: { tipo: 'longboard' } },
   'Quilha-SUP':        { group: 'quilhas', filters: { tipo: 'sup' } },
+  'Chave-Parafuso':    { group: 'quilhas', filters: { tipo: 'chave-parafuso' } },
 
   // ═══ ACESSÓRIOS ═══
   'Racks':           { group: 'acessorios', filters: { tipo: 'racks' } },

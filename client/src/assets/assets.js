@@ -116,8 +116,8 @@ export const filterDefinitions = {
     {
       key: 'modelo',
       label: 'Modelo',
-      parentKey: 'tipo',           // indica que depende de outro filtro
-      parentValue: 'shortboard',   // só relevante quando tipo = shortboard
+      parentKey: 'tipo',
+      parentValue: 'shortboard',
       options: [
         { value: 'maldivas', label: 'Deck Maldivas' },
         { value: 'mentawai', label: 'Deck Mentawai' },
@@ -140,7 +140,6 @@ export const filterDefinitions = {
       key: 'boardType',
       label: 'Tipo de Prancha',
       options: [
-      
         { value: 'shortboard', label: 'Shortboard' },
         { value: 'fish-evolution', label: 'Fish / Evolution' },
         { value: 'fun-minilong', label: 'Fun / Mini Long' },
@@ -219,7 +218,6 @@ export const filterDefinitions = {
         { value: '6-3', label: "6'3" },
         { value: '6-4', label: "6'4" },
         { value: '6-6', label: "6'6" },
-        { value: '6-8', label: "6'8" },
         { value: '6-8', label: "6'8" },
         { value: '7-0', label: "7'0" },
         { value: '7-2', label: "7'2" },
@@ -317,6 +315,7 @@ export const filterDefinitions = {
         { value: 'shortboard', label: 'Quilha Shortboard' },
         { value: 'longboard', label: 'Quilha Longboard' },
         { value: 'sup', label: 'Quilha SUP' },
+        { value: 'chave-parafuso', label: 'Chave / Parafuso' },
       ],
     },
   ],
@@ -384,7 +383,6 @@ export const groups = [
     slug: 'decks',
     description: 'Traction pads de alta performance para todas as condições. Tecnologia EVA premium com texturas que garantem aderência máxima.',
     image: decks_card2,
-  
   },
   {
     id: 'capas',
@@ -450,7 +448,7 @@ export const categories = [
   { text: 'Deck Front', path: 'Deck-Front', group: 'decks' },
   { text: 'Deck SUP', path: 'Deck-SUP', group: 'decks' },
   
- // ═══ LEASHES ═══
+  // ═══ LEASHES ═══
   { text: 'Leash Shortboard', path: 'Leash-Shortboard', group: 'leashes' },
   { text: 'Leash Fish / Evolution', path: 'Leash-Fish-Evolution', group: 'leashes' },
   { text: 'Leash Fun / Mini Long', path: 'Leash-Fun-MiniLong', group: 'leashes' },
@@ -463,10 +461,17 @@ export const categories = [
   { text: 'Refletiva Premium', path: 'Refletiva-Premium', group: 'capas' },
   { text: 'Capa Toalha', path: 'Capa-Toalha', group: 'capas' },
 
+  // ═══ SARCÓFAGOS ═══
+  { text: 'Sarcófago Combate', path: 'Sarcofago-Combate', group: 'sarcofagos' },
+  { text: 'Sarcófago Premium', path: 'Sarcofago-Premium', group: 'sarcofagos' },
+  { text: 'Sarcófago Combate c/ Rodas', path: 'Sarcofago-Combate-Rodas', group: 'sarcofagos' },
+  { text: 'Sarcófago Premium c/ Rodas', path: 'Sarcofago-Premium-Rodas', group: 'sarcofagos' },
+
   // ═══ QUILHAS ═══
   { text: 'Quilha Shortboard', path: 'Quilha-Shortboard', group: 'quilhas' },
   { text: 'Quilha Longboard', path: 'Quilha-Longboard', group: 'quilhas' },
   { text: 'Quilha SUP', path: 'Quilha-SUP', group: 'quilhas' },
+  { text: 'Chave / Parafuso', path: 'Chave-Parafuso', group: 'quilhas' },
 
   // ═══ ACESSÓRIOS ═══
   { text: 'Racks', path: 'Racks', group: 'acessorios' },
@@ -560,12 +565,10 @@ export const filterProductsByFilters = (products, activeFilters) => {
   if (activeKeys.length === 0) return products;
   
   return products.filter(product => {
-    // product.filters pode ser um Map (Mongoose) ou Object
     const productFilters = product.filters instanceof Map 
       ? Object.fromEntries(product.filters) 
       : (product.filters || {});
     
-    // AND entre filtros diferentes, OR dentro do mesmo filtro
     return activeKeys.every(filterKey => {
       const selectedValues = activeFilters[filterKey];
       const productValue = productFilters[filterKey];
@@ -648,6 +651,6 @@ export const features = [
   {
     icon: trust_icon,
     title: 'Compra Segura',
-    description: 'PIX, cartão e boleto com total segurança.',
+    description: 'PIX e cartão de crédito com total segurança.',
   },
 ];
