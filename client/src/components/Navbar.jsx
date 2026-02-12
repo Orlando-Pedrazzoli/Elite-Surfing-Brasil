@@ -14,6 +14,7 @@ const NAV_DEPARTMENTS = [
   { label: 'DECKS', slug: 'decks' },
   { label: 'CAPAS', slug: 'capas' },
   { label: 'SARCÓFAGOS', slug: 'sarcofagos' },
+  { label: 'QUILHAS', slug: 'quilhas' },
 ];
 
 const sarcofagoSublinks = [
@@ -23,10 +24,45 @@ const sarcofagoSublinks = [
   { text: 'Sarcófago Premium c/ Rodas', path: 'Sarcofago-Premium-Rodas' },
 ];
 
+// ═══════════════════════════════════════════════════════════════
+// 🆕 DECKS: 4 tipos principais, Shortboard tem sub-menu flyout
+// ═══════════════════════════════════════════════════════════════
+const deckTypes = [
+  {
+    text: 'Deck Shortboard',
+    path: null, // não navega direto, abre flyout
+    filterPath: '/collections/decks?tipo=shortboard',
+    children: [
+      { text: 'Deck Maldivas', path: 'Deck-Maldivas' },
+      { text: 'Deck Mentawai', path: 'Deck-Mentawai' },
+      { text: 'Deck Fiji Classic', path: 'Deck-Fiji-Classic' },
+      { text: 'Deck Hawaii', path: 'Deck-Hawaii' },
+      { text: 'Deck J-Bay', path: 'Deck-J-Bay' },
+      { text: 'Deck Noronha', path: 'Deck-Noronha' },
+      { text: 'Deck Peniche', path: 'Deck-Peniche' },
+      { text: 'Deck Saquarema', path: 'Deck-Saquarema' },
+      { text: 'Deck Combate', path: 'Deck-Combate' },
+    ],
+  },
+  { text: 'Deck Longboard', path: 'Deck-Longboard' },
+  { text: 'Deck Front', path: 'Deck-Front' },
+  { text: 'Deck SUP', path: 'Deck-SUP' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 QUILHAS: subcategorias
+// ═══════════════════════════════════════════════════════════════
+const quilhaSublinks = [
+  { text: 'Quilha Shortboard', path: 'Quilha-Shortboard' },
+  { text: 'Quilha Longboard', path: 'Quilha-Longboard' },
+  { text: 'Quilha SUP', path: 'Quilha-SUP' },
+];
+
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [mobileSubExpanded, setMobileSubExpanded] = useState(null); // 🆕 Sub-accordion mobile
 
   const location = useLocation();
   const isHomepage = location.pathname === '/';
@@ -80,6 +116,7 @@ const Navbar = () => {
   const handleNavLinkClick = path => {
     setOpen(false);
     setMobileExpanded(null);
+    setMobileSubExpanded(null);
     navigate(path);
   };
 
@@ -94,8 +131,12 @@ const Navbar = () => {
 
   const isTransparent = isHomepage && !scrolled;
 
+  // 🆕 Obter sublinks por slug (excluindo quilhas de acessórios)
   const getSublinks = (slug) => {
     if (slug === 'sarcofagos') return sarcofagoSublinks;
+    if (slug === 'decks') return null; // Decks usa deckTypes com flyout
+    if (slug === 'quilhas') return quilhaSublinks;
+    // Acessórios: filtra removendo quilhas
     return categories.filter(cat => cat.group === slug);
   };
 
@@ -140,8 +181,10 @@ const Navbar = () => {
           <div className='hidden lg:flex items-center justify-center gap-6 xl:gap-8 flex-1 mx-8'>
             {NAV_DEPARTMENTS.map((dept) => {
               const isAllDepts = dept.slug === null;
+              const isDecks = dept.slug === 'decks';
               const sublinks = isAllDepts ? null : getSublinks(dept.slug);
               const collectionPath = dept.slug ? `/collections/${dept.slug}` : null;
+              const hasDropdown = isAllDepts || isDecks || (sublinks && sublinks.length > 0);
 
               return (
                 <div key={dept.label} className='relative group'>
@@ -162,7 +205,7 @@ const Navbar = () => {
                       }`}
                     >
                       {dept.label}
-                      {sublinks && sublinks.length > 0 && (
+                      {hasDropdown && (
                         <ChevronDown className='w-3.5 h-3.5 transition-transform group-hover:rotate-180' />
                       )}
                     </Link>
@@ -186,8 +229,70 @@ const Navbar = () => {
                     </div>
                   )}
 
-                  {/* Dropdown: Subcategorias */}
-                  {!isAllDepts && sublinks && sublinks.length > 0 && (
+                  {/* ═══════════════════════════════════════════ */}
+                  {/* 🆕 Dropdown DECKS: 4 tipos + flyout Shortboard */}
+                  {/* ═══════════════════════════════════════════ */}
+                  {isDecks && (
+                    <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
+                      <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
+                        <Link
+                          to='/collections/decks'
+                          className='block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors border-b border-gray-100'
+                        >
+                          Ver Todos
+                        </Link>
+                        {deckTypes.map((deckType) => {
+                          // Shortboard com flyout
+                          if (deckType.children) {
+                            return (
+                              <div key={deckType.text} className='relative group/sub'>
+                                <Link
+                                  to={deckType.filterPath}
+                                  className='flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
+                                >
+                                  <span>{deckType.text}</span>
+                                  <ChevronRight className='w-4 h-4 text-gray-400' />
+                                </Link>
+                                {/* Flyout lateral */}
+                                <div className='invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute top-0 left-full pl-1 transition-all duration-200 z-50'>
+                                  <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[200px]'>
+                                    <Link
+                                      to={deckType.filterPath}
+                                      className='block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors border-b border-gray-100'
+                                    >
+                                      Ver Todos Shortboard
+                                    </Link>
+                                    {deckType.children.map((child) => (
+                                      <Link
+                                        key={child.path}
+                                        to={`/products/${child.path}`}
+                                        className='block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
+                                      >
+                                        {child.text}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          // Outros tipos (Longboard, Front, SUP) - link direto
+                          return (
+                            <Link
+                              key={deckType.text}
+                              to={`/products/${deckType.path}`}
+                              className='block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
+                            >
+                              {deckType.text}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dropdown: Subcategorias normais (Leashes, Capas, Sarcófagos, Quilhas, Acessórios) */}
+                  {!isAllDepts && !isDecks && sublinks && sublinks.length > 0 && (
                     <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
                       <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
                         <Link
@@ -409,13 +514,17 @@ const Navbar = () => {
                 {/* Departamentos */}
                 {NAV_DEPARTMENTS.map((dept) => {
                   const isAllDepts = dept.slug === null;
+                  const isDecks = dept.slug === 'decks';
                   const sublinks = isAllDepts ? null : getSublinks(dept.slug);
                   const isExpanded = mobileExpanded === dept.label;
 
                   return (
                     <div key={dept.label} className='border-b border-gray-100'>
                       <button
-                        onClick={() => setMobileExpanded(isExpanded ? null : dept.label)}
+                        onClick={() => {
+                          setMobileExpanded(isExpanded ? null : dept.label);
+                          setMobileSubExpanded(null);
+                        }}
                         className='flex items-center justify-between w-full py-3 px-2 text-base font-medium text-gray-700 hover:text-primary transition-colors'
                       >
                         <span>{dept.label.charAt(0) + dept.label.slice(1).toLowerCase()}</span>
@@ -424,21 +533,90 @@ const Navbar = () => {
                         />
                       </button>
 
-                      <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                      <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
                         <div className='pl-4 pb-3 space-y-1'>
-                          {isAllDepts ? (
-                            groups.map((group) => (
+                          {/* TODOS OS DEPARTAMENTOS */}
+                          {isAllDepts && groups.map((group) => (
+                            <Link
+                              key={group.id}
+                              to={`/collections/${group.slug}`}
+                              onClick={() => handleNavLinkClick(`/collections/${group.slug}`)}
+                              className='flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                            >
+                              <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
+                              <span>{group.name}</span>
+                            </Link>
+                          ))}
+
+                          {/* 🆕 DECKS: 4 tipos + sub-accordion Shortboard */}
+                          {isDecks && (
+                            <>
                               <Link
-                                key={group.id}
-                                to={`/collections/${group.slug}`}
-                                onClick={() => handleNavLinkClick(`/collections/${group.slug}`)}
-                                className='flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                to='/collections/decks'
+                                onClick={() => handleNavLinkClick('/collections/decks')}
+                                className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                               >
-                                <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
-                                <span>{group.name}</span>
+                                <ChevronRight className='w-4 h-4' />
+                                <span>Ver Todos</span>
                               </Link>
-                            ))
-                          ) : (
+                              {deckTypes.map((deckType) => {
+                                if (deckType.children) {
+                                  const isSubExpanded = mobileSubExpanded === 'shortboard';
+                                  return (
+                                    <div key={deckType.text}>
+                                      <button
+                                        onClick={() => setMobileSubExpanded(isSubExpanded ? null : 'shortboard')}
+                                        className='flex items-center justify-between w-full py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                      >
+                                        <div className='flex items-center gap-2'>
+                                          <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-90' : ''}`} />
+                                          <span>{deckType.text}</span>
+                                        </div>
+                                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                      </button>
+                                      <div className={`overflow-hidden transition-all duration-300 ${isSubExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className='pl-6 space-y-1 py-1'>
+                                          <Link
+                                            to={deckType.filterPath}
+                                            onClick={() => handleNavLinkClick(deckType.filterPath)}
+                                            className='flex items-center gap-2 py-2 px-3 text-sm text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                          >
+                                            <ChevronRight className='w-3 h-3' />
+                                            <span>Ver Todos Shortboard</span>
+                                          </Link>
+                                          {deckType.children.map((child) => (
+                                            <Link
+                                              key={child.path}
+                                              to={`/products/${child.path}`}
+                                              onClick={() => handleNavLinkClick(`/products/${child.path}`)}
+                                              className='flex items-center gap-2 py-2 px-3 text-sm text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                            >
+                                              <ChevronRight className='w-3 h-3' />
+                                              <span>{child.text}</span>
+                                            </Link>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <Link
+                                    key={deckType.text}
+                                    to={`/products/${deckType.path}`}
+                                    onClick={() => handleNavLinkClick(`/products/${deckType.path}`)}
+                                    className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                  >
+                                    <ChevronRight className='w-4 h-4' />
+                                    <span>{deckType.text}</span>
+                                  </Link>
+                                );
+                              })}
+                            </>
+                          )}
+
+                          {/* Outros departamentos normais */}
+                          {!isAllDepts && !isDecks && (
                             <>
                               <Link
                                 to={`/collections/${dept.slug}`}

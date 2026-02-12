@@ -141,8 +141,8 @@ export const filterDefinitions = {
       label: 'Tipo de Prancha',
       options: [
       
-        { value: 'fish-evolution', label: 'Fish / Evolution' },
         { value: 'shortboard', label: 'Shortboard' },
+        { value: 'fish-evolution', label: 'Fish / Evolution' },
         { value: 'fun-minilong', label: 'Fun / Mini Long' },
         { value: 'longboard', label: 'Longboard' },
         { value: 'standup', label: 'Stand Up' },
@@ -451,8 +451,8 @@ export const categories = [
   { text: 'Deck SUP', path: 'Deck-SUP', group: 'decks' },
   
  // ═══ LEASHES ═══
-  { text: 'Leash Fish / Evolution', path: 'Leash-Fish-Evolution', group: 'leashes' },
   { text: 'Leash Shortboard', path: 'Leash-Shortboard', group: 'leashes' },
+  { text: 'Leash Fish / Evolution', path: 'Leash-Fish-Evolution', group: 'leashes' },
   { text: 'Leash Fun / Mini Long', path: 'Leash-Fun-MiniLong', group: 'leashes' },
   { text: 'Leash Longboard', path: 'Leash-Longboard', group: 'leashes' },
   { text: 'Leash Stand Up', path: 'Leash-StandUp', group: 'leashes' },
