@@ -29,7 +29,9 @@ import white_arrow_icon from './white_arrow_icon.svg';
 import add_address_iamge from './add_address_image.svg';
 import decks_banner from './decks-banner.jpg';
 import decks_card from './decks-card1.jpg';
-import decks_card2 from './decks-card2.jpg';
+import decks_card2 from './decktop.png';
+import quilhas_card from './quilhas-card.png';
+import sarcofago_card from './sarcofago.png';
 
 export const assets = {
   logo,
@@ -64,6 +66,8 @@ export const assets = {
   decks_banner,
   decks_card,
   decks_card2,
+  quilhas_card,
+  sarcofago_card,
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -396,14 +400,14 @@ export const groups = [
     name: 'Sarcófagos',
     slug: 'sarcofagos',
     description: 'Sarcófagos para viagens e proteção total da sua prancha. Estrutura reforçada com acolchoamento interno.',
-    image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
+    image: sarcofago_card,
   },
   {
     id: 'quilhas',
     name: 'Quilhas',
     slug: 'quilhas',
     description: 'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    image: quilhas_card,
   },
   {
     id: 'bodyboard',
