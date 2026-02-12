@@ -32,6 +32,7 @@ import HealthCheck from './components/HealthCheck';
 import WhatsAppButton from './components/WhatsAppButton';
 import CartSidebar from './components/CartSidebar';
 import GroupPage from './pages/GroupPage';
+import InstitucionalPage from './pages/InstitucionalPage';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
@@ -41,6 +42,7 @@ const App = () => {
   const isSellerPath = location.pathname.includes('seller');
   const isHomepage = location.pathname === '/';
   const isCollectionPage = location.pathname.startsWith('/collections/');
+  const isInstitucional = location.pathname.startsWith('/institucional');
   const { showUserLogin, isSeller, isSellerLoading } = useAppContext();
 
   // Loading APENAS na área de seller
@@ -96,12 +98,12 @@ const App = () => {
       />
       <ScrollToTop />
       
-      {/* Condicional: Homepage e Collections sem padding lateral */}
+      {/* Condicional: Homepage, Collections e Institucional sem padding lateral */}
       <div
         className={`${
           isSellerPath 
             ? '' 
-            : (isHomepage || isCollectionPage)
+            : (isHomepage || isCollectionPage || isInstitucional)
               ? '' 
               : 'px-4 md:px-16 lg:px-24 xl:px-32'
         }`}
@@ -122,10 +124,11 @@ const App = () => {
           <Route path='/faq' element={<FAQ />} />
           <Route path='/terms' element={<Terms />} />
           <Route path='/write-review' element={<WriteReview />} />
-
+          <Route path='/institucional' element={<InstitucionalPage />} />
+          <Route path='/institucional/:section' element={<InstitucionalPage />} />
           <Route path='/loader' element={<Loading />} />
 
-          {/* ═══ SELLER ROUTES (atualizado) ═══ */}
+          {/* ═══ SELLER ROUTES ═══ */}
           <Route
             path='/seller'
             element={isSeller ? <SellerLayout /> : <SellerLogin />}
@@ -143,130 +146,201 @@ const App = () => {
       {!isSellerPath && <WhatsAppButton />}
       {!isSellerPath && <CartSidebar />}
 
-      {/* Cookie Consent LGPD */}
+      {/* ═══════════════════════════════════════════════════════════
+          COOKIE CONSENT — LGPD (Lei nº 13.709/2018)
+          ═══════════════════════════════════════════════════════════ */}
       <CookieConsent
         location='bottom'
         cookieName='elitesurfingCookieConsent'
-        containerClasses='cookie-consent-container'
-        contentClasses='cookie-consent-content'
-        buttonWrapperClasses='cookie-consent-buttons'
+        containerClasses='cookie-banner'
         style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-          color: '#1e293b',
+          background: '#1e293b',
+          color: '#f1f5f9',
           fontSize: '14px',
-          padding: '20px 24px',
-          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.12)',
-          borderTop: '1px solid #e2e8f0',
+          padding: '0',
+          boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.2)',
           display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '20px',
-          flexWrap: 'wrap',
+          alignItems: 'stretch',
           zIndex: 9999,
+          borderTop: '3px solid #358f61',
         }}
-        buttonText='Aceitar todos'
-        declineButtonText='Rejeitar'
+        contentStyle={{
+          flex: '1',
+          padding: '20px 24px',
+          margin: '0',
+        }}
+        buttonWrapperClasses='cookie-banner-buttons'
+        buttonText='Aceitar Cookies'
+        declineButtonText='Apenas Essenciais'
         enableDeclineButton
         buttonStyle={{
-          background: '#3B82F6',
+          background: '#358f61',
           color: '#ffffff',
           fontSize: '14px',
           fontWeight: '600',
           border: 'none',
-          padding: '10px 24px',
+          padding: '12px 28px',
           borderRadius: '8px',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+          margin: '0',
+          whiteSpace: 'nowrap',
         }}
         declineButtonStyle={{
           background: 'transparent',
-          color: '#64748b',
-          fontSize: '14px',
-          fontWeight: '600',
-          border: '1px solid #cbd5e1',
-          padding: '10px 24px',
+          color: '#94a3b8',
+          fontSize: '13px',
+          fontWeight: '500',
+          border: '1px solid #475569',
+          padding: '10px 20px',
           borderRadius: '8px',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
+          margin: '0',
+          whiteSpace: 'nowrap',
         }}
         expires={365}
         overlay={false}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '16px',
-            flex: '1',
-            minWidth: '280px',
-          }}
-        >
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              background: '#EFF6FF',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-              <path d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z' fill='#3B82F6' />
-              <circle cx='8' cy='9' r='1.5' fill='#3B82F6' />
-              <circle cx='12' cy='15' r='1.5' fill='#3B82F6' />
-              <circle cx='16' cy='9' r='1.5' fill='#3B82F6' />
+        <div className='cookie-content'>
+          <div className='cookie-icon'>
+            <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+              <path d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 11.46 21.95 10.93 21.85 10.42C20.92 10.83 19.89 11.07 18.81 11.07C14.77 11.07 11.5 7.8 11.5 3.76C11.5 3.17 11.57 2.6 11.7 2.06C11.8 2.02 11.9 2 12 2Z' fill='#fbbf24'/>
+              <circle cx='8.5' cy='11.5' r='1.5' fill='#92400e'/>
+              <circle cx='12.5' cy='16' r='1' fill='#92400e'/>
+              <circle cx='15' cy='11' r='1' fill='#92400e'/>
+              <circle cx='10' cy='7.5' r='0.8' fill='#92400e'/>
             </svg>
           </div>
-          <div style={{ flex: '1' }}>
-            <p style={{ margin: 0, fontWeight: '600', color: '#0f172a', marginBottom: '6px', fontSize: '15px' }}>
-              Este site utiliza cookies
+          <div className='cookie-text'>
+            <p className='cookie-title'>
+              Nós valorizamos sua privacidade
             </p>
-            <p style={{ margin: 0, color: '#475569', fontSize: '13px', lineHeight: '1.5' }}>
-              Utilizamos cookies essenciais para o funcionamento do site e cookies
-              de análise para melhorar a sua experiência. Ao clicar em "Aceitar
-              todos", concorda com o uso de todos os cookies de acordo com a nossa{' '}
-              <a
-                href='/privacy'
-                style={{ color: '#3B82F6', textDecoration: 'underline', fontWeight: '500' }}
-                onClick={e => e.stopPropagation()}
-              >
-                Política de Privacidade
-              </a>.
+            <p className='cookie-description'>
+              Utilizamos cookies essenciais para o funcionamento do site e cookies de 
+              análise para melhorar sua experiência de navegação. Ao clicar em 
+              "Aceitar Cookies", você consente com o uso de todos os cookies conforme 
+              a <a href='/privacy' className='cookie-link'>Lei Geral de Proteção de Dados (LGPD)</a> e 
+              nossa <a href='/privacy' className='cookie-link'>Política de Privacidade</a>.
             </p>
           </div>
         </div>
       </CookieConsent>
 
       <style>{`
-        .cookie-consent-container button:hover {
-          transform: translateY(-1px);
+        /* ═══ Cookie Banner Styles ═══ */
+        .cookie-content {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
         }
-        .cookie-consent-container button:active {
+
+        .cookie-icon {
+          flex-shrink: 0;
+          width: 44px;
+          height: 44px;
+          background: rgba(251, 191, 36, 0.1);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cookie-title {
+          margin: 0 0 4px 0;
+          font-weight: 700;
+          color: #f8fafc;
+          font-size: 15px;
+          letter-spacing: -0.01em;
+        }
+
+        .cookie-description {
+          margin: 0;
+          color: #94a3b8;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .cookie-link {
+          color: #34d399;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .cookie-link:hover {
+          color: #6ee7b7;
+        }
+
+        /* Buttons container */
+        .cookie-banner-buttons {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 20px 24px;
+          flex-shrink: 0;
+        }
+
+        .cookie-banner button:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.1);
+        }
+
+        .cookie-banner button:active {
           transform: translateY(0);
         }
-        @media (max-width: 640px) {
-          .cookie-consent-container {
-            padding: 16px !important;
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+          .cookie-banner > div:first-child {
+            padding: 16px 16px 8px !important;
           }
-          .cookie-consent-container > div:first-child {
-            flex-direction: column !important;
-            align-items: flex-start !important;
+
+          .cookie-content {
+            gap: 12px;
           }
-          .cookie-consent-buttons {
+
+          .cookie-icon {
+            width: 36px;
+            height: 36px;
+          }
+
+          .cookie-icon svg {
+            width: 22px;
+            height: 22px;
+          }
+
+          .cookie-title {
+            font-size: 14px;
+          }
+
+          .cookie-description {
+            font-size: 12px;
+          }
+
+          .cookie-banner-buttons {
+            padding: 8px 16px 16px !important;
             width: 100%;
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
+            justify-content: stretch;
           }
-          .cookie-consent-buttons button {
+
+          .cookie-banner-buttons button {
             flex: 1;
             padding: 12px 16px !important;
             font-size: 13px !important;
+            text-align: center;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .cookie-banner-buttons {
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .cookie-banner-buttons button {
+            width: 100%;
           }
         }
       `}</style>

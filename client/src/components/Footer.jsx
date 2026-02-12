@@ -120,28 +120,40 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Coluna 2 - Navegação */}
+          {/* Coluna 2 - Institucional */}
           <div>
             <h3 className='font-bold text-gray-900 text-sm uppercase tracking-wide mb-5 pb-2 border-b-2 border-primary/20'>
-              Navegação
+              Institucional
             </h3>
             <ul className='space-y-3'>
               <li>
-                <Link to='/' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                <Link to='/institucional/quem-somos' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Início
+                  Quem Somos
                 </Link>
               </li>
               <li>
-                <Link to='/products' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                <Link to='/institucional/catalogo' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Produtos
+                  Catálogo
                 </Link>
               </li>
               <li>
-                <Link to='/contact' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                <Link to='/institucional/frete-gratis' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
-                  Contato
+                  Frete Grátis
+                </Link>
+              </li>
+              <li>
+                <Link to='/institucional/representantes' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                  <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
+                  Representantes
+                </Link>
+              </li>
+              <li>
+                <Link to='/institucional/trocas-devolucoes-garantia' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                  <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
+                  Trocas e Devoluções
                 </Link>
               </li>
             </ul>

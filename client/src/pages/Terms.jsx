@@ -30,10 +30,10 @@ const Terms = () => {
               </h1>
             </div>
             <p className='text-white/90 text-lg'>
-              Condições gerais de venda e utilização da Elite Surfing
+              Condições gerais de venda e uso da Elite Surfing Brasil
             </p>
             <p className='text-white/80 text-sm mt-2'>
-              Última atualização: {new Date().toLocaleDateString('pt-PT', { 
+              Última atualização: {new Date().toLocaleDateString('pt-BR', { 
                 day: 'numeric', 
                 month: 'long', 
                 year: 'numeric' 
@@ -52,30 +52,30 @@ const Terms = () => {
                 1. Introdução
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                Bem-vindo à Elite Surfing. Ao aceder e utilizar este website, aceita 
-                estar vinculado a estes termos e condições de utilização. Se não concordar 
-                com alguma parte destes termos, não deve utilizar o nosso website.
+                Bem-vindo à Elite Surfing Brasil. Ao acessar e utilizar este site, você 
+                concorda com estes termos e condições de uso. Se não concordar com alguma 
+                parte destes termos, pedimos que não utilize o nosso site.
               </p>
             </section>
 
             {/* Identificação */}
             <section>
               <h2 className='text-2xl font-bold text-gray-900 mb-4'>
-                2. Identificação
+                2. Identificação da Empresa
               </h2>
               <div className='bg-gray-50 rounded-lg p-6 space-y-2'>
                 <p className='text-gray-700'>
-                  <strong>Nome:</strong> Elite Surfing
+                  <strong>Razão Social:</strong> Elite Surfing Brasil
                 </p>
                 <p className='text-gray-700'>
-                  <strong>Sede:</strong> Avenida Doutor Francisco de Sá Carneiro 3, Apartamento 3D, 
-                  2780-241 Oeiras, Portugal
+                  <strong>Endereço:</strong> Av. das Américas, 12900, Bloco 1, Sala 203C, 
+                  Edifício Argentina — Recreio dos Bandeirantes, Rio de Janeiro — RJ, CEP 22790-702
                 </p>
                 <p className='text-gray-700'>
-                  <strong>Email:</strong> pedrazzoliorlando@gmail.com
+                  <strong>E-mail:</strong> atendimento@elitesurfing.com.br
                 </p>
                 <p className='text-gray-700'>
-                  <strong>Telefone:</strong> +351 912 164 220
+                  <strong>WhatsApp:</strong> (21) 96435-8058
                 </p>
               </div>
             </section>
@@ -86,42 +86,51 @@ const Terms = () => {
                 3. Objeto
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                Os presentes termos e condições regulam a utilização do website Elite Surfing 
+                Os presentes termos e condições regulam a utilização do site Elite Surfing Brasil 
                 e a aquisição de produtos através da nossa loja online. Ao efetuar uma compra, 
-                o cliente declara ter lido, compreendido e aceite os presentes termos e condições.
+                o cliente declara ter lido, compreendido e aceito os presentes termos e condições, 
+                em conformidade com o Código de Defesa do Consumidor (Lei nº 8.078/1990).
               </p>
             </section>
 
-            {/* Encomendas */}
+            {/* Pedidos e Pagamento */}
             <section>
               <h2 className='text-2xl font-bold text-gray-900 mb-4'>
-                4. Encomendas e Pagamento
+                4. Pedidos e Pagamento
               </h2>
               <div className='space-y-4'>
                 <div>
-                  <h3 className='font-semibold text-gray-900 mb-2'>4.1. Processo de Encomenda</h3>
+                  <h3 className='font-semibold text-gray-900 mb-2'>4.1. Processo de Compra</h3>
                   <p className='text-gray-700'>
-                    Ao efetuar uma encomenda, o cliente receberá um email de confirmação com 
-                    todos os detalhes. A encomenda só será processada após confirmação do pagamento.
+                    Ao efetuar um pedido, o cliente receberá um e-mail de confirmação com todos 
+                    os detalhes. O pedido só será processado após a confirmação do pagamento.
                   </p>
                 </div>
 
                 <div>
                   <h3 className='font-semibold text-gray-900 mb-2'>4.2. Prazo de Pagamento</h3>
                   <p className='text-gray-700'>
-                    O cliente tem 24 horas para efetuar o pagamento. Caso contrário, a encomenda 
-                    será automaticamente cancelada.
+                    O cliente tem 24 horas para efetuar o pagamento via boleto. Pagamentos por 
+                    PIX e cartão de crédito são processados imediatamente. Caso o pagamento não 
+                    seja confirmado no prazo, o pedido será automaticamente cancelado.
                   </p>
                 </div>
 
                 <div>
                   <h3 className='font-semibold text-gray-900 mb-2'>4.3. Métodos de Pagamento</h3>
                   <ul className='list-disc list-inside text-gray-700 space-y-1'>
-                    <li>Cartão de Crédito/Débito (Visa, Mastercard, American Express)</li>
-                    <li>PayPal</li>
-                    <li>MB WAY</li>
-                    <li>Multibanco</li>
+                    <li>Cartão de Crédito (Visa, Mastercard) — em até 10x sem juros</li>
+                    <li>PIX — com 10% de desconto</li>
+                    <li>Boleto Bancário</li>
                   </ul>
+                </div>
+
+                <div>
+                  <h3 className='font-semibold text-gray-900 mb-2'>4.4. Nota Fiscal</h3>
+                  <p className='text-gray-700'>
+                    Conforme a legislação brasileira, a nota fiscal eletrônica (NF-e) será 
+                    emitida para todos os pedidos e enviada por e-mail ao cliente.
+                  </p>
                 </div>
               </div>
             </section>
@@ -132,38 +141,41 @@ const Terms = () => {
                 5. Preços e Promoções
               </h2>
               <p className='text-gray-700 leading-relaxed mb-4'>
-                Todos os preços apresentados no website incluem IVA à taxa legal em vigor. 
-                Os preços podem ser alterados sem aviso prévio, mas a alteração não afetará 
-                encomendas já confirmadas.
+                Todos os preços apresentados no site são em Reais (R$) e incluem todos os 
+                impostos aplicáveis. Os preços podem ser alterados sem aviso prévio, porém 
+                a alteração não afetará pedidos já confirmados.
               </p>
               <p className='text-gray-700 leading-relaxed'>
-                As promoções são válidas durante o período indicado e sujeitas a stock disponível.
+                As promoções são válidas durante o período indicado e sujeitas à disponibilidade 
+                de estoque. Descontos e cupons não são cumulativos, salvo indicação expressa.
               </p>
             </section>
 
-            {/* Envio */}
+            {/* Envio e Entrega */}
             <section>
               <h2 className='text-2xl font-bold text-gray-900 mb-4'>
                 6. Envio e Entrega
               </h2>
               <div className='space-y-4'>
                 <div>
-                  <h3 className='font-semibold text-gray-900 mb-2'>6.1. Custos de Envio</h3>
+                  <h3 className='font-semibold text-gray-900 mb-2'>6.1. Frete</h3>
                   <ul className='list-disc list-inside text-gray-700 space-y-1'>
-                    <li>Portugal Continental: 6€ (grátis para compras acima de 59€)</li>
-                    <li>Açores e Madeira: Consultar</li>
-                    <li>Envios internacionais: Consultar</li>
+                    <li>Compras a partir de R$ 199,00: frete grátis para Sul e Sudeste</li>
+                    <li>Compras a partir de R$ 299,00: frete grátis para todo o Brasil</li>
+                    <li>Entrega expressa no mesmo dia para Grande Rio de Janeiro (consulte condições)</li>
                   </ul>
                 </div>
 
                 <div>
                   <h3 className='font-semibold text-gray-900 mb-2'>6.2. Prazos de Entrega</h3>
                   <ul className='list-disc list-inside text-gray-700 space-y-1'>
-                    <li>Portugal Continental: Até 3 dias úteis</li>
-                    <li>Açores e Madeira: Até 14 dias úteis</li>
+                    <li>Grande Rio de Janeiro: 1 a 3 dias úteis</li>
+                    <li>Capitais e regiões metropolitanas: 3 a 7 dias úteis</li>
+                    <li>Interior e demais localidades: 5 a 12 dias úteis</li>
                   </ul>
                   <p className='text-gray-600 text-sm mt-2'>
-                    Os prazos começam a contar após confirmação do pagamento e expedição da encomenda.
+                    Os prazos começam a contar após confirmação do pagamento e podem variar 
+                    conforme a região e disponibilidade da transportadora.
                   </p>
                 </div>
 
@@ -171,7 +183,8 @@ const Terms = () => {
                   <h3 className='font-semibold text-gray-900 mb-2'>6.3. Responsabilidade</h3>
                   <p className='text-gray-700'>
                     Não nos responsabilizamos por atrasos causados por fatores externos 
-                    (greves, condições meteorológicas, moradas incorretas, etc.).
+                    (greves, condições climáticas, endereços incorretos, etc.). Todos os envios 
+                    possuem código de rastreamento.
                   </p>
                 </div>
               </div>
@@ -183,17 +196,20 @@ const Terms = () => {
                 7. Direito de Devolução
               </h2>
               <p className='text-gray-700 leading-relaxed mb-4'>
-                De acordo com a legislação portuguesa e europeia, tem direito a devolver os 
-                produtos adquiridos no prazo de 30 dias após a receção, sem necessidade de 
-                justificação.
+                De acordo com o Art. 49 do Código de Defesa do Consumidor, você tem o direito 
+                de devolver os produtos adquiridos no prazo de <strong>7 dias corridos</strong> após 
+                o recebimento, sem necessidade de justificativa (direito de arrependimento).
               </p>
               <div className='bg-blue-50 border-l-4 border-primary rounded p-4'>
                 <p className='text-sm text-gray-700'>
                   Para mais informações, consulte a nossa{' '}
                   <Link to='/refund-policy' className='text-primary hover:underline font-semibold'>
-                    Política de Reembolso
-                  </Link>
-                  .
+                    Política de Devolução
+                  </Link>{' '}
+                  e a página de{' '}
+                  <Link to='/institucional/trocas-devolucoes-garantia' className='text-primary hover:underline font-semibold'>
+                    Trocas, Devoluções e Garantia
+                  </Link>.
                 </p>
               </div>
             </section>
@@ -204,10 +220,11 @@ const Terms = () => {
                 8. Garantias
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                Todos os produtos comercializados pela Elite Surfing dispõem de garantia legal 
-                de 2 anos, conforme previsto na legislação portuguesa. Em caso de defeito, 
-                o cliente pode solicitar reparação, substituição, redução do preço ou resolução 
-                do contrato.
+                Todos os produtos comercializados pela Elite Surfing Brasil possuem garantia 
+                legal de <strong>90 dias</strong> contra defeitos de fabricação, conforme previsto 
+                no Código de Defesa do Consumidor (Art. 26). A Elite Surfing oferece garantias 
+                estendidas de até 12 meses, dependendo do produto. Em caso de defeito, o cliente 
+                pode solicitar troca, reparo ou reembolso.
               </p>
             </section>
 
@@ -217,9 +234,11 @@ const Terms = () => {
                 9. Propriedade Intelectual
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                Todos os conteúdos presentes neste website (textos, imagens, logótipos, design) 
-                são propriedade da Elite Surfing e estão protegidos por direitos de autor. 
-                É proibida a reprodução, distribuição ou utilização sem autorização prévia.
+                Todos os conteúdos presentes neste site (textos, imagens, logotipos, design) 
+                são propriedade da Elite Surfing Brasil e estão protegidos pela Lei de Direitos 
+                Autorais (Lei nº 9.610/1998) e pela Lei de Propriedade Industrial (Lei nº 9.279/1996). 
+                É proibida a reprodução, distribuição ou utilização sem autorização prévia e 
+                expressa.
               </p>
             </section>
 
@@ -229,42 +248,54 @@ const Terms = () => {
                 10. Proteção de Dados Pessoais
               </h2>
               <p className='text-gray-700 leading-relaxed mb-4'>
-                Os dados pessoais recolhidos são tratados de acordo com o Regulamento Geral 
-                de Proteção de Dados (RGPD) e a legislação portuguesa aplicável.
+                Os dados pessoais coletados são tratados de acordo com a Lei Geral de Proteção 
+                de Dados (LGPD — Lei nº 13.709/2018) e demais legislações aplicáveis.
               </p>
               <div className='bg-blue-50 border-l-4 border-primary rounded p-4'>
                 <p className='text-sm text-gray-700'>
                   Para mais informações, consulte a nossa{' '}
                   <Link to='/privacy' className='text-primary hover:underline font-semibold'>
                     Política de Privacidade
-                  </Link>
-                  .
+                  </Link>.
                 </p>
               </div>
             </section>
 
-            {/* Resolução de Litígios */}
+            {/* Resolução de Conflitos */}
             <section>
               <h2 className='text-2xl font-bold text-gray-900 mb-4'>
-                11. Resolução de Litígios
+                11. Resolução de Conflitos
               </h2>
               <p className='text-gray-700 leading-relaxed mb-4'>
-                Em caso de litígio, o consumidor pode recorrer a uma Entidade de Resolução 
-                Alternativa de Litígios de Consumo ou à plataforma europeia de resolução de 
-                litígios online (Regulamento UE n.º 524/2013).
+                Em caso de conflito, o consumidor pode recorrer aos seguintes canais:
               </p>
-              <div className='bg-gray-50 rounded-lg p-4'>
-                <p className='text-sm text-gray-700'>
-                  <strong>Plataforma RLL:</strong>{' '}
-                  <a 
-                    href='https://ec.europa.eu/consumers/odr' 
-                    target='_blank' 
-                    rel='noopener noreferrer'
-                    className='text-primary hover:underline'
-                  >
-                    https://ec.europa.eu/consumers/odr
-                  </a>
-                </p>
+              <div className='space-y-3'>
+                <div className='bg-gray-50 rounded-lg p-4'>
+                  <p className='text-sm text-gray-700'>
+                    <strong>Procon:</strong> Órgão de Proteção e Defesa do Consumidor do seu 
+                    estado ou município.
+                  </p>
+                </div>
+                <div className='bg-gray-50 rounded-lg p-4'>
+                  <p className='text-sm text-gray-700'>
+                    <strong>Consumidor.gov.br:</strong>{' '}
+                    <a 
+                      href='https://www.consumidor.gov.br' 
+                      target='_blank' 
+                      rel='noopener noreferrer'
+                      className='text-primary hover:underline'
+                    >
+                      www.consumidor.gov.br
+                    </a>{' '}
+                    — Plataforma do governo federal para resolução de conflitos de consumo.
+                  </p>
+                </div>
+                <div className='bg-gray-50 rounded-lg p-4'>
+                  <p className='text-sm text-gray-700'>
+                    <strong>Juizado Especial Cível:</strong> Para causas de até 40 salários 
+                    mínimos, sem necessidade de advogado para causas de até 20 salários mínimos.
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -274,9 +305,10 @@ const Terms = () => {
                 12. Lei Aplicável e Foro
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                Os presentes termos e condições regem-se pela lei portuguesa. Para resolução 
-                de qualquer litígio, será competente o foro da comarca da área de residência 
-                do consumidor.
+                Os presentes termos e condições são regidos pelas leis da República Federativa 
+                do Brasil. Fica eleito o foro da comarca do domicílio do consumidor para 
+                dirimir quaisquer controvérsias, conforme o Art. 101, I, do Código de Defesa 
+                do Consumidor.
               </p>
             </section>
 
@@ -287,9 +319,10 @@ const Terms = () => {
                 13. Alterações aos Termos
               </h2>
               <p className='text-gray-700 leading-relaxed'>
-                A Elite Surfing reserva-se o direito de alterar estes termos e condições a 
-                qualquer momento. As alterações entram em vigor no momento da sua publicação 
-                no website.
+                A Elite Surfing Brasil reserva-se o direito de alterar estes termos e condições 
+                a qualquer momento. As alterações entram em vigor no momento da sua publicação 
+                no site. O uso continuado do site após qualquer alteração constitui a aceitação 
+                dos novos termos.
               </p>
             </section>
 

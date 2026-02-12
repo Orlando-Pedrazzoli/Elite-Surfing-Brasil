@@ -10,75 +10,104 @@ const FAQ = () => {
   // 🎯 FAQs - Usadas tanto para exibição quanto para o Schema
   const faqs = [
     {
-      question: 'Como fazer uma encomenda?',
-      answer: `Escolhe o artigo que queres comprar, seleciona o tamanho ou a cor, se disponível e clica em "Adicionar ao Carrinho".
+      question: 'Como faço um pedido?',
+      answer: `Escolha o produto que deseja comprar, selecione o tamanho ou cor (se disponível) e clique em "Adicionar ao Carrinho".
 
-Serás encaminhado para o carrinho de compras. Se quiseres adicionar mais artigos, clica em "Continuar Compras". Quando o carrinho tiver tudo o que precisas, basta clicar em "Finalizar Encomenda".
+Você será direcionado ao carrinho de compras. Se quiser adicionar mais itens, clique em "Continuar Comprando". Quando estiver tudo certo, clique em "Finalizar Pedido".
 
-Depois, escolhe se queres finalizar como convidado ou como utilizador registado e clica em "Continuar". Introduz os dados de envio com atenção (morada, email válido e contacto). Assim que estiver tudo certo, finaliza a compra.
+Escolha se deseja finalizar como visitante ou como usuário cadastrado. Preencha os dados de entrega com atenção (endereço completo, e-mail válido e telefone). Finalize a compra escolhendo a forma de pagamento.
 
-Receberás um email de confirmação com os detalhes da encomenda. Após o pagamento ser confirmado, só precisas de aguardar a entrega.`
+Você receberá um e-mail de confirmação com os detalhes do pedido. Após a confirmação do pagamento, é só aguardar a entrega!`
     },
     {
-      question: 'É necessário registar para efetuar uma encomenda?',
-      answer: 'O registo não é obrigatório, mas sugerimos que o faças, porque ter uma conta connosco não só torna as próximas compras mais rápidas, mas também permite-te acumular pontos para descontos futuros.'
+      question: 'Preciso me cadastrar para fazer um pedido?',
+      answer: 'O cadastro não é obrigatório, mas recomendamos que se cadastre. Ter uma conta torna as próximas compras mais rápidas, permite acompanhar seus pedidos e acessar o histórico de compras a qualquer momento.'
     },
     {
-      question: 'Quais são os métodos de pagamento disponíveis?',
-      answer: `Cartão de Crédito e PayPal: Aceitamos Visa, Mastercard e American Express. Podes ainda pagar via PayPal, um método rápido e seguro.
+      question: 'Quais são as formas de pagamento?',
+      answer: `Cartão de Crédito: Aceitamos Visa e Mastercard em até 10x sem juros. Seus dados são protegidos com criptografia SSL 256-bit via Stripe.
 
-MB WAY: Deves confirmar o pagamento na app MB WAY. Certifica-te de que tens a app instalada, configurada e que tens acesso à internet.
+PIX: Pagamento instantâneo com 10% de desconto. Após finalizar o pedido, o QR Code será exibido na tela e enviado por e-mail.
 
-Multibanco: Paga em qualquer caixa MB ou através do teu Home Banking. Após a encomenda, receberás os dados (Entidade, Referência e Valor). O pagamento é confirmado no prazo de 24h.`
+Boleto Bancário: O boleto tem validade de 24 horas. Após o pagamento, a compensação pode levar até 2 dias úteis.`
     },
     {
-      question: 'Porque razão o meu pagamento pode ser recusado?',
-      answer: `Existem várias razões possíveis: O cartão pode estar expirado. Confirma a validade. O limite do cartão pode ter sido atingido. Contacta o teu banco. Os dados introduzidos podem estar errados. Verifica se preencheste tudo corretamente. O sistema 3DS pode não estar ativado. Confirma com o teu banco.`
+      question: 'Por que meu pagamento pode ser recusado?',
+      answer: `Existem alguns motivos possíveis: O cartão pode estar vencido — confira a validade. O limite do cartão pode ter sido atingido — entre em contato com seu banco. Os dados podem estar incorretos — verifique se preencheu tudo corretamente. A autenticação 3D Secure pode não ter sido concluída — confirme com seu banco ou tente novamente.`
     },
     {
       question: 'É seguro pagar com cartão de crédito?',
-      answer: 'Sim, utilizamos encriptação SSL. Para garantir segurança, precisas de inserir o CVV do cartão.'
+      answer: 'Sim! Utilizamos o Stripe como processador de pagamentos, com criptografia SSL 256-bit. Seus dados de cartão nunca são armazenados em nossos servidores. Todas as transações são protegidas contra fraude.'
     },
     {
-      question: 'Até quando posso pagar a minha encomenda?',
-      answer: 'Tens 24 horas para efetuar o pagamento. Caso contrário, a encomenda será cancelada.'
+      question: 'Até quando posso pagar meu pedido?',
+      answer: 'Para pagamentos via boleto, o prazo é de 24 horas. Após esse período, o pedido será automaticamente cancelado. Pagamentos por PIX e cartão de crédito são processados imediatamente.'
     },
     {
-      question: 'Como é feita a entrega?',
-      answer: 'As encomendas são enviadas por transportadora e entregues em mão. Se ninguém estiver em casa, será deixado um aviso para agendar nova entrega. Em alguns casos a encomenda poderá ser entregue num ponto de recolha.'
+      question: 'Como funciona o frete?',
+      answer: `Compras a partir de R$ 199,00: frete grátis para as regiões Sul e Sudeste.
+
+Compras a partir de R$ 299,00: frete grátis para todo o Brasil.
+
+Entrega expressa: Em compras de qualquer valor, realizadas até 11:30h, por apenas R$ 9,99, a entrega é feita no mesmo dia útil para a Grande Rio de Janeiro (produtos selecionados).
+
+Para mais detalhes, consulte nossa página de Frete Grátis na seção Institucional.`
     },
     {
       question: 'Quais são os prazos de entrega?',
-      answer: `Até 3 dias úteis para Portugal Continental. Até 14 dias úteis para Açores e Madeira. Entregas em loja: até 7 dias úteis para Portugal Continental e até 14 dias úteis para a loja na Madeira. Os prazos começam a contar a partir do momento da expedição e podem variar devido a fatores externos, como moradas incorretas ou greves.`
+      answer: `Grande Rio de Janeiro: 1 a 3 dias úteis.
+Capitais e regiões metropolitanas: 3 a 7 dias úteis.
+Interior e demais localidades: 5 a 12 dias úteis.
+
+Os prazos começam a contar a partir da confirmação do pagamento e podem variar conforme a região e a disponibilidade da transportadora. Todos os envios possuem código de rastreamento.`
     },
     {
-      question: 'Existem taxas alfandegárias?',
-      answer: 'Podem haver taxas alfandegárias, se a morada de envio estiver fora da União Europeia ou zona Schengen. Não nos responsabilizamos por eventuais taxas alfandegárias ou outras despesas adicionais.'
+      question: 'Como rastreio meu pedido?',
+      answer: 'Após o despacho, você receberá o código de rastreamento por e-mail. Também é possível acompanhar o status da entrega na área "Meus Pedidos" do site, em tempo real.'
     },
     {
-      question: 'Quais são os custos dos portes de envio?',
-      answer: 'Os portes para Portugal Continental custam 6€, mas são grátis para compras acima de 59€. Para consultar os custos para outras regiões, contacta-nos.'
+      question: 'Posso trocar um produto?',
+      answer: `Sim! Você tem 7 dias corridos após o recebimento para solicitar a troca, conforme o Código de Defesa do Consumidor.
+
+Para iniciar a troca, entre em contato pelo e-mail atendimento@elitesurfing.com.br ou pelo WhatsApp (21) 96435-8058, informando o número do pedido e o motivo.
+
+O produto deve estar em sua embalagem original, sem sinais de uso e com todos os acessórios.`
     },
     {
-      question: 'Posso trocar um artigo?',
-      answer: `Claro que sim! Tens 30 dias após a receção da encomenda para efetuar trocas. Para iniciar uma troca, contacta-nos através de pedrazzoliorlando@gmail.com e envia os artigos para: Avenida Doutor Francisco de Sá Carneiro 3, Apartamento 3D, 2780-241 Oeiras, Portugal. O processo pode demorar até 10 dias úteis.`
+      question: 'Posso devolver um produto?',
+      answer: `Sim! De acordo com o Art. 49 do CDC, você tem 7 dias corridos após o recebimento para devolver o produto por arrependimento, sem necessidade de justificativa.
+
+Para iniciar a devolução, entre em contato pelo e-mail atendimento@elitesurfing.com.br ou pelo WhatsApp (21) 96435-8058.
+
+O reembolso será processado em até 3 dias úteis após o recebimento e análise do produto.`
     },
     {
-      question: 'Posso devolver um artigo?',
-      answer: `Claro que sim! Tens 30 dias após a receção da encomenda para efetuar uma devolução. Para iniciar uma devolução, contacta-nos através de pedrazzoliorlando@gmail.com e envia os artigos para: Avenida Doutor Francisco de Sá Carneiro 3, Apartamento 3D, 2780-241 Oeiras, Portugal. O processo pode demorar até 10 dias úteis.`
+      question: 'Como funciona o reembolso?',
+      answer: `Cartão de crédito: O estorno segue as regras da administradora do cartão e depende da data de vencimento da sua fatura.
+
+PIX ou Boleto: O valor é reembolsado em conta corrente ou poupança informada pelo cliente.
+
+Todos os ressarcimentos são processados em até 3 dias úteis após o recebimento e análise técnica do produto em nosso centro de distribuição.`
     },
     {
-      question: 'Como funcionam os reembolsos?',
-      answer: `Se a encomenda não corresponder às tuas expectativas ou se não houver stock, podes optar por: Troca por outro artigo ou crédito para usares numa compra futura. Reembolso, que será processado pelo mesmo método de pagamento e pode demorar até 15 dias úteis. Nota: Os portes de envio não são reembolsáveis.`
+      question: 'Qual a garantia dos produtos?',
+      answer: `Todos os produtos possuem garantia legal de 90 dias contra defeitos de fabricação, conforme o Código de Defesa do Consumidor.
+
+A Elite Surfing oferece garantias de até 12 meses, dependendo do produto. Em caso de defeito confirmado, fazemos a troca sem custo adicional. Consulte a descrição de cada produto para detalhes específicos.`
     },
     {
-      question: 'Como funcionam os códigos de desconto?',
-      answer: 'Se tiveres um código de desconto, insere-o antes de finalizar a compra no campo "Código Promocional" e clica em "Aplicar".'
+      question: 'Como uso um cupom de desconto?',
+      answer: 'No carrinho de compras, insira o código no campo "Cupom de Desconto" e clique em "Aplicar". O desconto será aplicado automaticamente ao valor total. Cupons não são cumulativos, salvo indicação expressa.'
     },
     {
-      question: 'Resolução de conflitos',
-      answer: `Se tiveres uma reclamação sobre uma compra online, podes apresentá-la através da plataforma de Resolução Alternativa de Litígios. Nos termos do Regulamento (UE) n.º 524/2013 do Parlamento Europeu e do Conselho, de 21 de maio de 2013, sobre a resolução de litígios de consumo Online (Regulamento RLL), as empresas devem informar os consumidores da existência da plataforma RLL.`
-    }
+      question: 'Como entro em contato com vocês?',
+      answer: `Você pode nos contatar pelos seguintes canais:
+
+📧 E-mail: atendimento@elitesurfing.com.br
+📱 WhatsApp: (21) 96435-8058
+
+Nosso horário de atendimento é de segunda a sexta, das 9h às 18h. Respondemos em até 24 horas úteis.`
+    },
   ];
 
   const toggleFAQ = (index) => {
@@ -107,15 +136,15 @@ Multibanco: Paga em qualquer caixa MB ou através do teu Home Banking. Após a e
             <div className='flex items-center gap-3 mb-4'>
               <HelpCircle className='w-10 h-10' />
               <h1 className='text-3xl md:text-4xl font-bold'>
-                Perguntas Mais Frequentes
+                Perguntas Frequentes
               </h1>
             </div>
             <p className='text-white/90 text-lg'>
-              Dá uma vista de olhos nas respostas às dúvidas mais frequentes para 
-              esclarecer qualquer questão sobre os nossos produtos e serviços.
+              Confira as respostas para as dúvidas mais comuns sobre nossos 
+              produtos e serviços.
             </p>
             <p className='text-white/80 text-sm mt-2'>
-              Se não encontrares a informação que procuras, fala connosco – estamos aqui para ajudar!
+              Não encontrou o que procura? Entre em contato — estamos aqui para ajudar!
             </p>
           </div>
         </div>
@@ -153,39 +182,41 @@ Multibanco: Paga em qualquer caixa MB ou através do teu Home Banking. Após a e
           {/* Contact Section */}
           <div className='mt-12 bg-white rounded-xl shadow-sm p-8'>
             <h2 className='text-2xl font-bold text-gray-900 mb-4'>
-              Ainda tens dúvidas?
+              Ainda tem dúvidas?
             </h2>
             <p className='text-gray-700 mb-6'>
-              Se não encontraste a resposta que procuravas, contacta-nos diretamente:
+              Se não encontrou a resposta que procurava, entre em contato diretamente:
             </p>
             
             <div className='grid md:grid-cols-2 gap-4'>
               <div className='bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-6'>
                 <div className='flex items-center gap-3 mb-2'>
                   <Mail className='w-5 h-5 text-primary' />
-                  <h3 className='font-semibold text-gray-900'>Email</h3>
+                  <h3 className='font-semibold text-gray-900'>E-mail</h3>
                 </div>
                 <a 
-                  href='mailto:pedrazzoliorlando@gmail.com'
+                  href='mailto:atendimento@elitesurfing.com.br'
                   className='text-primary hover:underline font-medium'
                 >
-                  pedrazzoliorlando@gmail.com
+                  atendimento@elitesurfing.com.br
                 </a>
                 <p className='text-sm text-gray-600 mt-2'>
-                  Resposta em até 48 horas
+                  Resposta em até 24 horas úteis
                 </p>
               </div>
 
               <div className='bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-6'>
                 <div className='flex items-center gap-3 mb-2'>
                   <Phone className='w-5 h-5 text-primary' />
-                  <h3 className='font-semibold text-gray-900'>Telefone</h3>
+                  <h3 className='font-semibold text-gray-900'>WhatsApp</h3>
                 </div>
                 <a 
-                  href='tel:+351912164220'
+                  href='https://wa.me/5521964358058'
+                  target='_blank'
+                  rel='noopener noreferrer'
                   className='text-primary hover:underline font-medium'
                 >
-                  +351 912 164 220
+                  (21) 96435-8058
                 </a>
                 <p className='text-sm text-gray-600 mt-2'>
                   Seg-Sex: 9h às 18h
