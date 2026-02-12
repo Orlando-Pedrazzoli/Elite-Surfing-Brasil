@@ -13,13 +13,14 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
   return (
     <div className='bg-gray-50 p-4 md:p-5 rounded-lg space-y-3'>
       
-      {/* 💰 PREÇO PIX/BOLETO — Destaque principal (laranja) */}
+      {/* 💰 PREÇO PIX — Destaque principal */}
       <div>
-        <p className='text-xl md:text-2xl font-extrabold text-orange-500'>
-          {formatBRL(installmentData.pixPrice)} NO PIX / BOLETO
+        <p className='text-xl md:text-2xl font-extrabold text-primary'>
+          {formatBRL(installmentData.pixPrice)}
+          <span className='text-base font-bold ml-2'>NO PIX</span>
         </p>
         <p className='text-xs text-gray-500 mt-0.5'>
-          5% de desconto no pagamento à vista
+          10% de desconto no pagamento à vista via PIX
         </p>
       </div>
 
@@ -41,6 +42,7 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
         {/* Preço do cartão */}
         <p className='text-base md:text-lg font-bold text-gray-800'>
           {formatBRL(offerPrice)}
+          <span className='text-sm font-normal text-gray-500 ml-1.5'>no cartão</span>
         </p>
 
         {/* Parcelamento principal */}
@@ -80,7 +82,7 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
             {/* PIX na tabela */}
             <div className='border-t border-gray-100 pt-1.5 mt-1.5'>
               <div className='flex justify-between text-xs'>
-                <span className='text-primary font-medium'>PIX / Boleto</span>
+                <span className='text-primary font-medium'>PIX à vista</span>
                 <span className='text-primary font-bold'>{formatBRL(installmentData.pixPrice)}</span>
               </div>
             </div>

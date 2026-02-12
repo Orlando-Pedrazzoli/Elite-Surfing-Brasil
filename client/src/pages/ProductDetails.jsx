@@ -706,7 +706,7 @@ const ProductDetails = () => {
         )}
 
         {/* ═══════════════════════════════════════════════ */}
-        {/* 🆕 BREADCRUMBS — PT-BR                         */}
+        {/* BREADCRUMBS                                     */}
         {/* ═══════════════════════════════════════════════ */}
         <nav className='text-sm md:text-base mb-6'>
           <Link to='/' className='hover:text-primary transition-colors duration-200'>Início</Link>
@@ -723,7 +723,7 @@ const ProductDetails = () => {
         {/* Product Content */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16'>
           {/* ═══════════════════════════════════════════════ */}
-          {/* IMAGES SECTION (inalterado)                     */}
+          {/* IMAGES SECTION                                  */}
           {/* ═══════════════════════════════════════════════ */}
           <div className='flex flex-col gap-4'>
             {/* Main Image Container */}
@@ -877,7 +877,7 @@ const ProductDetails = () => {
             </div>
 
             {/* ═══════════════════════════════════════════════ */}
-            {/* 🆕 TABS: Especificações + Informações — Desktop */}
+            {/* TABS: Especificações + Informações — Desktop    */}
             {/* ═══════════════════════════════════════════════ */}
             <div className='hidden sm:flex justify-center'>
               <div className='w-full max-w-[550px]'>
@@ -890,14 +890,14 @@ const ProductDetails = () => {
           {/* PRODUCT DETAILS SECTION                         */}
           {/* ═══════════════════════════════════════════════ */}
           <div className='space-y-4'>
-            {/* 🆕 Título + SKU + Partilha */}
+            {/* Título + SKU + Compartilhar */}
             <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}>
               <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1'>
                   <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight'>
                     {displayProduct.name}
                   </h1>
-                  {/* 🆕 SKU / Código do produto */}
+                  {/* SKU / Código do produto */}
                   {displayProduct.sku && (
                     <p className='text-xs text-gray-400 mt-1 font-mono'>
                       Cód: {displayProduct.sku}
@@ -905,7 +905,7 @@ const ProductDetails = () => {
                   )}
                 </div>
                 
-                {/* Botão de Partilha */}
+                {/* Botão de Compartilhar */}
                 <ShareProduct product={displayProduct} className="flex-shrink-0 mt-1" />
               </div>
 
@@ -971,7 +971,7 @@ const ProductDetails = () => {
             )}
 
             {/* ═══════════════════════════════════════════════ */}
-            {/* 🆕 PREÇO — PIX/Boleto + Cartão + Parcelas     */}
+            {/* PREÇO — PIX + Cartão + Parcelas                */}
             {/* ═══════════════════════════════════════════════ */}
             <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
               <ProductPriceDisplay 
@@ -981,7 +981,7 @@ const ProductDetails = () => {
               />
             </div>
 
-            {/* 🆕 TABS: Especificações + Info — Mobile */}
+            {/* TABS: Especificações + Info — Mobile */}
             <div className='sm:hidden'>
               <ProductInfoTabs product={displayProduct} />
             </div>
@@ -1053,21 +1053,23 @@ const ProductDetails = () => {
             </div>
 
             {/* ═══════════════════════════════════════════════ */}
-            {/* 🆕 CALCULADORA DE FRETE                        */}
+            {/* CALCULADORA DE FRETE                            */}
             {/* ═══════════════════════════════════════════════ */}
             <ShippingCalculator 
               product={displayProduct}
               orderTotal={displayProduct.offerPrice * quantity}
             />
 
-            {/* 🆕 Info Adicional — PT-BR adaptado */}
+            {/* ═══════════════════════════════════════════════ */}
+            {/* INFO ADICIONAL — Benefícios                     */}
+            {/* ═══════════════════════════════════════════════ */}
             <div className='p-3 md:p-4 rounded-lg bg-blue-50 border border-blue-200'>
               <div className='space-y-2'>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Frete grátis para Sul e Sudeste acima de R$ 299</span>
+                  <span className='text-xs md:text-sm text-gray-700'>Frete grátis a partir de R$ 199 (Sul/Sudeste) e R$ 299 (demais regiões)</span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
@@ -1076,10 +1078,10 @@ const ProductDetails = () => {
                   <span className='text-xs md:text-sm text-gray-700'>Parcele em até 10x sem juros no cartão</span>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
+                  <div className='w-4 h-4 bg-primary rounded-full flex items-center justify-center'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>5% de desconto no PIX ou Boleto</span>
+                  <span className='text-xs md:text-sm text-gray-700 font-medium'>10% de desconto no PIX à vista</span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>

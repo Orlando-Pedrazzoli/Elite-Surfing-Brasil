@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
-import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode, FileText } from 'lucide-react';
+import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode } from 'lucide-react';
+import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
 const Cart = () => {
   const {
@@ -157,14 +158,27 @@ const Cart = () => {
     }
   };
 
+  // ═══════════════════════════════════════════════
+  // CÁLCULOS DE TOTAL — com PIX 10% e cupom
+  // ═══════════════════════════════════════════════
+  const getSubtotal = () => parseFloat(getCartAmount());
+
+  const getPromoDiscount = () => {
+    if (!discountApplied) return 0;
+    return getSubtotal() * 0.3;
+  };
+
+  const getPixDiscount = () => {
+    if (paymentMethod !== 'pix') return 0;
+    const afterPromo = getSubtotal() - getPromoDiscount();
+    return afterPromo * PIX_DISCOUNT;
+  };
+
   const calculateTotal = () => {
-    const subtotal = parseFloat(getCartAmount());
-    let totalBeforeDiscount = subtotal;
-    if (discountApplied) {
-      const discount = subtotal * 0.3;
-      totalBeforeDiscount -= discount;
-    }
-    return Math.max(0, totalBeforeDiscount).toFixed(2);
+    const subtotal = getSubtotal();
+    const promoDisc = getPromoDiscount();
+    const pixDisc = getPixDiscount();
+    return Math.max(0, subtotal - promoDisc - pixDisc).toFixed(2);
   };
 
   const handleQuantityChange = (productId, newQuantity) => {
@@ -232,9 +246,10 @@ const Cart = () => {
     setIsProcessing(true);
     
     try {
-      const subtotal = parseFloat(getCartAmount());
-      const discountAmount = discountApplied ? subtotal * 0.3 : 0;
-      const finalAmount = subtotal - discountAmount;
+      const subtotal = getSubtotal();
+      const promoDisc = getPromoDiscount();
+      const pixDisc = getPixDiscount();
+      const finalAmount = Math.max(0, subtotal - promoDisc - pixDisc);
 
       const orderData = {
         items: cartArray.map(item => ({
@@ -243,8 +258,10 @@ const Cart = () => {
         })),
         originalAmount: subtotal,
         amount: finalAmount,
-        discountAmount: discountAmount,
+        discountAmount: promoDisc + pixDisc,
         discountPercentage: discountApplied ? 30 : 0,
+        pixDiscountAmount: pixDisc,
+        pixDiscountPercentage: paymentMethod === 'pix' ? PIX_DISCOUNT * 100 : 0,
         promoCode: discountApplied ? promoCode.toUpperCase() : '',
         paymentType: 'Online',
         paymentMethod: paymentMethod,
@@ -326,12 +343,8 @@ const Cart = () => {
 
   const getPaymentButtonText = () => {
     if (isProcessing) return 'Processando...';
-    
-    switch (paymentMethod) {
-      case 'pix': return 'Pagar com PIX';
-      case 'boleto': return 'Gerar Boleto';
-      default: return 'Pagar com Cartão';
-    }
+    if (paymentMethod === 'pix') return 'Pagar com PIX';
+    return 'Pagar com Cartão';
   };
 
   // Handler para salvar endereço
@@ -765,17 +778,19 @@ const Cart = () => {
                 </div>
               </div>
 
-              {/* Payment Method Selection */}
+              {/* ═══════════════════════════════════════════════ */}
+              {/* FORMA DE PAGAMENTO — PIX + Cartão */}
+              {/* ═══════════════════════════════════════════════ */}
               {hasAddress() && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <h3 className='font-semibold text-gray-700 mb-3'>Forma de Pagamento</h3>
                   <div className='space-y-3'>
                     {/* PIX */}
-                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'pix' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
+                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='pix' checked={paymentMethod === 'pix'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
-                        <div className='w-10 h-10 flex items-center justify-center bg-teal-100 rounded-lg mr-3'>
-                          <QrCode className='w-5 h-5 text-teal-600' />
+                        <div className='w-10 h-10 flex items-center justify-center bg-primary/10 rounded-lg mr-3'>
+                          <QrCode className='w-5 h-5 text-primary' />
                         </div>
                         <div>
                           <span className='font-medium text-gray-800'>PIX</span>
@@ -783,9 +798,9 @@ const Cart = () => {
                         </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <span className='text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium'>10% OFF</span>
+                        <span className='text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium'>10% OFF</span>
                         {paymentMethod === 'pix' && (
-                          <div className='w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center'>
+                          <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
                             <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
                               <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
                             </svg>
@@ -795,11 +810,11 @@ const Cart = () => {
                     </label>
 
                     {/* Cartão */}
-                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
+                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='card' checked={paymentMethod === 'card'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
-                        <div className='w-10 h-10 flex items-center justify-center bg-indigo-100 rounded-lg mr-3'>
-                          <CreditCard className='w-5 h-5 text-indigo-600' />
+                        <div className='w-10 h-10 flex items-center justify-center bg-primary/10 rounded-lg mr-3'>
+                          <CreditCard className='w-5 h-5 text-primary' />
                         </div>
                         <div>
                           <span className='font-medium text-gray-800'>Cartão de Crédito</span>
@@ -811,28 +826,7 @@ const Cart = () => {
                         </div>
                       </div>
                       {paymentMethod === 'card' && (
-                        <div className='w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center'>
-                          <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
-                            <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
-                          </svg>
-                        </div>
-                      )}
-                    </label>
-
-                    {/* Boleto */}
-                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'boleto' ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
-                      <input type='radio' name='paymentMethod' value='boleto' checked={paymentMethod === 'boleto'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
-                      <div className='flex items-center flex-1'>
-                        <div className='w-10 h-10 flex items-center justify-center bg-amber-100 rounded-lg mr-3'>
-                          <FileText className='w-5 h-5 text-amber-600' />
-                        </div>
-                        <div>
-                          <span className='font-medium text-gray-800'>Boleto Bancário</span>
-                          <p className='text-xs text-gray-500'>Vencimento em 3 dias úteis</p>
-                        </div>
-                      </div>
-                      {paymentMethod === 'boleto' && (
-                        <div className='w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center'>
+                        <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
                           <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
                             <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
                           </svg>
@@ -843,31 +837,54 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* Order Total */}
+              {/* ═══════════════════════════════════════════════ */}
+              {/* RESUMO DO PEDIDO                                */}
+              {/* ═══════════════════════════════════════════════ */}
               <div className='pt-4'>
                 <div className='flex justify-between items-center mb-3 text-gray-700'>
                   <span>Subtotal ({getCartCount()} {getCartCount() === 1 ? 'item' : 'itens'}):</span>
                   <span className='font-medium text-lg'>
-                    {currency} {parseFloat(getCartAmount()).toFixed(2)}
+                    {formatBRL(getSubtotal())}
                   </span>
                 </div>
+
                 {discountApplied && (
                   <div className='flex justify-between items-center text-green-600 mb-3'>
-                    <span>Desconto (30%):</span>
+                    <span>Cupom ({validPromoCode} -30%):</span>
                     <span className='font-medium text-lg'>
-                      -{currency} {(parseFloat(getCartAmount()) * 0.3).toFixed(2)}
+                      -{formatBRL(getPromoDiscount())}
                     </span>
                   </div>
                 )}
+
+                {paymentMethod === 'pix' && (
+                  <div className='flex justify-between items-center text-primary mb-3'>
+                    <span className='flex items-center gap-1'>
+                      <QrCode className='w-4 h-4' />
+                      Desconto PIX (10%):
+                    </span>
+                    <span className='font-medium text-lg'>
+                      -{formatBRL(getPixDiscount())}
+                    </span>
+                  </div>
+                )}
+
                 <div className='flex justify-between font-bold text-xl mt-5 pt-3 border-t border-gray-200'>
                   <span>Total:</span>
                   <span className='text-primary-dark'>
-                    {currency} {calculateTotal()}
+                    {formatBRL(parseFloat(calculateTotal()))}
                   </span>
                 </div>
+
                 {paymentMethod === 'card' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
-                    ou até 10x de {currency} {(parseFloat(calculateTotal()) / 10).toFixed(2)} sem juros
+                    ou até 10x de {formatBRL(parseFloat(calculateTotal()) / 10)} sem juros
+                  </p>
+                )}
+
+                {paymentMethod === 'pix' && (
+                  <p className='text-xs text-primary mt-1 text-right font-medium'>
+                    Você está economizando {formatBRL(getPixDiscount())} com PIX!
                   </p>
                 )}
               </div>
@@ -879,11 +896,7 @@ const Cart = () => {
                 className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white text-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2
                   ${isProcessing || !hasAddress() || cartArray.length === 0 || Object.keys(stockWarnings).length > 0
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : paymentMethod === 'pix' 
-                      ? 'bg-teal-600 hover:bg-teal-700'
-                      : paymentMethod === 'boleto' 
-                        ? 'bg-amber-600 hover:bg-amber-700'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    : 'bg-primary hover:bg-primary-dull active:scale-[0.98]'
                   }`}
               >
                 {isProcessing ? (
@@ -899,7 +912,6 @@ const Cart = () => {
                 ) : (
                   <>
                     {paymentMethod === 'pix' && <QrCode className='w-5 h-5' />}
-                    {paymentMethod === 'boleto' && <FileText className='w-5 h-5' />}
                     {paymentMethod === 'card' && <CreditCard className='w-5 h-5' />}
                     <span>{getPaymentButtonText()}</span>
                   </>

@@ -3,11 +3,11 @@
 // ═══════════════════════════════════════════════════════════
 // Parcela mínima: R$10,00 (padrão mercado brasileiro)
 // Máximo: 10x sem juros
-// Desconto PIX/Boleto: configurável (padrão 5%)
+// Desconto PIX: 10%
 
 const MIN_INSTALLMENT = 10; // R$10,00 mínimo por parcela
 const MAX_INSTALLMENTS = 10; // Máximo 10x
-const PIX_DISCOUNT = 0.05; // 5% de desconto no PIX/Boleto
+const PIX_DISCOUNT = 0.10; // 10% de desconto no PIX à vista
 
 /**
  * Calcula as opções de parcelamento
