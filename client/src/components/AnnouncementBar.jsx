@@ -2,9 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const announcements = [
-  { text: 'FRETE GRÁTIS  |  CONSULTE CONDIÇÕES', bold: 'FRETE GRÁTIS' },
-  { text: '10% DE DESCONTO  |  À VISTA', bold: '10% DE DESCONTO' },
-  { text: 'PAGAMENTO FACILITADO  |  ATÉ 10X SEM JUROS', bold: 'PAGAMENTO FACILITADO' },
+  { 
+    bold: 'FRETE GRÁTIS', 
+    text: 'A PARTIR DE R$ 199', 
+    link: '/institucional/frete-gratis' 
+  },
+  { 
+    bold: '10% DE DESCONTO', 
+    text: 'NO PIX À VISTA', 
+    link: '/products' 
+  },
+  { 
+    bold: 'ATÉ 10X SEM JUROS', 
+    text: 'NO CARTÃO DE CRÉDITO', 
+    link: '/products' 
+  },
+  { 
+    bold: 'ENTREGA NO MESMO DIA', 
+    text: 'GRANDE RIO — R$ 9,99', 
+    link: '/institucional/frete-gratis' 
+  },
 ];
 
 const AnnouncementBar = () => {
@@ -19,16 +36,18 @@ const AnnouncementBar = () => {
         setCurrentIndex((prev) => (prev + 1) % announcements.length);
         setIsAnimating(false);
       }, 400);
-    }, 3000);
+    }, 3500);
 
     return () => clearInterval(interval);
   }, []);
+
+  const current = announcements[currentIndex];
 
   return (
     <div className='bg-gray-900 overflow-hidden'>
       <div className='max-w-7xl mx-auto px-4 py-2.5'>
         <Link 
-          to='/products'
+          to={current.link}
           className='flex items-center justify-center h-5 overflow-hidden'
         >
           <div
@@ -40,12 +59,10 @@ const AnnouncementBar = () => {
           >
             <p className='text-xs tracking-widest uppercase text-zinc-300 hover:text-white transition-colors text-center whitespace-nowrap'>
               <span className='font-bold text-white'>
-                {announcements[currentIndex].bold}
+                {current.bold}
               </span>
               {'  |  '}
-              <span>
-                {announcements[currentIndex].text.split('|')[1]?.trim()}
-              </span>
+              <span>{current.text}</span>
             </p>
           </div>
         </Link>

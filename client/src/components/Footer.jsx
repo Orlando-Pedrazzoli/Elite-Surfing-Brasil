@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { assets } from '../assets/assets';
 import COMPANY from '../utils/companyConfig';
@@ -16,8 +16,47 @@ import {
   CreditCard,
 } from 'lucide-react';
 
+const trustBadges = [
+  {
+    icon: Lock,
+    iconColor: 'text-primary',
+    iconBg: 'bg-primary/10',
+    title: 'Pagamento Seguro',
+    subtitle: 'Criptografia SSL 256-bit',
+  },
+  {
+    icon: Truck,
+    iconColor: 'text-blue-600',
+    iconBg: 'bg-blue-50',
+    title: 'Envio para todo Brasil',
+    subtitleFn: (c) => `Entrega em ${c.policies.shippingDaysMin}-${c.policies.shippingDaysMax} dias úteis`,
+  },
+  {
+    icon: RotateCcw,
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-50',
+    title: 'Devolução Fácil',
+    subtitleFn: (c) => `${c.policies.returnDays} dias para devolver`,
+  },
+  {
+    icon: Phone,
+    iconColor: 'text-purple-600',
+    iconBg: 'bg-purple-50',
+    title: 'Atendimento',
+    subtitleFn: (c) => c.businessHours.formatted,
+  },
+];
+
 const Footer = () => {
   const { address, whatsapp, social, developer, businessHours } = COMPANY;
+  const [badgeIndex, setBadgeIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBadgeIndex((prev) => (prev + 1) % trustBadges.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <footer className='bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-200'>
@@ -25,51 +64,52 @@ const Footer = () => {
       {/* Trust Badges Bar - Garantias */}
       <div className='bg-white border-b border-gray-200'>
         <div className='px-6 md:px-16 lg:px-24 xl:px-32 py-6'>
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8'>
-            {/* Pagamento Seguro */}
-            <div className='flex items-center gap-3 justify-center md:justify-start'>
-              <div className='w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0'>
-                <Lock className='w-6 h-6 text-primary' />
-              </div>
-              <div>
-                <p className='font-bold text-gray-800 text-sm'>Pagamento Seguro</p>
-                <p className='text-xs text-gray-500'>Criptografia SSL 256-bit</p>
-              </div>
-            </div>
 
-            {/* Envio para todo Brasil */}
-            <div className='flex items-center gap-3 justify-center md:justify-start'>
-              <div className='w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0'>
-                <Truck className='w-6 h-6 text-blue-600' />
-              </div>
-              <div>
-                <p className='font-bold text-gray-800 text-sm'>Envio para todo Brasil</p>
-                <p className='text-xs text-gray-500'>Entrega em {COMPANY.policies.shippingDaysMin}-{COMPANY.policies.shippingDaysMax} dias úteis</p>
-              </div>
-            </div>
-
-            {/* Devolução Fácil */}
-            <div className='flex items-center gap-3 justify-center md:justify-start'>
-              <div className='w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center flex-shrink-0'>
-                <RotateCcw className='w-6 h-6 text-orange-500' />
-              </div>
-              <div>
-                <p className='font-bold text-gray-800 text-sm'>Devolução Fácil</p>
-                <p className='text-xs text-gray-500'>{COMPANY.policies.returnDays} dias para devolver</p>
-              </div>
-            </div>
-
-            {/* Suporte */}
-            <div className='flex items-center gap-3 justify-center md:justify-start'>
-              <div className='w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0'>
-                <Phone className='w-6 h-6 text-purple-600' />
-              </div>
-              <div>
-                <p className='font-bold text-gray-800 text-sm'>Atendimento</p>
-                <p className='text-xs text-gray-500'>{businessHours.formatted}</p>
-              </div>
-            </div>
+          {/* Desktop: grid normal */}
+          <div className='hidden md:grid md:grid-cols-4 gap-8'>
+            {trustBadges.map((badge, i) => {
+              const Icon = badge.icon;
+              const sub = badge.subtitle || (badge.subtitleFn ? badge.subtitleFn(COMPANY) : '');
+              return (
+                <div key={i} className='flex items-center gap-3'>
+                  <div className={`w-12 h-12 ${badge.iconBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-6 h-6 ${badge.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className='font-bold text-gray-800 text-sm'>{badge.title}</p>
+                    <p className='text-xs text-gray-500'>{sub}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Mobile: carousel auto-rotating */}
+          <div className='md:hidden relative h-12 overflow-hidden'>
+            {trustBadges.map((badge, i) => {
+              const Icon = badge.icon;
+              const sub = badge.subtitle || (badge.subtitleFn ? badge.subtitleFn(COMPANY) : '');
+              return (
+                <div
+                  key={i}
+                  className={`absolute inset-0 flex items-center justify-center gap-3 transition-all duration-500 ease-in-out ${
+                    i === badgeIndex
+                      ? 'opacity-100 translate-y-0'
+                      : 'opacity-0 translate-y-6 pointer-events-none'
+                  }`}
+                >
+                  <div className={`w-10 h-10 ${badge.iconBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-5 h-5 ${badge.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className='font-bold text-gray-800 text-sm'>{badge.title}</p>
+                    <p className='text-xs text-gray-500'>{sub}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </div>
 
@@ -219,6 +259,12 @@ const Footer = () => {
               Contato
             </h3>
             <ul className='space-y-3'>
+              <li>
+                <Link to='/contact' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
+                  <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
+                  Fale Conosco
+                </Link>
+              </li>
               <li>
                 <a
                   href={`mailto:${COMPANY.email}`}
