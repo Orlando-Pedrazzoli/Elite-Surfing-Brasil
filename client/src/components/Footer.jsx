@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { assets } from '../assets/assets';
+import COMPANY from '../utils/companyConfig';
 import { 
   Facebook, 
   Instagram, 
@@ -13,10 +14,11 @@ import {
   Truck,
   RotateCcw,
   CreditCard,
-  CheckCircle
 } from 'lucide-react';
 
 const Footer = () => {
+  const { address, whatsapp, social, developer, businessHours } = COMPANY;
+
   return (
     <footer className='bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-200'>
       
@@ -42,7 +44,7 @@ const Footer = () => {
               </div>
               <div>
                 <p className='font-bold text-gray-800 text-sm'>Envio para todo Brasil</p>
-                <p className='text-xs text-gray-500'>Entrega em 3-10 dias úteis</p>
+                <p className='text-xs text-gray-500'>Entrega em {COMPANY.policies.shippingDaysMin}-{COMPANY.policies.shippingDaysMax} dias úteis</p>
               </div>
             </div>
 
@@ -53,7 +55,7 @@ const Footer = () => {
               </div>
               <div>
                 <p className='font-bold text-gray-800 text-sm'>Devolução Fácil</p>
-                <p className='text-xs text-gray-500'>7 dias para devolver</p>
+                <p className='text-xs text-gray-500'>{COMPANY.policies.returnDays} dias para devolver</p>
               </div>
             </div>
 
@@ -64,7 +66,7 @@ const Footer = () => {
               </div>
               <div>
                 <p className='font-bold text-gray-800 text-sm'>Atendimento</p>
-                <p className='text-xs text-gray-500'>Seg-Sex 9h-18h</p>
+                <p className='text-xs text-gray-500'>{businessHours.formatted}</p>
               </div>
             </div>
           </div>
@@ -81,7 +83,7 @@ const Footer = () => {
               <img 
                 className='w-28 hover:opacity-80 transition-opacity' 
                 src={assets.logo_es} 
-                alt='Elite Surfing Brasil' 
+                alt={COMPANY.name} 
               />
             </Link>
 
@@ -95,7 +97,7 @@ const Footer = () => {
               </h3>
               <div className='flex items-center gap-2'>
                 <a
-                  href='https://www.instagram.com/elitesurfingbrasil'
+                  href={social.instagram}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='group relative w-9 h-9 bg-white rounded-lg flex items-center justify-center text-gray-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-200 hover:border-transparent overflow-hidden'
@@ -105,7 +107,7 @@ const Footer = () => {
                   <Instagram className='w-4 h-4 relative z-10' />
                 </a>
                 <a
-                  href='https://web.facebook.com/elitesurfingbrasil'
+                  href={social.facebook}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='group relative w-9 h-9 bg-white rounded-lg flex items-center justify-center text-gray-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-200 hover:border-transparent overflow-hidden'
@@ -125,28 +127,19 @@ const Footer = () => {
             </h3>
             <ul className='space-y-3'>
               <li>
-                <Link
-                  to='/'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Início
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/products'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/products' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Produtos
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/contact'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/contact' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Contato
                 </Link>
@@ -161,37 +154,25 @@ const Footer = () => {
             </h3>
             <ul className='space-y-3'>
               <li>
-                <Link
-                  to='/privacy'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/privacy' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Política de Privacidade
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/refund-policy'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/refund-policy' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Política de Devolução
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/terms'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/terms' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Termos e Condições
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/faq'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/faq' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Perguntas Frequentes
                 </Link>
@@ -206,19 +187,13 @@ const Footer = () => {
             </h3>
             <ul className='space-y-3'>
               <li>
-                <Link
-                  to='/my-orders'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/my-orders' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Meus Pedidos
                 </Link>
               </li>
               <li>
-                <Link
-                  to='/cart'
-                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
-                >
+                <Link to='/cart' className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'>
                   <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
                   Carrinho
                 </Link>
@@ -234,28 +209,32 @@ const Footer = () => {
             <ul className='space-y-3'>
               <li>
                 <a
-                  href='mailto:contato@elitesurfing.com.br'
+                  href={`mailto:${COMPANY.email}`}
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-start gap-2 group'
                 >
                   <Mail className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
-                  <span className='break-all'>contato@elitesurfing.com.br</span>
+                  <span className='break-all'>{COMPANY.email}</span>
                 </a>
               </li>
               <li>
                 <a
-                  href='https://wa.me/5511999999999'
+                  href={whatsapp.linkClean}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-start gap-2 group'
                 >
                   <Phone className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
-                  <span>+55 (11) 99999-9999</span>
+                  <span>{COMPANY.phone}</span>
+                  <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium'>WhatsApp</span>
                 </a>
               </li>
               <li className='flex items-start gap-2 text-gray-600 text-sm'>
                 <MapPin className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
                 <span>
-                  São Paulo, SP - Brasil
+                  {address.street}, {address.number}<br />
+                  {address.complement} - {address.building}<br />
+                  {address.neighborhood}, {address.city}/{address.state}<br />
+                  CEP: {address.cep}
                 </span>
               </li>
             </ul>
@@ -351,22 +330,22 @@ const Footer = () => {
           <div className='flex flex-col md:flex-row items-center justify-between gap-4'>
             <div className='flex flex-col md:flex-row items-center gap-2 md:gap-4'>
               <p className='text-sm text-gray-500 text-center md:text-left'>
-                © {new Date().getFullYear()} Elite Surfing Brasil. Todos os direitos reservados.
+                © {new Date().getFullYear()} {COMPANY.name}. Todos os direitos reservados.
               </p>
               <span className='hidden md:inline text-gray-300'>|</span>
               <p className='text-xs text-gray-400'>
-                CNPJ: 00.000.000/0001-00
+                CNPJ: {COMPANY.cnpj}
               </p>
             </div>
             <div className='flex items-center gap-2 text-sm text-gray-500'>
               <span>Desenvolvido por</span>
               <a
-                href='https://orlandopedrazzoli.com'
+                href={developer.url}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='text-primary hover:underline font-semibold inline-flex items-center gap-1'
               >
-                orlandopedrazzoli.com
+                {developer.url.replace('https://', '')}
                 <ExternalLink className='w-3 h-3' />
               </a>
             </div>

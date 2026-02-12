@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X } from 'lucide-react';
-import { getGroupBySlug, getFiltersByGroup, filterProductsByFilters, getFilterLabel } from '../assets/assets';
+import { getGroupBySlug, getFiltersByGroup, filterDefinitions, filterProductsByFilters, getFilterLabel } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 import { SEO, getCollectionSEO, BreadcrumbSchema, OrganizationSchema, CollectionSchema } from '../components/seo';
@@ -87,12 +87,28 @@ const FilterAccordion = ({ filterDef, activeValues, onToggleValue, productCounts
 // ═══════════════════════════════════════════════════════════════
 const GroupPage = () => {
   const { group: groupSlug } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { products, navigate } = useAppContext();
 
-  // Estados para filtros e visualização
-  const [activeFilters, setActiveFilters] = useState({}); // { boardType: ['shortboard'], thickness: ['6mm'] }
+  // 🆕 Inicializar filtros a partir dos query params da URL
+  const [activeFilters, setActiveFilters] = useState(() => {
+    const initial = {};
+    const defs = filterDefinitions[groupSlug] || [];
+    defs.forEach(fd => {
+      const paramValue = searchParams.get(fd.key);
+      if (paramValue) {
+        // Verificar se o valor existe nas options do filtro
+        const validOption = fd.options.find(o => o.value === paramValue);
+        if (validOption) {
+          initial[fd.key] = [paramValue];
+        }
+      }
+    });
+    return initial;
+  });
+
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [mobileGridCols, setMobileGridCols] = useState(1);
+  const [mobileGridCols, setMobileGridCols] = useState(2);
 
   // Obter dados do grupo
   const group = getGroupBySlug(groupSlug);
@@ -145,13 +161,12 @@ const GroupPage = () => {
     });
   }, [allGroupProducts, activeFilters]);
 
-  // 🆕 Contagem de produtos por filtro (baseada nos produtos do grupo, sem considerar o próprio filtro)
+  // 🆕 Contagem de produtos por filtro
   const getProductCountsForFilter = useCallback((filterKey) => {
     const counts = {};
     const filterDef = filterDefs.find(f => f.key === filterKey);
     if (!filterDef) return counts;
 
-    // Filtros ativos excluindo o filtro atual (para contagem cross-filter)
     const otherFilters = {};
     Object.entries(activeFilters).forEach(([key, values]) => {
       if (key !== filterKey && values.length > 0) {
@@ -159,10 +174,8 @@ const GroupPage = () => {
       }
     });
 
-    // Filtrar produtos pelos "outros" filtros
     const baseProducts = filterProductsByFilters(allGroupProducts, otherFilters);
 
-    // Contar para cada opção deste filtro
     filterDef.options.forEach(option => {
       counts[option.value] = baseProducts.filter(product => {
         const productFilters = product.filters instanceof Map
@@ -175,7 +188,7 @@ const GroupPage = () => {
     return counts;
   }, [filterDefs, activeFilters, allGroupProducts]);
 
-  // 🆕 Toggle um valor de filtro (OR dentro do mesmo filtro)
+  // 🆕 Toggle filtro + sincronizar URL
   const toggleFilterValue = useCallback((filterKey, value) => {
     setActiveFilters(prev => {
       const currentValues = prev[filterKey] || [];
@@ -189,7 +202,6 @@ const GroupPage = () => {
       if (newValues.length === 0 || !currentValues.includes(value)) {
         filterDefs.forEach(fd => {
           if (fd.parentKey === filterKey) {
-            // Verificar se o parentValue ainda está selecionado
             if (!newValues.includes(fd.parentValue)) {
               delete updated[fd.key];
             }
@@ -202,13 +214,25 @@ const GroupPage = () => {
         if (updated[key].length === 0) delete updated[key];
       });
 
+      // 🆕 Sincronizar query params na URL
+      const params = new URLSearchParams();
+      Object.entries(updated).forEach(([k, values]) => {
+        if (values.length === 1) {
+          params.set(k, values[0]);
+        } else if (values.length > 1) {
+          params.set(k, values.join(','));
+        }
+      });
+      setSearchParams(params, { replace: true });
+
       return updated;
     });
-  }, [filterDefs]);
+  }, [filterDefs, setSearchParams]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
     setActiveFilters({});
+    setSearchParams({}, { replace: true });
     setShowFilterPanel(false);
   };
 
@@ -252,7 +276,7 @@ const GroupPage = () => {
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // 🆕 Componente de Filtros (Desktop e Mobile usam o mesmo)
+  // Componente de Filtros (Desktop e Mobile usam o mesmo)
   // ═══════════════════════════════════════════════════════════════
   const FilterPanel = ({ isMobile = false }) => (
     <div className='flex flex-col'>
@@ -300,54 +324,58 @@ const GroupPage = () => {
             <span className='text-gray-800 font-medium' aria-current="page">{group.name}</span>
           </motion.nav>
 
-          {/* Mobile Controls Bar */}
-          <div className='flex sm:hidden items-center justify-between mb-4'>
-            {hasFilters ? (
-              <button
-                onClick={() => setShowFilterPanel(true)}
-                className='flex items-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200'
-              >
-                <SlidersHorizontal className='w-4 h-4' />
-                <span>Filtro</span>
-                {totalActiveFilters > 0 && (
-                  <span className='ml-1 bg-primary text-white text-xs px-1.5 py-0.5 rounded-full'>
-                    {totalActiveFilters}
-                  </span>
-                )}
-              </button>
-            ) : (
-              <div />
-            )}
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* Mobile Controls Bar - STICKY no scroll                 */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          <div className='sm:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-gray-100 shadow-sm'>
+            <div className='flex items-center justify-between'>
+              {hasFilters ? (
+                <button
+                  onClick={() => setShowFilterPanel(true)}
+                  className='flex items-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200'
+                >
+                  <SlidersHorizontal className='w-4 h-4' />
+                  <span>Filtro</span>
+                  {totalActiveFilters > 0 && (
+                    <span className='ml-1 bg-primary text-white text-xs px-1.5 py-0.5 rounded-full'>
+                      {totalActiveFilters}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <div />
+              )}
 
-            {/* Toggle 1/2 colunas */}
-            <div className='flex items-center gap-1'>
-              <button
-                onClick={() => setMobileGridCols(1)}
-                className={`p-2.5 rounded-lg transition-colors duration-200 ${
-                  mobileGridCols === 1 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                aria-label='Ver em 1 coluna'
-              >
-                <Rows3 className='w-5 h-5' />
-              </button>
-              <button
-                onClick={() => setMobileGridCols(2)}
-                className={`p-2.5 rounded-lg transition-colors duration-200 ${
-                  mobileGridCols === 2 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                aria-label='Ver em 2 colunas'
-              >
-                <LayoutGrid className='w-5 h-5' />
-              </button>
+              {/* Toggle 1/2 colunas */}
+              <div className='flex items-center gap-1'>
+                <button
+                  onClick={() => setMobileGridCols(1)}
+                  className={`p-2.5 rounded-lg transition-colors duration-200 ${
+                    mobileGridCols === 1 
+                      ? 'bg-primary text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  aria-label='Ver em 1 coluna'
+                >
+                  <Rows3 className='w-5 h-5' />
+                </button>
+                <button
+                  onClick={() => setMobileGridCols(2)}
+                  className={`p-2.5 rounded-lg transition-colors duration-200 ${
+                    mobileGridCols === 2 
+                      ? 'bg-primary text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  aria-label='Ver em 2 colunas'
+                >
+                  <LayoutGrid className='w-5 h-5' />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* ═══════════════════════════════════════════════════════ */}
-          {/* 🆕 Mobile Filter Panel - Fullscreen com Acordeões      */}
+          {/* Mobile Filter Panel - Fullscreen com Acordeões         */}
           {/* ═══════════════════════════════════════════════════════ */}
           {showFilterPanel && (
             <div className='fixed inset-0 bg-white z-50 flex flex-col sm:hidden'>
@@ -394,7 +422,7 @@ const GroupPage = () => {
           {/* ═══════════════════════════════════════════════════════ */}
           {/* Layout Principal: Sidebar + Grid                       */}
           {/* ═══════════════════════════════════════════════════════ */}
-          <div className='flex flex-col md:flex-row gap-8'>
+          <div className='flex flex-col md:flex-row gap-8 mt-4 sm:mt-0'>
             
             {/* Coluna Esquerda: Filtros Desktop */}
             {hasFilters && (
@@ -463,7 +491,7 @@ const GroupPage = () => {
                 </p>
               </div>
 
-              {/* 🆕 Tags de Filtros Ativos */}
+              {/* Tags de Filtros Ativos */}
               {totalActiveFilters > 0 && (
                 <div className='flex flex-wrap gap-2 mb-4'>
                   {Object.entries(activeFilters).map(([filterKey, values]) =>

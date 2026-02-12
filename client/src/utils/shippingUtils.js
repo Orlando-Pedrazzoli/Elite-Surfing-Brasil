@@ -1,8 +1,10 @@
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 // 📦 CÁLCULO DE FRETE — TABELA POR REGIÃO + PESO (BRASIL)
-// ═══════════════════════════════════════════════════════════
-// Baseado em faixas reais de Correios PAC/SEDEX
-// CEP de origem configurável (padrão: região SC - sede Wet Dreams fica em SC)
+// ═══════════════════════════════════════════════════════════════════════
+// Origem: Rio de Janeiro, RJ (Barra da Tijuca - CEP 22790-702)
+// Preços calibrados com base na origem RJ → destino por região
+// ═══════════════════════════════════════════════════════════════════════
+import COMPANY from './companyConfig';
 
 // 🗺️ MAPEAMENTO CEP → ESTADO (2 primeiros dígitos)
 const CEP_TO_STATE = {
@@ -27,7 +29,7 @@ const CEP_TO_STATE = {
   '64': 'PI',
   '65': 'MA',
   '66': 'PA', '67': 'PA', '68': 'PA',
-  '69': 'AM', // AM, RR, AP, AC, RO — tratados como Norte
+  '69': 'AM',
   '70': 'DF', '71': 'DF', '72': 'GO', '73': 'GO',
   '74': 'GO', '75': 'GO', '76': 'GO',
   '77': 'TO',
@@ -50,98 +52,107 @@ const STATE_TO_REGION = {
   PA: 'norte', AM: 'norte', RR: 'norte', AP: 'norte', AC: 'norte', RO: 'norte',
 };
 
-// 📊 TABELA DE FRETE POR REGIÃO + FAIXA DE PESO (em gramas)
-// Valores aproximados baseados em Correios PAC
-// Cada faixa: { maxWeight: gramas, prices: { região: valor } }
+// ═══════════════════════════════════════════════════════════════════════
+// 📊 TABELA DE FRETE — ORIGEM: RIO DE JANEIRO (RJ)
+// ═══════════════════════════════════════════════════════════════════════
+// Preços calibrados por distância real do RJ:
+//   - local_rj:     Dentro do estado do RJ (mais barato)
+//   - sudeste:      SP, MG, ES (próximo)
+//   - sul:          PR, SC, RS (distância média-longa)
+//   - centro_oeste: DF, GO, MT, MS, TO (distância média)
+//   - nordeste:     BA→MA (distância média-longa a longa)
+//   - norte:        PA, AM, RR, AP, AC, RO (mais distante, mais caro)
+// ═══════════════════════════════════════════════════════════════════════
+
 const SHIPPING_TABLE_PAC = [
   {
     maxWeight: 300,
     label: 'Até 300g',
-    prices: { sul: 18.90, sudeste: 22.90, centro_oeste: 27.90, nordeste: 32.90, norte: 38.90 },
-    deadline: { sul: 4, sudeste: 6, centro_oeste: 8, nordeste: 10, norte: 12 },
+    prices:   { local_rj: 15.90, sudeste: 19.90, sul: 24.90, centro_oeste: 26.90, nordeste: 29.90, norte: 38.90 },
+    deadline: { local_rj: 2,     sudeste: 4,     sul: 5,     centro_oeste: 6,      nordeste: 8,     norte: 12 },
   },
   {
     maxWeight: 500,
     label: 'Até 500g',
-    prices: { sul: 20.90, sudeste: 25.90, centro_oeste: 30.90, nordeste: 36.90, norte: 42.90 },
-    deadline: { sul: 4, sudeste: 6, centro_oeste: 8, nordeste: 10, norte: 12 },
+    prices:   { local_rj: 17.90, sudeste: 22.90, sul: 27.90, centro_oeste: 29.90, nordeste: 33.90, norte: 42.90 },
+    deadline: { local_rj: 2,     sudeste: 4,     sul: 5,     centro_oeste: 6,      nordeste: 8,     norte: 12 },
   },
   {
     maxWeight: 1000,
     label: 'Até 1kg',
-    prices: { sul: 24.90, sudeste: 29.90, centro_oeste: 35.90, nordeste: 42.90, norte: 49.90 },
-    deadline: { sul: 5, sudeste: 7, centro_oeste: 9, nordeste: 11, norte: 14 },
+    prices:   { local_rj: 20.90, sudeste: 26.90, sul: 32.90, centro_oeste: 34.90, nordeste: 39.90, norte: 49.90 },
+    deadline: { local_rj: 2,     sudeste: 5,     sul: 6,     centro_oeste: 7,      nordeste: 9,     norte: 14 },
   },
   {
     maxWeight: 2000,
     label: 'Até 2kg',
-    prices: { sul: 29.90, sudeste: 36.90, centro_oeste: 42.90, nordeste: 49.90, norte: 58.90 },
-    deadline: { sul: 5, sudeste: 7, centro_oeste: 9, nordeste: 11, norte: 14 },
+    prices:   { local_rj: 24.90, sudeste: 32.90, sul: 38.90, centro_oeste: 40.90, nordeste: 46.90, norte: 58.90 },
+    deadline: { local_rj: 3,     sudeste: 5,     sul: 6,     centro_oeste: 7,      nordeste: 10,    norte: 14 },
   },
   {
     maxWeight: 5000,
     label: 'Até 5kg',
-    prices: { sul: 38.90, sudeste: 45.90, centro_oeste: 55.90, nordeste: 65.90, norte: 75.90 },
-    deadline: { sul: 6, sudeste: 8, centro_oeste: 10, nordeste: 12, norte: 15 },
+    prices:   { local_rj: 32.90, sudeste: 42.90, sul: 49.90, centro_oeste: 52.90, nordeste: 59.90, norte: 75.90 },
+    deadline: { local_rj: 3,     sudeste: 6,     sul: 7,     centro_oeste: 8,      nordeste: 10,    norte: 15 },
   },
   {
     maxWeight: 10000,
     label: 'Até 10kg',
-    prices: { sul: 49.90, sudeste: 59.90, centro_oeste: 72.90, nordeste: 85.90, norte: 99.90 },
-    deadline: { sul: 7, sudeste: 9, centro_oeste: 11, nordeste: 14, norte: 18 },
+    prices:   { local_rj: 42.90, sudeste: 55.90, sul: 65.90, centro_oeste: 69.90, nordeste: 79.90, norte: 99.90 },
+    deadline: { local_rj: 3,     sudeste: 7,     sul: 8,     centro_oeste: 9,      nordeste: 12,    norte: 18 },
   },
   {
     maxWeight: 30000,
     label: 'Até 30kg',
-    prices: { sul: 69.90, sudeste: 82.90, centro_oeste: 99.90, nordeste: 119.90, norte: 139.90 },
-    deadline: { sul: 8, sudeste: 10, centro_oeste: 12, nordeste: 15, norte: 20 },
+    prices:   { local_rj: 59.90, sudeste: 75.90, sul: 89.90, centro_oeste: 95.90, nordeste: 109.90, norte: 139.90 },
+    deadline: { local_rj: 4,     sudeste: 8,     sul: 9,     centro_oeste: 10,     nordeste: 13,     norte: 20 },
   },
 ];
 
-// SEDEX (mais rápido, mais caro)
+// SEDEX (mais rápido, mais caro) — Origem RJ
 const SHIPPING_TABLE_SEDEX = [
   {
     maxWeight: 300,
-    prices: { sul: 27.90, sudeste: 32.90, centro_oeste: 38.90, nordeste: 45.90, norte: 55.90 },
-    deadline: { sul: 1, sudeste: 2, centro_oeste: 3, nordeste: 4, norte: 5 },
+    prices:   { local_rj: 22.90, sudeste: 29.90, sul: 36.90, centro_oeste: 38.90, nordeste: 44.90, norte: 55.90 },
+    deadline: { local_rj: 1,     sudeste: 1,     sul: 2,     centro_oeste: 2,      nordeste: 3,     norte: 5 },
   },
   {
     maxWeight: 500,
-    prices: { sul: 30.90, sudeste: 36.90, centro_oeste: 42.90, nordeste: 50.90, norte: 60.90 },
-    deadline: { sul: 1, sudeste: 2, centro_oeste: 3, nordeste: 4, norte: 5 },
+    prices:   { local_rj: 25.90, sudeste: 33.90, sul: 40.90, centro_oeste: 42.90, nordeste: 49.90, norte: 60.90 },
+    deadline: { local_rj: 1,     sudeste: 1,     sul: 2,     centro_oeste: 2,      nordeste: 3,     norte: 5 },
   },
   {
     maxWeight: 1000,
-    prices: { sul: 35.90, sudeste: 42.90, centro_oeste: 49.90, nordeste: 58.90, norte: 69.90 },
-    deadline: { sul: 1, sudeste: 2, centro_oeste: 3, nordeste: 5, norte: 6 },
+    prices:   { local_rj: 29.90, sudeste: 38.90, sul: 46.90, centro_oeste: 48.90, nordeste: 55.90, norte: 69.90 },
+    deadline: { local_rj: 1,     sudeste: 2,     sul: 2,     centro_oeste: 3,      nordeste: 4,     norte: 6 },
   },
   {
     maxWeight: 2000,
-    prices: { sul: 42.90, sudeste: 52.90, centro_oeste: 62.90, nordeste: 72.90, norte: 85.90 },
-    deadline: { sul: 2, sudeste: 3, centro_oeste: 4, nordeste: 5, norte: 7 },
+    prices:   { local_rj: 35.90, sudeste: 46.90, sul: 55.90, centro_oeste: 58.90, nordeste: 66.90, norte: 85.90 },
+    deadline: { local_rj: 1,     sudeste: 2,     sul: 3,     centro_oeste: 3,      nordeste: 4,     norte: 7 },
   },
   {
     maxWeight: 5000,
-    prices: { sul: 55.90, sudeste: 65.90, centro_oeste: 78.90, nordeste: 92.90, norte: 109.90 },
-    deadline: { sul: 2, sudeste: 3, centro_oeste: 4, nordeste: 6, norte: 8 },
+    prices:   { local_rj: 45.90, sudeste: 58.90, sul: 69.90, centro_oeste: 72.90, nordeste: 84.90, norte: 109.90 },
+    deadline: { local_rj: 1,     sudeste: 2,     sul: 3,     centro_oeste: 3,      nordeste: 5,     norte: 8 },
   },
   {
     maxWeight: 10000,
-    prices: { sul: 72.90, sudeste: 85.90, centro_oeste: 99.90, nordeste: 119.90, norte: 139.90 },
-    deadline: { sul: 3, sudeste: 4, centro_oeste: 5, nordeste: 7, norte: 9 },
+    prices:   { local_rj: 59.90, sudeste: 75.90, sul: 89.90, centro_oeste: 95.90, nordeste: 109.90, norte: 139.90 },
+    deadline: { local_rj: 1,     sudeste: 3,     sul: 3,     centro_oeste: 4,      nordeste: 6,     norte: 9 },
   },
   {
     maxWeight: 30000,
-    prices: { sul: 99.90, sudeste: 119.90, centro_oeste: 139.90, nordeste: 165.90, norte: 195.90 },
-    deadline: { sul: 3, sudeste: 4, centro_oeste: 6, nordeste: 8, norte: 10 },
+    prices:   { local_rj: 82.90, sudeste: 105.90, sul: 125.90, centro_oeste: 132.90, nordeste: 152.90, norte: 195.90 },
+    deadline: { local_rj: 2,     sudeste: 3,      sul: 4,      centro_oeste: 4,      nordeste: 7,      norte: 10 },
   },
 ];
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO — FRETE GRÁTIS
-// ═══════════════════════════════════════════════════════════
-const FREE_SHIPPING_THRESHOLD = 299; // Frete grátis acima de R$299
-const FREE_SHIPPING_REGIONS = ['sul', 'sudeste']; // Regiões com frete grátis (se acima do threshold)
+// ═══════════════════════════════════════════════════════════════════════
+const FREE_SHIPPING_THRESHOLD = COMPANY.payments.freeShippingMin;
+const FREE_SHIPPING_REGIONS = ['local_rj', 'sudeste'];
 
 /**
  * Validar formato do CEP
@@ -171,10 +182,15 @@ export const getStateFromCep = (cep) => {
 
 /**
  * Obter região a partir do CEP
+ * Diferencia "local_rj" (dentro do RJ) de "sudeste" (SP, MG, ES)
  */
 export const getRegionFromCep = (cep) => {
   const state = getStateFromCep(cep);
   if (!state) return null;
+  
+  // Envios dentro do próprio RJ são mais baratos
+  if (state === 'RJ') return 'local_rj';
+  
   return STATE_TO_REGION[state] || null;
 };
 
@@ -182,8 +198,9 @@ export const getRegionFromCep = (cep) => {
  * Nome da região formatado
  */
 const REGION_NAMES = {
-  sul: 'Sul',
+  local_rj: 'Rio de Janeiro (local)',
   sudeste: 'Sudeste',
+  sul: 'Sul',
   centro_oeste: 'Centro-Oeste',
   nordeste: 'Nordeste',
   norte: 'Norte',
@@ -197,7 +214,7 @@ const calculateCubicWeight = (dimensions) => {
   if (!dimensions || !dimensions.length || !dimensions.width || !dimensions.height) {
     return 0;
   }
-  return (dimensions.length * dimensions.width * dimensions.height) / 6000 * 1000; // em gramas
+  return (dimensions.length * dimensions.width * dimensions.height) / 6000 * 1000;
 };
 
 /**
@@ -212,15 +229,15 @@ export const calculateShipping = (cep, product, orderTotal = 0) => {
     return { error: 'CEP inválido. Verifique e tente novamente.' };
   }
 
-  const region = getRegionFromCep(cep);
   const state = getStateFromCep(cep);
+  const region = getRegionFromCep(cep);
   
   if (!region) {
     return { error: 'CEP não encontrado. Verifique e tente novamente.' };
   }
 
   // Peso real do produto (em gramas)
-  const realWeight = product?.weight || 300; // default 300g se não informado
+  const realWeight = product?.weight || 300;
   
   // Peso cúbico
   const cubicWeight = calculateCubicWeight(product?.dimensions);
@@ -242,6 +259,8 @@ export const calculateShipping = (cep, product, orderTotal = 0) => {
   }
 
   const results = {
+    origin: `${COMPANY.address.city}/${COMPANY.address.state}`,
+    originCep: COMPANY.originCep,
     state,
     region,
     regionName: REGION_NAMES[region],
@@ -276,9 +295,11 @@ export const calculateShipping = (cep, product, orderTotal = 0) => {
   }
 
   // Mensagem de frete grátis
-  if (!isFreeShipping && orderTotal < FREE_SHIPPING_THRESHOLD) {
+  if (!isFreeShipping && FREE_SHIPPING_REGIONS.includes(region) && orderTotal < FREE_SHIPPING_THRESHOLD) {
     const remaining = FREE_SHIPPING_THRESHOLD - orderTotal;
-    results.freeShippingMessage = `Frete grátis para ${FREE_SHIPPING_REGIONS.map(r => REGION_NAMES[r]).join(' e ')} em compras acima de R$ ${FREE_SHIPPING_THRESHOLD},00. Faltam R$ ${remaining.toFixed(2).replace('.', ',')}!`;
+    results.freeShippingMessage = `Frete grátis para RJ e Sudeste em compras acima de R$ ${FREE_SHIPPING_THRESHOLD},00. Faltam R$ ${remaining.toFixed(2).replace('.', ',')}!`;
+  } else if (!isFreeShipping && !FREE_SHIPPING_REGIONS.includes(region)) {
+    results.freeShippingMessage = `Frete grátis para RJ e Sudeste em compras acima de R$ ${FREE_SHIPPING_THRESHOLD},00.`;
   }
 
   return results;

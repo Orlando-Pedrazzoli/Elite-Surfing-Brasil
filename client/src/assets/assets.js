@@ -307,6 +307,21 @@ export const filterDefinitions = {
   ],
 
   // ═══════════════════════════════════════════════════════════════
+  // 🔱 QUILHAS
+  // ═══════════════════════════════════════════════════════════════
+  quilhas: [
+    {
+      key: 'tipo',
+      label: 'Tipo de Quilha',
+      options: [
+        { value: 'shortboard', label: 'Quilha Shortboard' },
+        { value: 'longboard', label: 'Quilha Longboard' },
+        { value: 'sup', label: 'Quilha SUP' },
+      ],
+    },
+  ],
+
+  // ═══════════════════════════════════════════════════════════════
   // 🎒 ACESSÓRIOS
   // ═══════════════════════════════════════════════════════════════
   acessorios: [
@@ -316,7 +331,6 @@ export const filterDefinitions = {
       options: [
         { value: 'racks', label: 'Racks' },
         { value: 'parafinas', label: 'Parafinas' },
-        { value: 'quilhas', label: 'Quilhas' },
         { value: 'bones', label: 'Bonés' },
         { value: 'protetor-rabeta', label: 'Protetor / Rabeta' },
         { value: 'wetsuit-bag', label: 'Wetsuit Bag' },
@@ -337,6 +351,7 @@ export const filterDefinitions = {
         { value: 'leash', label: 'Leashes' },
         { value: 'capa', label: 'Capas' },
         { value: 'sarcofago', label: 'Sarcófagos' },
+        { value: 'quilha', label: 'Quilhas' },
         { value: 'acessorio', label: 'Acessórios' },
         { value: 'bodyboard', label: 'Bodyboard' },
         { value: 'sup', label: 'Stand Up Paddle' },
@@ -353,7 +368,7 @@ export const groups = [
     id: 'acessorios',
     name: 'Acessórios',
     slug: 'acessorios',
-    description: 'Wax, quilhas, racks, wetsuits e tudo que você precisa para sua sessão de surf.',
+    description: 'Wax, racks, wetsuits e tudo que você precisa para sua sessão de surf.',
     image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
   {
@@ -384,6 +399,13 @@ export const groups = [
     slug: 'sarcofagos',
     description: 'Sarcófagos para viagens e proteção total da sua prancha. Estrutura reforçada com acolchoamento interno.',
     image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
+  },
+  {
+    id: 'quilhas',
+    name: 'Quilhas',
+    slug: 'quilhas',
+    description: 'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
+    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
   {
     id: 'bodyboard',
@@ -441,10 +463,14 @@ export const categories = [
   { text: 'Refletiva Premium', path: 'Refletiva-Premium', group: 'capas' },
   { text: 'Capa Toalha', path: 'Capa-Toalha', group: 'capas' },
 
+  // ═══ QUILHAS ═══
+  { text: 'Quilha Shortboard', path: 'Quilha-Shortboard', group: 'quilhas' },
+  { text: 'Quilha Longboard', path: 'Quilha-Longboard', group: 'quilhas' },
+  { text: 'Quilha SUP', path: 'Quilha-SUP', group: 'quilhas' },
+
   // ═══ ACESSÓRIOS ═══
   { text: 'Racks', path: 'Racks', group: 'acessorios' },
   { text: 'Parafinas', path: 'Parafinas', group: 'acessorios' },
-  { text: 'Quilhas', path: 'Quilhas', group: 'acessorios' },
   { text: 'Bonés', path: 'Bones', group: 'acessorios' },
   { text: 'Protetor / Rabeta', path: 'Protetor-Rabeta', group: 'acessorios' },
   { text: 'Wetsuit Bag', path: 'Wetsuit-Bag', group: 'acessorios' },
@@ -592,9 +618,9 @@ export const footerLinks = [
   {
     title: 'Siga-nos',
     links: [
-      { text: 'Instagram', url: 'https://instagram.com/elitesurfingbrasil' },
+      { text: 'Instagram', url: 'https://instagram.com/elitesurfing' },
       { text: 'TikTok', url: '#' },
-      { text: 'Facebook', url: '#' },
+      { text: 'Facebook', url: 'https://www.facebook.com/elitesurfing.com.br' },
       { text: 'YouTube', url: '#' },
     ],
   },
