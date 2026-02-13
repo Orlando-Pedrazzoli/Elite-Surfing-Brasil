@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { assets, categories } from '../../assets/assets';
+import React, { useState, useEffect, useMemo } from 'react';
+import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
 import toast from 'react-hot-toast';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
@@ -85,10 +85,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   const [files, setFiles] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // GROUP + CATEGORY
+  const [selectedGroup, setSelectedGroup] = useState('');
   const [category, setCategory] = useState('');
+
   const [price, setPrice] = useState('');
   const [offerPrice, setOfferPrice] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // CAMPOS DE STOCK
   const [stock, setStock] = useState('');
@@ -97,6 +101,9 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   const [sku, setSku] = useState('');
   const [weight, setWeight] = useState('');
   const [dimensions, setDimensions] = useState({ length: '', width: '', height: '' });
+
+  // 🆕 FILTROS DINÂMICOS (baseados no grupo selecionado)
+  const [productFilters, setProductFilters] = useState({});
 
   // CAMPOS DE FAMÍLIA/COR
   const [productFamily, setProductFamily] = useState('');
@@ -110,11 +117,36 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   
   const [isMainVariant, setIsMainVariant] = useState(true);
 
+  // Filtrar categorias baseado no grupo selecionado
+  const filteredCategories = useMemo(() => {
+    if (!selectedGroup) return [];
+    return getCategoriesByGroup(selectedGroup);
+  }, [selectedGroup]);
+
+  // 🆕 Obter filtros disponíveis para o grupo selecionado
+  const groupFilterDefs = useMemo(() => {
+    if (!selectedGroup) return [];
+    return getFiltersByGroup(selectedGroup);
+  }, [selectedGroup]);
+
+  // 🆕 Filtros visíveis (respeita parent-child)
+  const visibleFilters = useMemo(() => {
+    return groupFilterDefs.filter(filterDef => {
+      if (!filterDef.parentKey) return true;
+      return productFilters[filterDef.parentKey] === filterDef.parentValue;
+    });
+  }, [groupFilterDefs, productFilters]);
+
+  // Carregar dados do produto
   useEffect(() => {
     if (product) {
       setName(product.name);
       setDescription(product.description.join('\n'));
-      setCategory(product.category);
+      
+      // Group + Category
+      setSelectedGroup(product.group || '');
+      setCategory(product.category || '');
+      
       setPrice(product.price.toString());
       setOfferPrice(product.offerPrice.toString());
       
@@ -129,6 +161,16 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         width: product.dimensions?.width ? product.dimensions.width.toString() : '',
         height: product.dimensions?.height ? product.dimensions.height.toString() : '',
       });
+
+      // 🆕 Filtros do produto
+      if (product.filters) {
+        const filters = product.filters instanceof Map 
+          ? Object.fromEntries(product.filters) 
+          : (product.filters || {});
+        setProductFilters(filters);
+      } else {
+        setProductFilters({});
+      }
       
       // Família/cor
       setProductFamily(product.productFamily || '');
@@ -156,6 +198,28 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     }
   }, [product]);
 
+  // Quando o grupo muda, limpar a categoria e filtros
+  const handleGroupChange = (e) => {
+    const newGroup = e.target.value;
+    setSelectedGroup(newGroup);
+    setCategory('');
+    setProductFilters({});
+  };
+
+  // 🆕 Atualizar valor de um filtro
+  const handleFilterChange = (filterKey, value) => {
+    setProductFilters(prev => {
+      const updated = { ...prev, [filterKey]: value };
+      // Limpar filtros filhos quando o parent muda
+      groupFilterDefs.forEach(fd => {
+        if (fd.parentKey === filterKey && fd.parentValue !== value) {
+          delete updated[fd.key];
+        }
+      });
+      return updated;
+    });
+  };
+
   // GERAR SLUG PARA FAMÍLIA
   const generateFamilySlug = (text) => {
     return text
@@ -169,10 +233,17 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   // 🆕 GERAR SKU AUTOMÁTICO
   const generateSku = () => {
     const groupPrefix = {
-      decks: 'DK', leashes: 'LS', capas: 'CP', sarcofagos: 'SF',
-      bodyboard: 'BB', sup: 'SP', acessorios: 'AC', outlet: 'OT',
+      decks: 'DK',
+      leashes: 'LS',
+      capas: 'CP',
+      sarcofagos: 'SF',
+      quilhas: 'QL',
+      bodyboard: 'BB',
+      sup: 'SP',
+      acessorios: 'AC',
+      outlet: 'OT',
     };
-    const prefix = groupPrefix[product.group] || 'XX';
+    const prefix = groupPrefix[selectedGroup] || 'XX';
     const random = Math.floor(1000 + Math.random() * 9000);
     setSku(`ES-${prefix}-${random}`);
   };
@@ -197,6 +268,18 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     setIsSubmitting(true);
 
     try {
+      if (!selectedGroup) {
+        toast.error('Selecione um grupo');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!category) {
+        toast.error('Selecione uma categoria');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (stock === '' || parseInt(stock) < 0) {
         toast.error('Defina a quantidade em estoque');
         setIsSubmitting(false);
@@ -212,6 +295,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       const productData = {
         name,
         description: description.split('\n').filter(line => line.trim()),
+        group: selectedGroup,
         category,
         price: parseFloat(price),
         offerPrice: parseFloat(offerPrice),
@@ -230,6 +314,17 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             }
           : null,
       };
+
+      // 🆕 Adicionar filtros se algum foi preenchido
+      const filledFilters = {};
+      Object.entries(productFilters).forEach(([key, value]) => {
+        if (value) filledFilters[key] = value;
+      });
+      if (Object.keys(filledFilters).length > 0) {
+        productData.filters = filledFilters;
+      } else {
+        productData.filters = {};
+      }
 
       // Dados de família/cor
       if (productFamily.trim()) {
@@ -398,24 +493,130 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               placeholder='Digite a descrição'
               disabled={isSubmitting}
             ></textarea>
+            <p className='text-xs text-gray-500'>Cada linha será um item da lista</p>
           </div>
 
-          {/* Categoria */}
-          <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='edit-category'>Categoria</label>
-            <select
-              onChange={e => setCategory(e.target.value)}
-              value={category}
-              id='edit-category'
-              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
-              disabled={isSubmitting}
-            >
-              <option value=''>Selecione a Categoria</option>
-              {categories.map((item, index) => (
-                <option key={index} value={item.path}>{item.text}</option>
-              ))}
-            </select>
+          {/* GROUP + CATEGORIA em linha */}
+          <div className='flex items-start gap-4 flex-wrap'>
+            {/* Grupo */}
+            <div className='flex-1 flex flex-col gap-1 min-w-[180px]'>
+              <label className='text-base font-medium' htmlFor='edit-group'>Grupo</label>
+              <select
+                onChange={handleGroupChange}
+                value={selectedGroup}
+                id='edit-group'
+                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
+                required
+                disabled={isSubmitting}
+              >
+                <option value=''>Selecionar Grupo</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.slug}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <p className='text-xs text-gray-500'>Selecione primeiro o grupo</p>
+            </div>
+
+            {/* Categoria */}
+            <div className='flex-1 flex flex-col gap-1 min-w-[180px]'>
+              <label className='text-base font-medium' htmlFor='edit-category'>Categoria</label>
+              <select
+                onChange={e => setCategory(e.target.value)}
+                value={category}
+                id='edit-category'
+                className={`outline-none py-2.5 px-3 rounded-lg border transition-colors ${
+                  !selectedGroup 
+                    ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' 
+                    : 'border-gray-300 focus:border-primary'
+                }`}
+                disabled={!selectedGroup || isSubmitting}
+                required
+              >
+                <option value=''>
+                  {selectedGroup ? 'Selecionar Categoria' : 'Selecione um grupo primeiro'}
+                </option>
+                {filteredCategories.map((item, index) => (
+                  <option key={index} value={item.path}>
+                    {item.text}
+                  </option>
+                ))}
+              </select>
+              {selectedGroup && filteredCategories.length === 0 && (
+                <p className='text-xs text-amber-600'>Nenhuma categoria neste grupo ainda</p>
+              )}
+            </div>
           </div>
+
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* 🆕 FILTROS DINÂMICOS                                      */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {selectedGroup && visibleFilters.length > 0 && (
+            <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
+              <div className='flex items-center gap-2 mb-1'>
+                <svg className='w-5 h-5 text-blue-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' />
+                </svg>
+                <h3 className='text-base font-semibold text-blue-800'>
+                  Filtros do Produto
+                </h3>
+              </div>
+              <p className='text-xs text-blue-600 -mt-2'>
+                Esses filtros permitem que o cliente encontre o produto na página da coleção
+              </p>
+
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                {visibleFilters.map((filterDef) => (
+                  <div key={filterDef.key} className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      {filterDef.label}
+                    </label>
+                    <select
+                      value={productFilters[filterDef.key] || ''}
+                      onChange={e => handleFilterChange(filterDef.key, e.target.value)}
+                      className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
+                      disabled={isSubmitting}
+                    >
+                      <option value=''>— Selecionar —</option>
+                      {filterDef.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preview dos filtros preenchidos */}
+              {Object.keys(productFilters).filter(k => productFilters[k]).length > 0 && (
+                <div className='flex flex-wrap gap-2 pt-2 border-t border-blue-200'>
+                  {Object.entries(productFilters).map(([key, value]) => {
+                    if (!value) return null;
+                    const filterDef = groupFilterDefs.find(f => f.key === key);
+                    const option = filterDef?.options.find(o => o.value === value);
+                    return (
+                      <span 
+                        key={key}
+                        className='inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium'
+                      >
+                        {filterDef?.label}: {option?.label || value}
+                        <button
+                          type='button'
+                          onClick={() => handleFilterChange(key, '')}
+                          className='ml-0.5 hover:text-blue-600'
+                          disabled={isSubmitting}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Preços */}
           <div className='flex items-center gap-5 flex-wrap'>
@@ -502,9 +703,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                   <button
                     type='button'
                     onClick={generateSku}
-                    className='px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50'
+                    disabled={!selectedGroup || isSubmitting}
+                    className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                      selectedGroup && !isSubmitting
+                        ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                        : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    }`}
                     title='Gerar código automático'
-                    disabled={isSubmitting}
                   >
                     Gerar
                   </button>
