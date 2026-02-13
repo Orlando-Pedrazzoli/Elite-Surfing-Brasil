@@ -140,7 +140,6 @@ export const filterDefinitions = {
       key: 'boardType',
       label: 'Tipo de Prancha',
       options: [
-        { value: 'shortboard', label: 'Shortboard' },
         { value: 'shortboard-hibridas', label: 'Shortboard / Híbridas' },
         { value: 'fun-minilong', label: 'Fun / Mini Long' },
         { value: 'longboard', label: 'Longboard' },
@@ -449,7 +448,7 @@ export const categories = [
   { text: 'Deck SUP', path: 'Deck-SUP', group: 'decks' },
   
   // ═══ LEASHES ═══
-  { text: 'Leash Shortboard', path: 'Leash-Shortboard', group: 'leashes' },
+  { text: 'Leash Shortboard / Híbridas', path: 'Leash-Shortboard-Hibridas', group: 'leashes' },
 
   { text: 'Leash Fun / Mini Long', path: 'Leash-Fun-MiniLong', group: 'leashes' },
   { text: 'Leash Longboard', path: 'Leash-Longboard', group: 'leashes' },
