@@ -5,29 +5,39 @@ import { motion } from 'framer-motion';
 const banners = [
   {
     id: 1,
-    heading: 'EXPLORE A COLEÇÃO',
-    description: 'Os decks Elite Surfing garante conexão total entre o pé e a prancha, permitindo máxima velocidade, resposta e drive nas manobras mais exigentes.',
-    ctaText: 'VER COLEÇÃO DE DECKS',
-    ctaLink: '/collections/decks', // 🆕 Link para group decks
-    image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=1200&q=80',
+    heading: 'NOSSOS SARCÓFAGOS',
+    description:
+      'Tivemos a grande honra de receber um review sobre essa lenda do surf elogiando e recomendando nosso sarcófago.',
+    ctaText: 'CONHEÇA',
+    ctaLink: '/collections/sarcofagos',
+    media: {
+      type: 'video',
+      src: 'https://www.youtube.com/embed/iQTmZACDRNA?si=5rT5E19EOgQmEyYH',
+    },
     imagePosition: 'right',
   },
   {
     id: 2,
     heading: 'LEASHES',
-    description: 'Projetados para funcionar em ondas pequenas ou condições mais exigentes, contam com construção em peça única, sem emendas, para máxima segurança e performance.',
+    description:
+      'Projetados para funcionar em ondas pequenas ou condições mais exigentes, contam com construção em peça única, sem emendas, para máxima segurança e performance.',
     ctaText: 'VER COLEÇÃO DE LEASHES',
-    ctaLink: '/collections/leashes', // 🆕 Link para group leashes
-    image: 'https://images.unsplash.com/photo-1455264745730-cb3b76250ae8?w=1200&q=80',
+    ctaLink: '/collections/leashes',
+    media: {
+      type: 'image',
+      src: 'https://images.unsplash.com/photo-1455264745730-cb3b76250ae8?w=1200&q=80',
+    },
     imagePosition: 'left',
   },
 ];
 
-const FeatureBanner = ({ heading, description, ctaText, ctaLink, image, imagePosition }) => {
+const FeatureBanner = ({ heading, description, ctaText, ctaLink, media, imagePosition }) => {
   const isImageRight = imagePosition === 'right';
 
   return (
-    <div className={`flex flex-col ${isImageRight ? 'lg:flex-row' : 'lg:flex-row-reverse'} min-h-[400px] lg:min-h-[500px]`}>
+    <div
+      className={`flex flex-col ${isImageRight ? 'lg:flex-row' : 'lg:flex-row-reverse'} min-h-[400px] lg:min-h-[500px]`}
+    >
       {/* Content Block */}
       <motion.div
         initial={{ opacity: 0, x: isImageRight ? -50 : 50 }}
@@ -50,19 +60,30 @@ const FeatureBanner = ({ heading, description, ctaText, ctaLink, image, imagePos
         </Link>
       </motion.div>
 
-      {/* Image Block */}
+      {/* Media Block */}
       <motion.div
         initial={{ opacity: 0, x: isImageRight ? 50 : -50 }}
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="flex-1 relative overflow-hidden"
+        className="flex-1 relative overflow-hidden min-h-[300px] lg:min-h-full"
       >
-        <img
-          src={image}
-          alt={heading}
-          className="w-full h-full object-cover min-h-[300px] lg:min-h-full"
-        />
+        {media.type === 'video' ? (
+          <iframe
+            src={media.src}
+            title={heading}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        ) : (
+          <img
+            src={media.src}
+            alt={heading}
+            className="w-full h-full object-cover absolute inset-0"
+          />
+        )}
       </motion.div>
     </div>
   );
@@ -78,7 +99,7 @@ const FeatureBanners = () => {
           description={banner.description}
           ctaText={banner.ctaText}
           ctaLink={banner.ctaLink}
-          image={banner.image}
+          media={banner.media}
           imagePosition={banner.imagePosition}
         />
       ))}
