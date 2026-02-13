@@ -35,6 +35,7 @@ import quilhas_card from './quilhas-card.png';
 import capas_card from './capas.png';
 import sarcofago_card from './sarcofago.png';
 import decktop_card from './decktop.png';
+import leash_tech from './leash-tech.png';
 
 
 export const assets = {
@@ -70,6 +71,7 @@ export const assets = {
   decks_banner,
   decks_card,
   decks_card2,
+  leash_tech,
 };
 
 // ═══════════════════════════════════════════════════════════════════
