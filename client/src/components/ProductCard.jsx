@@ -1,7 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
-import { assets } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
-import { ShoppingBag, Plus, Minus } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
 const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
@@ -22,7 +21,6 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
       style={{ width: size, height: size }}
     >
       {isDual ? (
-        // Bolinha dividida na diagonal
         <div 
           className='w-full h-full rounded-full overflow-hidden'
           style={{
@@ -31,14 +29,12 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
           }}
         />
       ) : (
-        // Bolinha simples
         <div 
           className='w-full h-full rounded-full'
           style={{ backgroundColor: code1 }}
         />
       )}
       
-      {/* X para esgotado */}
       {outOfStock && (
         <span className='absolute inset-0 flex items-center justify-center'>
           <svg className='w-2.5 h-2.5 text-gray-600' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
@@ -167,7 +163,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       {/* Image Container */}
       <div className='relative flex items-center justify-center bg-gray-50/50 rounded-lg overflow-hidden aspect-square'>
         
-        {/* Imagem - p-4 alterado para p-2 */}
+        {/* Imagem */}
         <div className={`
           w-full h-full flex items-center justify-center p-2
           transition-all duration-150 ease-out
@@ -181,47 +177,27 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
           />
         </div>
 
-        {/* Badge Esgotado - discreto */}
+        {/* Badge Esgotado */}
         {isInactive && (
           <div className='absolute top-2 left-2 bg-gray-900/80 text-white text-[10px] px-2 py-1 rounded font-medium uppercase tracking-wider'>
             Esgotado
           </div>
         )}
 
-        {/* Indicadores de imagem (pontos) - só aparece no hover */}
-        {displayProduct.image.length > 1 && (
-          <div className='absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity'>
-            {displayProduct.image.map((_, index) => (
-              <button
-                key={index}
-                onClick={e => {
-                  e.stopPropagation();
-                  setCurrentImageIndex(index);
-                }}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  currentImageIndex === index
-                    ? 'bg-gray-800 w-4'
-                    : 'bg-gray-400'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Setas de navegação - só aparece no hover */}
+        {/* Setas de navegação — Lucide ChevronLeft/Right */}
         {displayProduct.image.length > 1 && (
           <>
             <button
               onClick={prevImage}
               className='absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white'
             >
-              <img src={assets.arrow_left} alt='' className='w-3 h-3' />
+              <ChevronLeft className='w-4 h-4 text-gray-700' />
             </button>
             <button
               onClick={nextImage}
               className='absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white'
             >
-              <img src={assets.arrow_right} alt='' className='w-3 h-3' />
+              <ChevronRight className='w-4 h-4 text-gray-700' />
             </button>
           </>
         )}
@@ -230,7 +206,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       {/* Product Info */}
       <div className='pt-3 pb-2 px-1 flex flex-col flex-grow'>
         
-        {/* 🆕 Bolinhas de Cor - suporta cores duplas */}
+        {/* Bolinhas de Cor */}
         {familyProducts.length > 1 && (
          <div className={`flex items-center justify-center mb-2 ${largeSwatches ? 'gap-2.5' : 'gap-2'}`}>
             {familyProducts.slice(0, 6).map((familyProduct) => {
@@ -278,7 +254,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
             </p>
           </div>
 
-          {/* Botão Carrinho - desativado quando esgotado */}
+          {/* Botão Carrinho */}
           <div onClick={e => e.stopPropagation()}>
             {isInactive ? (
               <div 

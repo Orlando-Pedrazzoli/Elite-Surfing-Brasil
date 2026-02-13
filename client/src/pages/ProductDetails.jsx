@@ -2,7 +2,7 @@ import '../styles/ProductDetails.css';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Link, useParams } from 'react-router-dom';
-import { assets } from '../assets/assets';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import ProductReviews from '../components/ProductReviews';
 import ShareProduct from '../components/ShareProduct';
@@ -666,13 +666,13 @@ const ProductDetails = () => {
                     onClick={e => { e.stopPropagation(); prevModalImage(); }}
                     className='absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 sm:p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                   >
-                    <img src={assets.arrow_left} alt='' className='w-4 h-4 sm:w-5 sm:h-5' />
+                   <ChevronLeft className='w-4 h-4 text-gray-700' />
                   </button>
                   <button
                     onClick={e => { e.stopPropagation(); nextModalImage(); }}
                     className='absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 sm:p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                   >
-                    <img src={assets.arrow_right} alt='' className='w-4 h-4 sm:w-5 sm:h-5' />
+                    <ChevronRight className='w-4 h-4 text-gray-700' />
                   </button>
                 </>
               )}
@@ -787,13 +787,13 @@ const ProductDetails = () => {
                       onClick={e => { e.stopPropagation(); prevImage(); }}
                       className='absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                     >
-                      <img src={assets.arrow_left} alt='Anterior' className='w-4 h-4' />
+                     <ChevronLeft className='w-4 h-4 text-gray-700' />
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); nextImage(); }}
                       className='absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                     >
-                      <img src={assets.arrow_right} alt='Próxima' className='w-4 h-4' />
+                      <ChevronRight className='w-4 h-4 text-gray-700' />
                     </button>
                   </>
                 )}
@@ -829,7 +829,7 @@ const ProductDetails = () => {
               <div className='flex items-center gap-2 max-w-[550px]'>
                 {displayProduct.image.length > 5 && (
                   <button onClick={scrollThumbsLeft} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
-                    <img src={assets.arrow_left} alt='Anterior' className='w-4 h-4' />
+                   <ChevronLeft className='w-4 h-4 text-gray-700' />
                   </button>
                 )}
 
@@ -870,7 +870,7 @@ const ProductDetails = () => {
 
                 {displayProduct.image.length > 5 && (
                   <button onClick={scrollThumbsRight} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
-                    <img src={assets.arrow_right} alt='Próxima' className='w-4 h-4' />
+                    <ChevronRight className='w-4 h-4 text-gray-700' />
                   </button>
                 )}
               </div>
