@@ -159,6 +159,7 @@ const AddProduct = () => {
       sup: 'SP',
       acessorios: 'AC',
       outlet: 'OT',
+      quilhas: 'QL',
     };
     const prefix = groupPrefix[selectedGroup] || 'XX';
     const random = Math.floor(1000 + Math.random() * 9000);
