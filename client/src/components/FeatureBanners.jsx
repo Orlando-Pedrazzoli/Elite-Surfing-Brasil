@@ -25,7 +25,8 @@ const banners = [
     ctaLink: '/collections/leashes',
     media: {
       type: 'image',
-      src: 'https://images.unsplash.com/photo-1455264745730-cb3b76250ae8?w=1200&q=80',
+      src: '/leash-tech.png',
+      fit: 'contain',
     },
     imagePosition: 'left',
   },
@@ -81,7 +82,7 @@ const FeatureBanner = ({ heading, description, ctaText, ctaLink, media, imagePos
           <img
             src={media.src}
             alt={heading}
-            className="w-full h-full object-cover absolute inset-0"
+            className={`w-full h-full ${media.fit === 'contain' ? 'object-contain bg-neutral-900' : 'object-cover'} absolute inset-0`}
           />
         )}
       </motion.div>
