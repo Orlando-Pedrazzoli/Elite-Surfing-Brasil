@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
 const PRESET_COLORS = [
@@ -31,6 +32,8 @@ const PRESET_DUAL_COLORS = [
   { name: 'Preto/Branco', code1: '#000000', code2: '#dfdfe1' },
   { name: 'Preto/Vermelho', code1: '#000000', code2: '#dc2333' },
 ];
+
+const MAX_IMAGES = 8;
 
 // 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
 const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }) => {
@@ -70,6 +73,281 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
   );
 };
 
+// ═══════════════════════════════════════════════════════════════
+// 🆕 IMAGE UPLOAD COMPONENT — Drag & Drop + Multi-select
+// ═══════════════════════════════════════════════════════════════
+const ImageUploadZone = ({ files, setFiles }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [dragSourceIndex, setDragSourceIndex] = useState(null);
+  const fileInputRef = useRef(null);
+  const dragCounter = useRef(0);
+
+  // Adicionar ficheiros (validação + limite)
+  const addFiles = useCallback((newFiles) => {
+    const imageFiles = Array.from(newFiles).filter(file => {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`"${file.name}" não é uma imagem`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}" excede 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (imageFiles.length === 0) return;
+
+    setFiles(prev => {
+      const current = prev.filter(Boolean);
+      const available = MAX_IMAGES - current.length;
+
+      if (available <= 0) {
+        toast.error(`Máximo de ${MAX_IMAGES} imagens`);
+        return prev;
+      }
+
+      const toAdd = imageFiles.slice(0, available);
+      if (imageFiles.length > available) {
+        toast(`Apenas ${available} imagem(ns) adicionada(s) (limite: ${MAX_IMAGES})`, { icon: 'ℹ️' });
+      }
+
+      const updated = [...current, ...toAdd];
+      return updated;
+    });
+  }, [setFiles]);
+
+  // Remover imagem
+  const removeFile = useCallback((index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }, [setFiles]);
+
+  // Drag & Drop — zona de upload
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Click para abrir file picker
+  const handleClickUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
+      e.target.value = '';
+    }
+  };
+
+  // Drag & Drop — reordenar thumbnails
+  const handleThumbDragStart = (e, index) => {
+    setDragSourceIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleThumbDragOver = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragSourceIndex !== null && dragSourceIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleThumbDrop = (e, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+      setFiles(prev => {
+        const updated = [...prev];
+        const [moved] = updated.splice(dragSourceIndex, 1);
+        updated.splice(targetIndex, 0, moved);
+        return updated;
+      });
+    }
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleThumbDragEnd = () => {
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const activeFiles = files.filter(Boolean);
+  const slotsLeft = MAX_IMAGES - activeFiles.length;
+
+  return (
+    <div>
+      <p className='text-base font-medium mb-2'>Imagens do Produto</p>
+
+      {/* Drop zone */}
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={slotsLeft > 0 ? handleClickUpload : undefined}
+        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+          slotsLeft <= 0
+            ? 'border-gray-200 bg-gray-50 cursor-default'
+            : isDragging
+              ? 'border-primary bg-primary/5 scale-[1.01] shadow-lg'
+              : 'border-gray-300 hover:border-primary/50 hover:bg-gray-50 cursor-pointer'
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='image/*'
+          multiple
+          onChange={handleFileInput}
+          className='hidden'
+        />
+
+        {isDragging ? (
+          <div className='py-4'>
+            <Upload className='w-10 h-10 text-primary mx-auto mb-2 animate-bounce' />
+            <p className='text-primary font-semibold text-lg'>Solte as imagens aqui</p>
+          </div>
+        ) : slotsLeft > 0 ? (
+          <div className='py-2'>
+            <div className='flex items-center justify-center gap-3 mb-3'>
+              <div className='w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center'>
+                <ImageIcon className='w-6 h-6 text-gray-400' />
+              </div>
+            </div>
+            <p className='text-gray-700 font-medium'>
+              Arraste imagens aqui ou <span className='text-primary underline'>clique para selecionar</span>
+            </p>
+            <p className='text-xs text-gray-400 mt-1.5'>
+              PNG, JPG ou WEBP • Máx. 10MB por imagem • {slotsLeft} de {MAX_IMAGES} disponíveis
+            </p>
+          </div>
+        ) : (
+          <div className='py-2'>
+            <p className='text-gray-500 font-medium'>Limite de {MAX_IMAGES} imagens atingido</p>
+            <p className='text-xs text-gray-400 mt-1'>Remova uma imagem para adicionar outra</p>
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnails grid */}
+      {activeFiles.length > 0 && (
+        <div className='mt-4'>
+          <div className='flex items-center justify-between mb-2'>
+            <p className='text-sm font-medium text-gray-600'>
+              {activeFiles.length} imagem{activeFiles.length !== 1 ? 's' : ''} adicionada{activeFiles.length !== 1 ? 's' : ''}
+            </p>
+            {activeFiles.length > 1 && (
+              <p className='text-xs text-gray-400'>Arraste para reordenar • A primeira é a imagem principal</p>
+            )}
+          </div>
+
+          <div className='grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3'>
+            {activeFiles.map((file, index) => (
+              <div
+                key={`${file.name}-${file.size}-${index}`}
+                draggable
+                onDragStart={(e) => handleThumbDragStart(e, index)}
+                onDragOver={(e) => handleThumbDragOver(e, index)}
+                onDrop={(e) => handleThumbDrop(e, index)}
+                onDragEnd={handleThumbDragEnd}
+                className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-150 aspect-square ${
+                  dragOverIndex === index
+                    ? 'border-primary scale-105 shadow-md'
+                    : dragSourceIndex === index
+                      ? 'border-gray-300 opacity-40'
+                      : index === 0
+                        ? 'border-primary/50 ring-1 ring-primary/20'
+                        : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={`Imagem ${index + 1}`}
+                  className='w-full h-full object-cover'
+                />
+
+                {/* Overlay com ações */}
+                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-150'>
+                  {/* Botão remover */}
+                  <button
+                    type='button'
+                    onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                    className='absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm'
+                    title='Remover imagem'
+                  >
+                    <X className='w-3.5 h-3.5' />
+                  </button>
+
+                  {/* Indicador drag */}
+                  <div className='absolute bottom-1 left-1 opacity-0 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing'>
+                    <GripVertical className='w-4 h-4 text-white drop-shadow' />
+                  </div>
+                </div>
+
+                {/* Badge principal */}
+                {index === 0 && (
+                  <div className='absolute top-1 left-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm'>
+                    Principal
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Ação limpar todas */}
+          {activeFiles.length > 1 && (
+            <button
+              type='button'
+              onClick={() => setFiles([])}
+              className='mt-3 text-xs text-red-500 hover:text-red-700 transition-colors font-medium'
+            >
+              Remover todas as imagens
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
 const AddProduct = () => {
   const [files, setFiles] = useState([]);
   const [name, setName] = useState('');
@@ -155,11 +433,11 @@ const AddProduct = () => {
       leashes: 'LS',
       capas: 'CP',
       sarcofagos: 'SF',
+      quilhas: 'QL',
       bodyboard: 'BB',
       sup: 'SP',
       acessorios: 'AC',
       outlet: 'OT',
-      quilhas: 'QL',
     };
     const prefix = groupPrefix[selectedGroup] || 'XX';
     const random = Math.floor(1000 + Math.random() * 9000);
@@ -196,7 +474,9 @@ const AddProduct = () => {
     try {
       event.preventDefault();
 
-      if (files.length === 0) {
+      const activeFiles = files.filter(Boolean);
+
+      if (activeFiles.length === 0) {
         toast.error('Adicione pelo menos uma imagem');
         return;
       }
@@ -276,8 +556,8 @@ const AddProduct = () => {
 
       const formData = new FormData();
       formData.append('productData', JSON.stringify(productData));
-      for (let i = 0; i < files.length; i++) {
-        formData.append('images', files[i]);
+      for (let i = 0; i < activeFiles.length; i++) {
+        formData.append('images', activeFiles[i]);
       }
 
       const { data } = await axios.post('/api/product/add', formData);
@@ -321,39 +601,10 @@ const AddProduct = () => {
         
         <h2 className='text-2xl font-bold text-gray-800 mb-6'>Adicionar Produto</h2>
 
-        {/* Imagens */}
-        <div>
-          <p className='text-base font-medium mb-2'>Imagens do Produto</p>
-          <div className='flex flex-wrap items-center gap-3'>
-            {Array(8)
-              .fill('')
-              .map((_, index) => (
-                <label key={index} htmlFor={`image${index}`} className='cursor-pointer'>
-                  <input
-                    onChange={e => {
-                      const updatedFiles = [...files];
-                      updatedFiles[index] = e.target.files[0];
-                      setFiles(updatedFiles);
-                    }}
-                    type='file'
-                    id={`image${index}`}
-                    hidden
-                    accept='image/*'
-                  />
-                  <img
-                    className='w-20 h-20 object-cover rounded-lg border-2 border-dashed border-gray-300 hover:border-primary transition-colors'
-                    src={
-                      files[index]
-                        ? URL.createObjectURL(files[index])
-                        : assets.upload_area
-                    }
-                    alt={`Upload ${index + 1}`}
-                  />
-                </label>
-              ))}
-          </div>
-          <p className='text-xs text-gray-500 mt-2'>Arraste ou clique para adicionar até 8 imagens</p>
-        </div>
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* 🆕 DRAG & DROP IMAGE UPLOAD                           */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        <ImageUploadZone files={files} setFiles={setFiles} />
 
         {/* Nome */}
         <div className='flex flex-col gap-1'>
