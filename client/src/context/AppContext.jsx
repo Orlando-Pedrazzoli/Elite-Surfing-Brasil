@@ -237,16 +237,17 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // Fetch All Products
-  const fetchProducts = async () => {
-    try {
-      const { data } = await axios.get('/api/product/list');
-      if (data.success) {
-        setProducts(data.products);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar produtos:', error);
+const fetchProducts = async () => {
+  try {
+    const { data } = await axios.get('/api/product/list');
+    if (data.success) {
+      setProducts(data.products);
+      setFamilyCache({});  // ← ADICIONA ESTA LINHA
     }
-  };
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+  }
+};
 
   // =============================================================================
   // FUNÇÕES DE ESTOQUE
