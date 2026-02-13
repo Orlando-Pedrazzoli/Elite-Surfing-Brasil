@@ -30,6 +30,12 @@ import add_address_iamge from './add_address_image.svg';
 import decks_banner from './decks-banner.jpg';
 import decks_card from './decks-card1.jpg';
 import decks_card2 from './decks-card2.jpg';
+import acessorios_card from './acessorios.png';
+import quilhas_card from './quilhas-card.png';
+import capas_card from './capas.png';
+import sarcofago_card from './sarcofago.png';
+import decktop_card from './decktop.png';
+
 
 export const assets = {
   logo,
@@ -367,7 +373,7 @@ export const groups = [
     name: 'Acessórios',
     slug: 'acessorios',
     description: 'Wax, racks, wetsuits e tudo que você precisa para sua sessão de surf.',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    image: acessorios_card,
   },
   {
     id: 'leashes',
@@ -381,28 +387,28 @@ export const groups = [
     name: 'Decks',
     slug: 'decks',
     description: 'Traction pads de alta performance para todas as condições. Tecnologia EVA premium com texturas que garantem aderência máxima.',
-    image: decks_card2,
+    image: decktop_card,
   },
   {
     id: 'capas',
     name: 'Capas',
     slug: 'capas',
     description: 'Proteja sua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
-    image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
+    image: capas_card,
   },
   {
     id: 'sarcofagos',
     name: 'Sarcófagos',
     slug: 'sarcofagos',
     description: 'Sarcófagos para viagens e proteção total da sua prancha. Estrutura reforçada com acolchoamento interno.',
-    image: 'https://images.unsplash.com/photo-1531722569936-825d3dd91b15?w=800&q=80',
+    image: sarcofago_card,
   },
   {
     id: 'quilhas',
     name: 'Quilhas',
     slug: 'quilhas',
     description: 'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    image: quilhas_card,
   },
   {
     id: 'bodyboard',
