@@ -20,7 +20,6 @@ const categoryRedirectMap = {
   'Deck-SUP':         { group: 'decks', filters: { tipo: 'sup' } },
 
   // ═══ LEASHES ═══
-  'Leash-Fish-Evolution': { group: 'leashes', filters: { boardType: 'fish-evolution' } },
   'Leash-Shortboard':     { group: 'leashes', filters: { boardType: 'shortboard' } },
   'Leash-Fun-MiniLong':   { group: 'leashes', filters: { boardType: 'fun-minilong' } },
   'Leash-Longboard':      { group: 'leashes', filters: { boardType: 'longboard' } },
