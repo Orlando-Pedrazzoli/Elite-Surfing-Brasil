@@ -5,14 +5,14 @@ import { motion } from 'framer-motion';
 const banners = [
   {
     id: 1,
-    heading: 'NOSSOS SARCÓFAGOS',
+    heading: 'SARCÓFAGOS',
     description:
       'Tivemos a grande honra de receber um review sobre essa lenda do surf elogiando e recomendando nosso sarcófago.',
-    ctaText: 'CONHEÇA',
+    ctaText: 'VER COLEÇÃO',
     ctaLink: '/collections/sarcofagos',
     media: {
       type: 'video',
-      src: 'https://www.youtube.com/embed/iQTmZACDRNA?si=5rT5E19EOgQmEyYH',
+      src: 'https://www.youtube.com/embed/iQTmZACDRNA?si=5rT5E19EOgQmEyYH&modestbranding=1&rel=0&showinfo=0',
     },
     imagePosition: 'right',
   },
@@ -75,7 +75,7 @@ const FeatureBanner = ({ heading, description, ctaText, ctaLink, media, imagePos
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full border-4 border-neutral-700"
           />
         ) : (
           <img
