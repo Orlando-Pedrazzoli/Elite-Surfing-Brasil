@@ -1,29 +1,42 @@
 /**
  * SEO Configuration - Elite Surfing Brasil
- * Versão: 2.0.0
- * Última atualização: 2026-02-10
+ * Versão: 3.0.0
+ * Última atualização: 2026-02-16
  *
- * REGRAS:
+ * REGRAS DE SINCRONIZAÇÃO:
  * 1. URLs SEM trailing slash (exceto homepage que usa '')
  * 2. URLs devem ser idênticas às do sitemap.xml
  * 3. Descrições entre 120-160 caracteres para melhor exibição no Google
  * 4. Títulos máximo 60 caracteres
  *
- * GRUPOS REAIS (assets.js):
- * decks, leashes, capas, sarcofagos, bodyboard, sup, acessorios, outlet
+ * SINCRONIZADO COM:
+ * - assets.js → groups[] (9 coleções)
+ * - assets.js → categories[] (34 categorias)
+ * - App.jsx → Routes
+ * - generate-sitemap.js → URLs
  *
- * CATEGORIAS REAIS (assets.js):
- * Decks: Maldivas, Mentawai, Fiji Classic, Hawaii, J-Bay, Noronha, Peniche, Saquarema, Combate, Longboard, Front, SUP
- * Leashes: 6ft-6mm, 6ft-7mm, 7ft-7mm, 8ft-7mm
- * Capas: Refletiva Combate, Refletiva Premium, Capa Toalha
- * Acessórios: Racks, Parafinas, Quilhas, Bonés, Protetor/Rabeta, Wetsuit Bag, Diversos
+ * GROUPS (assets.js):
+ * decks, leashes, capas, sarcofagos, quilhas, acessorios, bodyboard, sup, outlet
+ *
+ * CATEGORIES (assets.js) — paths exatos:
+ * Decks: Deck-Maldivas, Deck-Mentawai, Deck-Fiji-Classic, Deck-Hawaii, Deck-J-Bay,
+ *        Deck-Noronha, Deck-Peniche, Deck-Saquarema, Deck-Combate, Deck-Longboard,
+ *        Deck-Front, Deck-SUP
+ * Leashes: Leash-Shortboard-Hibridas, Leash-Fun-MiniLong, Leash-Longboard,
+ *          Leash-StandUp, Leash-Bodyboard
+ * Capas: Refletiva-Combate, Refletiva-Premium, Capa-Toalha
+ * Sarcófagos: Sarcofago-Combate, Sarcofago-Premium, Sarcofago-Combate-Rodas,
+ *             Sarcofago-Premium-Rodas
+ * Quilhas: Quilha-Shortboard, Quilha-Longboard, Quilha-SUP, Chave-Parafuso
+ * Acessórios: Racks, Parafinas, Bones, Protetor-Rabeta, Wetsuit-Bag, Diversos
  */
 
 const BASE_URL = 'https://www.elitesurfing.com.br';
 
-/**
- * Configuração SEO para páginas estáticas
- */
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO SEO — PÁGINAS ESTÁTICAS
+// ═══════════════════════════════════════════════════════════════════
+
 const seoConfig = {
   home: {
     title: null, // Usa título padrão do SEO.jsx
@@ -103,7 +116,15 @@ const seoConfig = {
     noindex: false,
   },
 
-  // Páginas privadas - não indexar
+  institucional: {
+    title: 'Quem Somos - Elite Surfing Brasil',
+    description:
+      'Conheça a história da Elite Surfing Brasil. Desde a fundação até hoje, nossa missão é oferecer acessórios de surf de qualidade premium para surfistas exigentes.',
+    url: '/institucional',
+    noindex: false,
+  },
+
+  // Páginas privadas — não indexar
   myOrders: {
     title: 'Meus Pedidos',
     description:
@@ -137,15 +158,16 @@ const seoConfig = {
   },
 };
 
-/**
- * Descrições SEO para páginas de COLLECTIONS (8 grupos do assets.js)
- * Rotas: /collections/{slug}
- */
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO SEO — COLLECTIONS (9 grupos do assets.js)
+// Rotas: /collections/{slug}
+// ═══════════════════════════════════════════════════════════════════
+
 export const collectionDescriptions = {
   decks: {
     title: 'Decks de Surf - Traction Pads',
     description:
-      'Decks de surf e traction pads de alta performance. EVA premium fresado com texturas que garantem aderência máxima. Modelos Maldivas, Mentawai, Fiji, Hawaii, J-Bay, Noronha, Peniche, Saquarema e Combate.',
+      'Decks de surf e traction pads de alta performance. EVA premium fresado com aderência máxima. Modelos Maldivas, Mentawai, Fiji, Hawaii, J-Bay, Noronha, Peniche, Saquarema e Combate.',
     url: '/collections/decks',
     keywords: [
       'deck surf',
@@ -161,14 +183,13 @@ export const collectionDescriptions = {
   leashes: {
     title: 'Leashes de Surf',
     description:
-      'Leashes de surf premium para máxima segurança e durabilidade. Tamanhos de 6ft a 8ft, espessuras de 6mm a 7mm. Swivel duplo anti-torção. Frete para todo Brasil.',
+      'Leashes de surf premium para máxima segurança e durabilidade. Para shortboard, longboard, fun, stand up e bodyboard. Swivel duplo anti-torção. Frete para todo Brasil.',
     url: '/collections/leashes',
     keywords: [
       'leash surf',
       'cordinha prancha',
-      'leash 6ft',
-      'leash 7ft',
-      'leash 8ft',
+      'leash shortboard',
+      'leash longboard',
       'comprar leash surf',
     ],
     image: '/og-image.jpg',
@@ -177,7 +198,7 @@ export const collectionDescriptions = {
   capas: {
     title: 'Capas para Prancha de Surf',
     description:
-      'Capas de proteção para pranchas de surf. Modelos Refletiva Combate, Refletiva Premium e Capa Toalha. Para shortboard, fish, longboard e mais. Frete para todo Brasil.',
+      'Capas de proteção para pranchas de surf. Refletiva Combate, Refletiva Premium e Capa Toalha. Para shortboard, fish, longboard e mais. Frete para todo Brasil.',
     url: '/collections/capas',
     keywords: [
       'capa prancha surf',
@@ -201,6 +222,36 @@ export const collectionDescriptions = {
       'capa viagem prancha',
       'boardbag viagem',
       'sarcófago rodas',
+    ],
+    image: '/og-image.jpg',
+  },
+
+  quilhas: {
+    title: 'Quilhas de Surf',
+    description:
+      'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade. Chaves e parafusos incluídos.',
+    url: '/collections/quilhas',
+    keywords: [
+      'quilhas surf',
+      'quilha shortboard',
+      'quilha longboard',
+      'quilha sup',
+      'fins surf',
+    ],
+    image: '/og-image.jpg',
+  },
+
+  acessorios: {
+    title: 'Acessórios de Surf',
+    description:
+      'Acessórios de surf: parafinas (wax), racks, bonés, protetores de rabeta, wetsuit bags e mais. Tudo que você precisa para sua sessão. Frete para todo Brasil.',
+    url: '/collections/acessorios',
+    keywords: [
+      'acessórios surf',
+      'wax surf',
+      'parafina surf',
+      'rack prancha',
+      'comprar acessórios surf',
     ],
     image: '/og-image.jpg',
   },
@@ -234,22 +285,6 @@ export const collectionDescriptions = {
     image: '/og-image.jpg',
   },
 
-  acessorios: {
-    title: 'Acessórios de Surf',
-    description:
-      'Acessórios de surf: parafinas (wax), quilhas, racks, bonés, protetores de rabeta e mais. Tudo que você precisa para sua sessão. Frete para todo Brasil.',
-    url: '/collections/acessorios',
-    keywords: [
-      'acessórios surf',
-      'wax surf',
-      'parafina surf',
-      'quilhas surf',
-      'rack prancha',
-      'comprar acessórios surf',
-    ],
-    image: '/og-image.jpg',
-  },
-
   outlet: {
     title: 'Outlet - Ofertas de Surf',
     description:
@@ -265,20 +300,25 @@ export const collectionDescriptions = {
   },
 };
 
-/**
- * Descrições SEO para páginas de CATEGORIAS (modelos/subcategorias do assets.js)
- * Rotas: /products/{slug}
- */
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO SEO — CATEGORIAS (34 subcategorias do assets.js)
+// Rotas: /products/{slug}
+//
+// IMPORTANTE: As keys aqui são LOWERCASE dos paths do assets.js
+// O helper getCategorySEO() faz toLowerCase() antes de buscar
+// ═══════════════════════════════════════════════════════════════════
+
 export const categoryDescriptions = {
   // ═══════════════════════════════════════════════════════════════
-  // DECKS - 12 categorias
+  // DECKS — 12 categorias
+  // Paths: Deck-Maldivas, Deck-Mentawai, etc.
   // ═══════════════════════════════════════════════════════════════
 
   'deck-maldivas': {
     title: 'Deck Maldivas - Traction Pad',
     description:
-      'Deck Maldivas de alta performance com EVA premium. Textura exclusiva para máxima aderência. Várias cores disponíveis. Frete para todo Brasil.',
-    url: '/products/deck-maldivas',
+      'Deck Maldivas de alta performance com EVA premium fresado. Textura exclusiva para máxima aderência. Várias cores disponíveis. Frete para todo Brasil.',
+    url: '/products/Deck-Maldivas',
     keywords: ['deck maldivas', 'deck surf maldivas', 'traction pad maldivas'],
   },
 
@@ -286,7 +326,7 @@ export const categoryDescriptions = {
     title: 'Deck Mentawai - Traction Pad',
     description:
       'Deck Mentawai com EVA fresado de alta qualidade. Design inspirado nas ondas da Indonésia. Grip máximo em todas as condições.',
-    url: '/products/deck-mentawai',
+    url: '/products/Deck-Mentawai',
     keywords: ['deck mentawai', 'deck surf mentawai', 'traction pad mentawai'],
   },
 
@@ -294,7 +334,7 @@ export const categoryDescriptions = {
     title: 'Deck Fiji Classic - Traction Pad',
     description:
       'Deck Fiji Classic em 3 partes com EVA fresado em ângulo diamantado. Design clássico com várias combinações de cores. Kicktail de 26mm.',
-    url: '/products/deck-fiji-classic',
+    url: '/products/Deck-Fiji-Classic',
     keywords: ['deck fiji', 'deck fiji classic', 'traction pad fiji'],
   },
 
@@ -302,7 +342,7 @@ export const categoryDescriptions = {
     title: 'Deck Hawaii - Traction Pad',
     description:
       'Deck Hawaii com EVA fresado em ângulo diamantado. Kicktail de 26mm e fita adesiva premium. Ideal para surfistas de todos os níveis.',
-    url: '/products/deck-hawaii',
+    url: '/products/Deck-Hawaii',
     keywords: ['deck hawaii', 'deck surf hawaii', 'traction pad hawaii'],
   },
 
@@ -310,15 +350,15 @@ export const categoryDescriptions = {
     title: 'Deck J-Bay - Traction Pad',
     description:
       'Deck J-Bay em 3 partes com EVA fresado em ângulo diamantado. Inspirado na famosa onda sul-africana. Várias cores disponíveis.',
-    url: '/products/deck-j-bay',
+    url: '/products/Deck-J-Bay',
     keywords: ['deck j-bay', 'deck jbay', 'traction pad j-bay'],
   },
 
   'deck-noronha': {
     title: 'Deck Noronha - Traction Pad',
     description:
-      'Deck Noronha com EVA lixado e fresa dupla em formato de quadrados. Barra central super soft com detalhes CNC. Várias cores disponíveis.',
-    url: '/products/deck-noronha',
+      'Deck Noronha com EVA lixado e fresa dupla em formato de quadrados. Barra central super soft com detalhes CNC. Várias cores.',
+    url: '/products/Deck-Noronha',
     keywords: ['deck noronha', 'deck cnc', 'traction pad noronha'],
   },
 
@@ -326,15 +366,15 @@ export const categoryDescriptions = {
     title: 'Deck Peniche - Traction Pad',
     description:
       'Deck Peniche com EVA premium de alta aderência. Design funcional para performance máxima. Frete para todo Brasil.',
-    url: '/products/deck-peniche',
+    url: '/products/Deck-Peniche',
     keywords: ['deck peniche', 'deck surf peniche', 'traction pad peniche'],
   },
 
   'deck-saquarema': {
     title: 'Deck Saquarema - Traction Pad',
     description:
-      'Deck Saquarema com EVA lixado e fresa dupla (Double Square Groove). 3 partes, barra central super soft e kicktail rígido de 25mm. Fita adesiva 3M.',
-    url: '/products/deck-saquarema',
+      'Deck Saquarema com EVA lixado e fresa dupla (Double Square Groove). 3 partes, barra central super soft e kicktail rígido de 25mm. Fita 3M.',
+    url: '/products/Deck-Saquarema',
     keywords: ['deck saquarema', 'deck premium', 'traction pad saquarema'],
   },
 
@@ -342,7 +382,7 @@ export const categoryDescriptions = {
     title: 'Deck Combate - Traction Pad',
     description:
       'Deck Combate de alta resistência. Projetado para condições intensas de surf. EVA durável com aderência superior.',
-    url: '/products/deck-combate',
+    url: '/products/Deck-Combate',
     keywords: ['deck combate', 'deck resistente', 'traction pad combate'],
   },
 
@@ -350,7 +390,7 @@ export const categoryDescriptions = {
     title: 'Deck Longboard - Traction Pad',
     description:
       'Deck para longboard com EVA premium. Cobertura ampla para maior aderência e controle. Ideal para longboarders.',
-    url: '/products/deck-longboard',
+    url: '/products/Deck-Longboard',
     keywords: ['deck longboard', 'grip longboard', 'traction pad longboard'],
   },
 
@@ -358,7 +398,7 @@ export const categoryDescriptions = {
     title: 'Deck Front - Traction Pad Frontal',
     description:
       'Deck Front para posição dianteira da prancha. EVA premium com textura anti-derrapante. Complemento perfeito para seu traction pad.',
-    url: '/products/deck-front',
+    url: '/products/Deck-Front',
     keywords: ['deck front', 'deck frontal', 'front pad surf'],
   },
 
@@ -366,91 +406,168 @@ export const categoryDescriptions = {
     title: 'Deck SUP - Stand Up Paddle',
     description:
       'Deck para Stand Up Paddle com EVA premium. Cobertura ampla e confortável para longas sessões. Alta aderência e durabilidade.',
-    url: '/products/deck-sup',
+    url: '/products/Deck-SUP',
     keywords: ['deck sup', 'deck stand up paddle', 'grip sup'],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // LEASHES - 4 categorias
+  // LEASHES — 5 categorias
+  // Paths: Leash-Shortboard-Hibridas, Leash-Fun-MiniLong, etc.
   // ═══════════════════════════════════════════════════════════════
 
-  'leash-6ft-6mm': {
-    title: 'Leash 6ft 6mm - Leash Competição',
+  'leash-shortboard-hibridas': {
+    title: 'Leash Shortboard / Híbridas',
     description:
-      'Leash competição 6ft com 6mm de espessura. Ideal para pranchas até 6\'6". Swivel duplo anti-torção. Material ultra-resistente.',
-    url: '/products/leash-6ft-6mm',
-    keywords: ['leash 6ft', 'leash comp', 'leash 6mm', 'cordinha surf'],
+      'Leashes para shortboard e pranchas híbridas. Swivel duplo anti-torção, material ultra-resistente. Diversas espessuras e comprimentos disponíveis.',
+    url: '/products/Leash-Shortboard-Hibridas',
+    keywords: ['leash shortboard', 'leash híbrida', 'cordinha shortboard', 'leash comp surf'],
   },
 
-  'leash-6ft-7mm': {
-    title: 'Leash 6ft 7mm - Leash Regular',
+  'leash-fun-minilong': {
+    title: 'Leash Fun / Mini Long',
     description:
-      'Leash regular 6ft com 7mm de espessura. Excelente equilíbrio entre leveza e resistência. Swivel duplo anti-torção.',
-    url: '/products/leash-6ft-7mm',
-    keywords: ['leash 6ft 7mm', 'leash regular', 'cordinha prancha'],
+      'Leashes para funboards e mini long. Comprimento ideal para pranchas de 7\' a 8\'. Swivel duplo anti-torção e resistência máxima.',
+    url: '/products/Leash-Fun-MiniLong',
+    keywords: ['leash fun', 'leash mini long', 'leash funboard', 'cordinha funboard'],
   },
 
-  'leash-7ft-7mm': {
-    title: 'Leash 7ft 7mm - Leash Funboard',
+  'leash-longboard': {
+    title: 'Leash Longboard',
     description:
-      'Leash 7ft com 7mm de espessura. Ideal para funboards e pranchas maiores. Swivel duplo anti-torção e material ultra-resistente.',
-    url: '/products/leash-7ft-7mm',
-    keywords: ['leash 7ft', 'leash funboard', 'leash 7mm'],
+      'Leashes para longboard com comprimento e resistência adequados. Swivel duplo anti-torção. Ideal para pranchas acima de 9 pés.',
+    url: '/products/Leash-Longboard',
+    keywords: ['leash longboard', 'cordinha longboard', 'leash 9ft', 'leash 10ft'],
   },
 
-  'leash-8ft-7mm': {
-    title: 'Leash 8ft 7mm - Leash Longboard',
+  'leash-standup': {
+    title: 'Leash Stand Up Paddle',
     description:
-      'Leash 8ft com 7mm de espessura. Perfeito para longboards e SUP. Resistência máxima com swivel duplo anti-torção.',
-    url: '/products/leash-8ft-7mm',
-    keywords: ['leash 8ft', 'leash longboard', 'leash 7mm longboard'],
+      'Leashes para Stand Up Paddle (SUP). Modelos retos e espirais para passeio, race e surf. Resistência máxima para águas abertas.',
+    url: '/products/Leash-StandUp',
+    keywords: ['leash sup', 'leash stand up', 'leash stand up paddle', 'cordinha sup'],
+  },
+
+  'leash-bodyboard': {
+    title: 'Leash Bodyboard',
+    description:
+      'Leashes para bodyboard com design específico para pulso e bíceps. Material resistente e confortável para todas as condições.',
+    url: '/products/Leash-Bodyboard',
+    keywords: ['leash bodyboard', 'cordinha bodyboard', 'leash pulso bodyboard'],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // CAPAS - 3 categorias
+  // CAPAS — 3 categorias
+  // Paths: Refletiva-Combate, Refletiva-Premium, Capa-Toalha
   // ═══════════════════════════════════════════════════════════════
 
   'refletiva-combate': {
     title: 'Capa Refletiva Combate',
     description:
       'Capa refletiva modelo Combate para prancha de surf. Proteção térmica contra o sol. Material resistente e leve. Vários tamanhos disponíveis.',
-    url: '/products/refletiva-combate',
-    keywords: [
-      'capa refletiva combate',
-      'capa prancha refletiva',
-      'boardbag refletiva',
-    ],
+    url: '/products/Refletiva-Combate',
+    keywords: ['capa refletiva combate', 'capa prancha refletiva', 'boardbag refletiva'],
   },
 
   'refletiva-premium': {
     title: 'Capa Refletiva Premium',
     description:
       'Capa refletiva modelo Premium para prancha de surf. Máxima proteção térmica e acolchoamento reforçado. Acabamento superior.',
-    url: '/products/refletiva-premium',
-    keywords: [
-      'capa refletiva premium',
-      'capa prancha premium',
-      'boardbag premium',
-    ],
+    url: '/products/Refletiva-Premium',
+    keywords: ['capa refletiva premium', 'capa prancha premium', 'boardbag premium'],
   },
 
   'capa-toalha': {
     title: 'Capa Toalha para Prancha',
     description:
       'Capa toalha para prancha de surf. Proteção suave contra arranhões e absorção de umidade. Prática e funcional para o dia a dia.',
-    url: '/products/capa-toalha',
+    url: '/products/Capa-Toalha',
     keywords: ['capa toalha prancha', 'capa toalha surf', 'sock prancha'],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // ACESSÓRIOS - 7 categorias
+  // SARCÓFAGOS — 4 categorias
+  // Paths: Sarcofago-Combate, Sarcofago-Premium, etc.
+  // ═══════════════════════════════════════════════════════════════
+
+  'sarcofago-combate': {
+    title: 'Sarcófago Combate',
+    description:
+      'Sarcófago Combate para viagem com pranchas de surf. Estrutura reforçada e acolchoamento interno. Duplos, triplos e quádruplos disponíveis.',
+    url: '/products/Sarcofago-Combate',
+    keywords: ['sarcófago combate', 'sarcófago prancha', 'boardbag viagem combate'],
+  },
+
+  'sarcofago-premium': {
+    title: 'Sarcófago Premium',
+    description:
+      'Sarcófago Premium para máxima proteção em viagens. Acolchoamento extra e acabamento superior. Para 2, 3 ou 4 pranchas.',
+    url: '/products/Sarcofago-Premium',
+    keywords: ['sarcófago premium', 'sarcófago prancha premium', 'boardbag viagem premium'],
+  },
+
+  'sarcofago-combate-rodas': {
+    title: 'Sarcófago Combate com Rodas',
+    description:
+      'Sarcófago Combate com rodas para facilitar o transporte. Estrutura reforçada, acolchoamento interno e rodas resistentes.',
+    url: '/products/Sarcofago-Combate-Rodas',
+    keywords: ['sarcófago combate rodas', 'sarcófago rodas', 'boardbag rodas'],
+  },
+
+  'sarcofago-premium-rodas': {
+    title: 'Sarcófago Premium com Rodas',
+    description:
+      'Sarcófago Premium com rodas. Máxima proteção e mobilidade para suas pranchas. Acolchoamento extra e rodas de alta resistência.',
+    url: '/products/Sarcofago-Premium-Rodas',
+    keywords: ['sarcófago premium rodas', 'sarcófago surf rodas', 'boardbag premium rodas'],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // QUILHAS — 4 categorias
+  // Paths: Quilha-Shortboard, Quilha-Longboard, Quilha-SUP, Chave-Parafuso
+  // ═══════════════════════════════════════════════════════════════
+
+  'quilha-shortboard': {
+    title: 'Quilhas Shortboard',
+    description:
+      'Quilhas para shortboard de alta performance. Materiais premium para máxima resposta e velocidade. Vários modelos e tamanhos.',
+    url: '/products/Quilha-Shortboard',
+    keywords: ['quilha shortboard', 'quilhas surf', 'fins shortboard', 'quilha fcs'],
+  },
+
+  'quilha-longboard': {
+    title: 'Quilhas Longboard',
+    description:
+      'Quilhas para longboard de alta qualidade. Modelos single fin e side fins. Materiais premium para controle e estabilidade.',
+    url: '/products/Quilha-Longboard',
+    keywords: ['quilha longboard', 'single fin', 'quilha central', 'fins longboard'],
+  },
+
+  'quilha-sup': {
+    title: 'Quilhas Stand Up Paddle',
+    description:
+      'Quilhas para Stand Up Paddle (SUP). Modelos para passeio, race e surf. Alta performance e durabilidade.',
+    url: '/products/Quilha-SUP',
+    keywords: ['quilha sup', 'quilha stand up paddle', 'fins sup'],
+  },
+
+  'chave-parafuso': {
+    title: 'Chaves e Parafusos para Quilhas',
+    description:
+      'Chaves e parafusos para quilhas de surf. Ferramentas essenciais para montagem e troca rápida de quilhas. Aço inox de alta resistência.',
+    url: '/products/Chave-Parafuso',
+    keywords: ['chave quilha', 'parafuso quilha', 'ferramenta quilha', 'chave fcs'],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ACESSÓRIOS — 6 categorias
+  // Paths: Racks, Parafinas, Bones, Protetor-Rabeta, Wetsuit-Bag, Diversos
   // ═══════════════════════════════════════════════════════════════
 
   racks: {
     title: 'Racks para Prancha de Surf',
     description:
       'Racks para transporte de pranchas de surf. Modelos para carro e parede. Seguros e práticos. Frete para todo Brasil.',
-    url: '/products/racks',
+    url: '/products/Racks',
     keywords: ['rack prancha', 'rack surf carro', 'suporte prancha'],
   },
 
@@ -458,29 +575,15 @@ export const categoryDescriptions = {
     title: 'Parafinas / Wax para Surf',
     description:
       'Parafinas e wax para surf. Fu Wax, Bull Wax e mais. Para águas frias e quentes. Aderência máxima garantida.',
-    url: '/products/parafinas',
-    keywords: [
-      'parafina surf',
-      'wax surf',
-      'fu wax',
-      'bull wax',
-      'cera prancha',
-    ],
-  },
-
-  quilhas: {
-    title: 'Quilhas de Surf',
-    description:
-      'Quilhas de surf de alta performance. Modelos para diferentes estilos e condições. Materiais premium para máxima resposta.',
-    url: '/products/quilhas',
-    keywords: ['quilhas surf', 'quilha prancha', 'fins surf', 'quilha fcs'],
+    url: '/products/Parafinas',
+    keywords: ['parafina surf', 'wax surf', 'fu wax', 'bull wax', 'cera prancha'],
   },
 
   bones: {
     title: 'Bonés de Surf',
     description:
       'Bonés de surf para proteção contra o sol. Modelos estilosos e funcionais. Ideal para sessões e dia a dia.',
-    url: '/products/bones',
+    url: '/products/Bones',
     keywords: ['boné surf', 'boné aba curva surf', 'chapéu surf'],
   },
 
@@ -488,15 +591,15 @@ export const categoryDescriptions = {
     title: 'Protetores de Rabeta',
     description:
       'Protetores de rabeta para prancha de surf. Proteção extra contra batidas e impactos. Fácil aplicação e alta durabilidade.',
-    url: '/products/protetor-rabeta',
+    url: '/products/Protetor-Rabeta',
     keywords: ['protetor rabeta', 'tail pad', 'proteção prancha'],
   },
 
   'wetsuit-bag': {
-    title: 'Wetsuit Bag - Bolsa para Roupa de Neoprene',
+    title: 'Wetsuit Bag - Bolsa para Neoprene',
     description:
       'Bolsas para wetsuit e roupas de neoprene. Práticas e impermeáveis. Ideais para organizar seu equipamento de surf.',
-    url: '/products/wetsuit-bag',
+    url: '/products/Wetsuit-Bag',
     keywords: ['wetsuit bag', 'bolsa neoprene', 'saco roupa surf'],
   },
 
@@ -504,17 +607,21 @@ export const categoryDescriptions = {
     title: 'Diversos - Acessórios de Surf',
     description:
       'Acessórios diversos para surf. Produtos complementares para sua sessão e manutenção do equipamento.',
-    url: '/products/diversos',
+    url: '/products/Diversos',
     keywords: ['acessórios surf diversos', 'manutenção prancha'],
   },
 };
 
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
 /**
- * Helper: Obter configuração SEO para uma collection (grupo)
+ * Obter configuração SEO para uma collection (grupo)
  * @param {string} collectionSlug - Slug da coleção (ex: 'decks')
  * @returns {object} Configuração SEO
  */
-export const getCollectionSEO = collectionSlug => {
+export const getCollectionSEO = (collectionSlug) => {
   const slug = (collectionSlug || '').toLowerCase().trim();
 
   if (collectionDescriptions[slug]) {
@@ -532,11 +639,11 @@ export const getCollectionSEO = collectionSlug => {
 };
 
 /**
- * Helper: Obter configuração SEO para uma categoria (subcategoria/modelo)
- * @param {string} categorySlug - Slug da categoria (ex: 'deck-maldivas')
+ * Obter configuração SEO para uma categoria (subcategoria/modelo)
+ * @param {string} categorySlug - Slug da categoria (ex: 'Deck-Maldivas' ou 'deck-maldivas')
  * @returns {object} Configuração SEO
  */
-export const getCategorySEO = categorySlug => {
+export const getCategorySEO = (categorySlug) => {
   const slug = (categorySlug || '').toLowerCase().trim();
 
   if (categoryDescriptions[slug]) {
@@ -546,34 +653,35 @@ export const getCategorySEO = categorySlug => {
   // Fallback para categorias não definidas
   const formattedName = slug
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   return {
     title: `${formattedName} - Elite Surfing Brasil`,
     description: `Produtos ${formattedName} na Elite Surfing Brasil. Acessórios de surf de alta qualidade com frete para todo Brasil.`,
-    url: `/products/${slug}`,
+    url: `/products/${categorySlug || slug}`,
     keywords: [slug, 'surf', 'brasil'],
   };
 };
 
 /**
- * Helper: Gerar meta tags para produto individual
+ * Gerar meta tags para produto individual
  * @param {object} product - Objeto do produto
  * @returns {object} Configuração SEO
  */
-export const getProductSEO = product => {
+export const getProductSEO = (product) => {
   if (!product) return seoConfig.products;
 
-  const category = (product.category || '').toLowerCase();
+  const category = (product.category || '').trim();
   const price = product.offerPrice || product.price;
 
   return {
     title: product.name,
-    description: `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${Array.isArray(product.description) ? product.description[0] : product.description || ''}`.slice(
-      0,
-      155
-    ),
+    description: `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${
+      Array.isArray(product.description)
+        ? product.description[0]
+        : product.description || ''
+    }`.slice(0, 155),
     url: `/products/${category}/${product._id}`,
     image: product.image?.[0] || '/og-image.jpg',
     type: 'product',

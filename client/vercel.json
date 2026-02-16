@@ -2,18 +2,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "redirects": [
-    {
-      "source": "/products/Deck-Bells",
-      "destination": "/products",
-      "statusCode": 301
-    },
-    {
-      "source": "/products/deck-bells",
-      "destination": "/products",
-      "statusCode": 301
-    }
-  ],
+  "redirects": [],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],

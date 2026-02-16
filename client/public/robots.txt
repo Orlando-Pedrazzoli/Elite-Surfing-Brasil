@@ -1,7 +1,7 @@
 # =====================================================
-# Elite Surfing Portugal - robots.txt
-# https://www.elitesurfing.pt
-# Última atualização: 2026-01-28
+# Elite Surfing Brasil - robots.txt
+# https://www.elitesurfing.com.br
+# Última atualização: 2026-02-16
 # =====================================================
 
 # =====================================================
@@ -17,8 +17,9 @@ Allow: /faq
 Allow: /privacy
 Allow: /terms
 Allow: /refund-policy
+Allow: /institucional
 
-# Páginas privadas - não indexar
+# Páginas privadas — não indexar
 Disallow: /seller
 Disallow: /seller/
 Disallow: /my-orders
@@ -33,31 +34,32 @@ Disallow: /api/
 Disallow: /*.json$
 Disallow: /*?*
 
-# URLs removidas (redirecionadas via vercel.json)
-Disallow: /products/Deck-Bells
-Disallow: /products/deck-bells
-
 # =====================================================
-# Googlebot
+# Googlebot — Acesso total às páginas públicas
 # =====================================================
 User-agent: Googlebot
 Allow: /
 Allow: /products
+Allow: /products/
 Allow: /collections/
+Allow: /institucional
 Disallow: /seller
 Disallow: /seller/
 Disallow: /cart
 Disallow: /my-orders
 Disallow: /add-address
+Disallow: /write-review
+Disallow: /order-success
+Disallow: /loader
 
 # =====================================================
-# Google Images - permitir todas as imagens
+# Google Images — permitir todas as imagens
 # =====================================================
 User-agent: Googlebot-Image
 Allow: /
 
 # =====================================================
-# AdsBot - necessário para Google Ads
+# AdsBot — necessário para Google Ads / campanhas
 # =====================================================
 User-agent: AdsBot-Google
 Allow: /
@@ -66,17 +68,30 @@ User-agent: AdsBot-Google-Mobile
 Allow: /
 
 # =====================================================
-# Bingbot
+# Googlebot News — para Google Discover
+# =====================================================
+User-agent: Googlebot-News
+Allow: /
+
+# =====================================================
+# Bingbot — Acesso total às páginas públicas
 # =====================================================
 User-agent: Bingbot
 Allow: /
+Allow: /products
+Allow: /products/
+Allow: /collections/
+Allow: /institucional
 Disallow: /seller
 Disallow: /seller/
 Disallow: /cart
 Disallow: /my-orders
+Disallow: /add-address
+Disallow: /write-review
+Disallow: /order-success
 
 # =====================================================
-# Outros bots úteis
+# Outros bots úteis — Redes sociais e buscadores
 # =====================================================
 User-agent: Slurp
 Allow: /
@@ -96,8 +111,14 @@ Allow: /
 User-agent: WhatsApp
 Allow: /
 
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Pinterest
+Allow: /
+
 # =====================================================
-# Bloquear bots maliciosos/desnecessários
+# Bloquear bots desnecessários / scrapers
 # =====================================================
 User-agent: AhrefsBot
 Disallow: /
@@ -111,11 +132,23 @@ Disallow: /
 User-agent: DotBot
 Disallow: /
 
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
 # =====================================================
 # Sitemaps
 # =====================================================
-Sitemap: https://www.elitesurfing.pt/sitemap.xml
-Sitemap: https://www.elitesurfing.pt/sitemap-static.xml
-Sitemap: https://www.elitesurfing.pt/sitemap-collections.xml
-Sitemap: https://www.elitesurfing.pt/sitemap-categories.xml
-Sitemap: https://www.elitesurfing.pt/sitemap-products.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap-static.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap-collections.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap-categories.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap-products.xml

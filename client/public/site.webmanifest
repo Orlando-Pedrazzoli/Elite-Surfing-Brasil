@@ -1,7 +1,7 @@
 {
-  "name": "Elite Surfing Portugal",
+  "name": "Elite Surfing Brasil",
   "short_name": "Elite Surfing",
-  "description": "Loja online de equipamento e acessórios de surf em Portugal. Decks, leashes, quilhas, capas e wax.",
+  "description": "Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, quilhas e wax. PIX com desconto. Frete para todo Brasil.",
   "start_url": "/",
   "scope": "/",
   "id": "/",
@@ -9,7 +9,7 @@
   "orientation": "portrait-primary",
   "theme_color": "#f85032",
   "background_color": "#ffffff",
-  "lang": "pt-PT",
+  "lang": "pt-BR",
   "dir": "ltr",
   "categories": ["shopping", "sports"],
   "icons": [
@@ -42,7 +42,7 @@
     {
       "name": "Ver Todos os Produtos",
       "short_name": "Produtos",
-      "description": "Explorar catálogo completo",
+      "description": "Explorar catálogo completo de acessórios de surf",
       "url": "/products",
       "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     },
@@ -54,9 +54,9 @@
       "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     },
     {
-      "name": "Contactar",
-      "short_name": "Contacto",
-      "description": "Fale connosco via WhatsApp",
+      "name": "Fale Conosco",
+      "short_name": "Contato",
+      "description": "Fale conosco via WhatsApp",
       "url": "/contact",
       "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     }
@@ -66,7 +66,7 @@
       "src": "/og-image.jpg",
       "sizes": "1200x630",
       "type": "image/jpeg",
-      "label": "Elite Surfing Portugal - Loja Online de Surf"
+      "label": "Elite Surfing Brasil - Loja Online de Acessórios de Surf"
     }
   ],
   "related_applications": [],

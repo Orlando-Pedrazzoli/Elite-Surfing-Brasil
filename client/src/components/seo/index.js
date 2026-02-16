@@ -1,8 +1,8 @@
 /**
- * SEO Components - Elite Surfing Portugal
- * Versão: 2.0.0
- * Última atualização: 2026-01-28
- * 
+ * SEO Components - Elite Surfing Brasil
+ * Versão: 3.0.0
+ * Última atualização: 2026-02-16
+ *
  * Exporta todos os componentes e utilitários de SEO
  */
 
@@ -10,23 +10,24 @@
 export { default as SEO } from './SEO';
 
 // Schemas JSON-LD (Structured Data)
-export { 
-  OrganizationSchema, 
-  WebSiteSchema, 
+export {
+  OrganizationSchema,
+  WebSiteSchema,
   SiteNavigationSchema,
-  ProductSchema, 
-  BreadcrumbSchema, 
+  ProductSchema,
+  BreadcrumbSchema,
   FAQSchema,
   LocalBusinessSchema,
-  CollectionSchema,      // NOVO
-  ContactPageSchema      // NOVO
+  CollectionSchema,
+  ContactPageSchema,
 } from './JsonLd';
 
 // Configurações e helpers
-export { 
-  default as seoConfig, 
-  categoryDescriptions, 
+export {
+  default as seoConfig,
+  categoryDescriptions,
   collectionDescriptions,
   getCategorySEO,
-  getCollectionSEO
+  getCollectionSEO,
+  getProductSEO,
 } from './seoConfig';

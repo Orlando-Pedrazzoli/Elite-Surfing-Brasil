@@ -3,26 +3,28 @@ import path from 'path';
 
 /**
  * =====================================================
- * Gerador de Sitemaps - Elite Surfing Portugal
- * Versão: 2.0.0
- * Última atualização: 2026-01-28
+ * Gerador de Sitemaps - Elite Surfing Brasil
+ * Versão: 3.0.0
+ * Última atualização: 2026-02-16
  * =====================================================
- * 
+ *
  * Gera 5 ficheiros XML em /public:
- * 
- * 1. sitemap.xml          - Índice principal (sitemap index)
- * 2. sitemap-static.xml   - Páginas estáticas (home, contact, faq, etc.)
- * 3. sitemap-collections.xml - Grupos/Coleções (/collections/decks, etc.)
- * 4. sitemap-categories.xml  - Modelos/Subcategorias (/products/deck-tahiti, etc.)
- * 5. sitemap-products.xml    - Produtos individuais com imagens
- * 
+ *
+ * 1. sitemap.xml              - Índice principal (sitemap index)
+ * 2. sitemap-static.xml       - Páginas estáticas (home, contact, faq, etc.)
+ * 3. sitemap-collections.xml  - Grupos/Coleções (/collections/decks, etc.)
+ * 4. sitemap-categories.xml   - Modelos/Subcategorias (/products/Deck-Maldivas, etc.)
+ * 5. sitemap-products.xml     - Produtos individuais com imagens
+ *
  * EXECUÇÃO:
  * - Manual: npm run sitemap
  * - Automática: Executa antes do build (npm run build)
- * 
- * IMPORTANTE:
- * - As URLs aqui DEVEM corresponder às rotas do App.jsx
- * - As URLs aqui DEVEM corresponder às definidas no seoConfig.js
+ *
+ * SINCRONIZAÇÃO:
+ * - As URLs DEVEM corresponder às rotas do App.jsx
+ * - As collections DEVEM corresponder aos groups do assets.js
+ * - As categories DEVEM corresponder aos paths do assets.js
+ * - As URLs DEVEM corresponder ao seoConfig.js
  * =====================================================
  */
 
@@ -30,44 +32,95 @@ import path from 'path';
 // CONFIGURAÇÃO
 // =====================================================
 
-const SITE_URL = 'https://www.elitesurfing.pt';
-const API_URL = 'https://elitesurfingeu-backend.vercel.app';
+const SITE_URL = 'https://www.elitesurfing.com.br';
+const API_URL = 'https://elitesurfingbr-backend.vercel.app';
 
-// Páginas estáticas (correspondem ao seoConfig.js)
-// NOTA: Apenas páginas sem noindex:true
+// =====================================================
+// PÁGINAS ESTÁTICAS (correspondem ao seoConfig.js)
+// Apenas páginas sem noindex:true
+// =====================================================
 const staticRoutes = [
-  { url: '', changefreq: 'daily', priority: 1.0 },           // home
-  { url: '/products', changefreq: 'daily', priority: 0.9 },
-  { url: '/contact', changefreq: 'monthly', priority: 0.7 },
-  { url: '/faq', changefreq: 'monthly', priority: 0.6 },
-  { url: '/privacy', changefreq: 'yearly', priority: 0.3 },
-  { url: '/terms', changefreq: 'yearly', priority: 0.3 },
-  { url: '/refund-policy', changefreq: 'yearly', priority: 0.3 },
+  { url: '',                changefreq: 'daily',   priority: 1.0 },  // Home
+  { url: '/products',       changefreq: 'daily',   priority: 0.9 },  // Todos os Produtos
+  { url: '/contact',        changefreq: 'monthly', priority: 0.7 },  // Contato
+  { url: '/faq',            changefreq: 'monthly', priority: 0.6 },  // FAQ
+  { url: '/institucional',  changefreq: 'monthly', priority: 0.5 },  // Quem Somos
+  { url: '/privacy',        changefreq: 'yearly',  priority: 0.3 },  // Política de Privacidade (LGPD)
+  { url: '/terms',          changefreq: 'yearly',  priority: 0.3 },  // Termos e Condições
+  { url: '/refund-policy',  changefreq: 'yearly',  priority: 0.3 },  // Troca e Devolução
 ];
 
-// Collections/Grupos (correspondem às rotas /collections/:group)
+// =====================================================
+// COLLECTIONS / GRUPOS (rotas /collections/:group)
+// Sincronizado com assets.js → groups[]
+// =====================================================
 const collections = [
-  { slug: 'decks', changefreq: 'weekly', priority: 0.9 },
-  { slug: 'leashes', changefreq: 'weekly', priority: 0.9 },
-  { slug: 'capas', changefreq: 'weekly', priority: 0.9 },
-  { slug: 'wax', changefreq: 'weekly', priority: 0.9 },
+  { slug: 'decks',       changefreq: 'weekly', priority: 0.9 },
+  { slug: 'leashes',     changefreq: 'weekly', priority: 0.9 },
+  { slug: 'capas',       changefreq: 'weekly', priority: 0.9 },
+  { slug: 'sarcofagos',  changefreq: 'weekly', priority: 0.9 },
+  { slug: 'quilhas',     changefreq: 'weekly', priority: 0.9 },
+  { slug: 'acessorios',  changefreq: 'weekly', priority: 0.9 },
+  { slug: 'bodyboard',   changefreq: 'weekly', priority: 0.8 },
+  { slug: 'sup',         changefreq: 'weekly', priority: 0.8 },
+  { slug: 'outlet',      changefreq: 'daily',  priority: 0.8 },
 ];
 
-// Categorias/Modelos (correspondem às rotas /products/:category)
-// Estas são as páginas que listam variantes de um modelo específico
+// =====================================================
+// CATEGORIAS / MODELOS (rotas /products/:category)
+// Sincronizado com assets.js → categories[]
+// ATENÇÃO: Usar os paths EXATOS do assets.js (case-sensitive)
+// =====================================================
 const categories = [
-  { slug: 'deck-tahiti', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'deck-hawaii-grom', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'deck-saquarema', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'deck-noronha', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'deck-fiji-classic', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'deck-j-bay', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'fuwax-cool', changefreq: 'weekly', priority: 0.8 },
-  { slug: 'leash-6ft-6mm', changefreq: 'weekly', priority: 0.8 },
+  // ═══ DECKS (12) ═══
+  { slug: 'Deck-Maldivas',     changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Mentawai',     changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Fiji-Classic',  changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Hawaii',       changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-J-Bay',        changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Noronha',      changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Peniche',      changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Saquarema',    changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Combate',      changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Longboard',    changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-Front',        changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Deck-SUP',          changefreq: 'weekly', priority: 0.8 },
+
+  // ═══ LEASHES (5) ═══
+  { slug: 'Leash-Shortboard-Hibridas', changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Leash-Fun-MiniLong',        changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Leash-Longboard',           changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Leash-StandUp',             changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Leash-Bodyboard',           changefreq: 'weekly', priority: 0.8 },
+
+  // ═══ CAPAS (3) ═══
+  { slug: 'Refletiva-Combate', changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Refletiva-Premium', changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Capa-Toalha',      changefreq: 'weekly', priority: 0.8 },
+
+  // ═══ SARCÓFAGOS (4) ═══
+  { slug: 'Sarcofago-Combate',       changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Sarcofago-Premium',       changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Sarcofago-Combate-Rodas', changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Sarcofago-Premium-Rodas', changefreq: 'weekly', priority: 0.8 },
+
+  // ═══ QUILHAS (4) ═══
+  { slug: 'Quilha-Shortboard', changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Quilha-Longboard',  changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Quilha-SUP',        changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Chave-Parafuso',    changefreq: 'weekly', priority: 0.8 },
+
+  // ═══ ACESSÓRIOS (6) ═══
+  { slug: 'Racks',            changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Parafinas',        changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Bones',            changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Protetor-Rabeta',  changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Wetsuit-Bag',      changefreq: 'weekly', priority: 0.8 },
+  { slug: 'Diversos',         changefreq: 'weekly', priority: 0.8 },
 ];
 
 // Produtos a excluir (removidos/inválidos)
-const invalidProductSlugs = ['Deck-Bells', 'deck-bells'];
+const invalidProductSlugs = [];
 
 // =====================================================
 // FUNÇÕES AUXILIARES
@@ -111,13 +164,13 @@ async function fetchProducts() {
   try {
     console.log('🔍 Conectando à API...');
     console.log(`   URL: ${API_URL}/api/product/list`);
-    
+
     const response = await fetch(`${API_URL}/api/product/list`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
 
     if (!data.success || !data.products) {
@@ -132,24 +185,18 @@ async function fetchProducts() {
         console.log(`   ⊘ Excluído (slug inválido): ${product.slug}`);
         return false;
       }
-      
-      // Excluir produtos fora de stock (opcional - descomentar se necessário)
-      // if (product.inStock !== true) {
-      //   console.log(`   ⊘ Excluído (sem stock): ${product.name}`);
-      //   return false;
-      // }
-      
-      // Excluir variantes que não são principais (evita duplicados)
+
+      // Excluir variantes que não são principais (evita duplicados no sitemap)
       if (product.isMainVariant === false) {
         return false;
       }
-      
+
       return true;
     });
 
     console.log(`✅ ${validProducts.length} produtos válidos de ${data.products.length} total`);
     return validProducts;
-    
+
   } catch (err) {
     console.error('❌ Erro ao buscar produtos:', err.message);
     console.log('   ℹ️ O sitemap de produtos será gerado vazio');
@@ -166,7 +213,7 @@ async function fetchProducts() {
  */
 function generateSitemapIndex() {
   const today = getToday();
-  
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
@@ -193,7 +240,7 @@ function generateSitemapIndex() {
  */
 function generateStaticSitemap() {
   const today = getToday();
-  
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
@@ -219,7 +266,7 @@ function generateStaticSitemap() {
  */
 function generateCollectionsSitemap() {
   const today = getToday();
-  
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
@@ -242,10 +289,11 @@ function generateCollectionsSitemap() {
 /**
  * Gera sitemap de categorias/modelos
  * Rotas: /products/{slug}
+ * NOTA: Usa os paths exatos do assets.js (case-sensitive)
  */
 function generateCategoriesSitemap() {
   const today = getToday();
-  
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
@@ -268,6 +316,7 @@ function generateCategoriesSitemap() {
 /**
  * Gera sitemap de produtos individuais com imagens
  * Rotas: /products/{category}/{id}
+ * Inclui image:image para Google Image Search
  */
 function generateProductsSitemap(products) {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -276,8 +325,8 @@ function generateProductsSitemap(products) {
 `;
 
   for (const product of products) {
-    // Normalizar categoria para URL
-    const category = (product.category || 'produtos').toLowerCase().trim();
+    // Usar o category tal como vem do DB (corresponde ao path do assets.js)
+    const category = (product.category || 'produtos').trim();
     const fullUrl = `${SITE_URL}/products/${category}/${product._id}`;
     const lastmod = formatDate(product.updatedAt);
     const productName = escapeXml(product.name || '');
@@ -291,7 +340,7 @@ function generateProductsSitemap(products) {
     // Adicionar imagens do produto (máximo 8 por URL - recomendação Google)
     if (product.image && Array.isArray(product.image) && product.image.length > 0) {
       const images = product.image.slice(0, 8);
-      
+
       for (const img of images) {
         if (img && typeof img === 'string') {
           xml += `
@@ -318,12 +367,13 @@ function generateProductsSitemap(products) {
 
 async function generateSitemaps() {
   console.log('');
-  console.log('╔══════════════════════════════════════════════════╗');
-  console.log('║   GERADOR DE SITEMAPS - Elite Surfing Portugal   ║');
-  console.log('╚══════════════════════════════════════════════════╝');
+  console.log('╔═══════════════════════════════════════════════════╗');
+  console.log('║   GERADOR DE SITEMAPS - Elite Surfing Brasil 🇧🇷  ║');
+  console.log('╚═══════════════════════════════════════════════════╝');
   console.log('');
   console.log(`📍 URL Base: ${SITE_URL}`);
-  console.log(`📅 Data: ${getToday()}`);
+  console.log(`🔗 API:      ${API_URL}`);
+  console.log(`📅 Data:     ${getToday()}`);
   console.log('');
 
   const outputDir = path.join(process.cwd(), 'public');
@@ -338,7 +388,7 @@ async function generateSitemaps() {
   const products = await fetchProducts();
 
   console.log('');
-  console.log('📝 Gerando ficheiros XML...');
+  console.log('📝 Gerando arquivos XML...');
   console.log('');
 
   // 1. Sitemap Index
@@ -359,7 +409,7 @@ async function generateSitemaps() {
   // 4. Categories Sitemap
   const categoriesSitemap = generateCategoriesSitemap();
   fs.writeFileSync(path.join(outputDir, 'sitemap-categories.xml'), categoriesSitemap, 'utf8');
-  console.log(`   ✓ sitemap-categories.xml (${categories.length} modelos)`);
+  console.log(`   ✓ sitemap-categories.xml (${categories.length} categorias)`);
 
   // 5. Products Sitemap
   const productsSitemap = generateProductsSitemap(products);
@@ -368,21 +418,21 @@ async function generateSitemaps() {
 
   // Resumo final
   const totalUrls = staticRoutes.length + collections.length + categories.length + products.length;
-  
+
   console.log('');
   console.log('══════════════════════════════════════════════════');
   console.log('✅ SITEMAPS GERADOS COM SUCESSO!');
   console.log('══════════════════════════════════════════════════');
   console.log('');
   console.log('📊 Resumo:');
-  console.log(`   • Páginas estáticas: ${staticRoutes.length}`);
-  console.log(`   • Coleções:          ${collections.length}`);
-  console.log(`   • Modelos:           ${categories.length}`);
-  console.log(`   • Produtos:          ${products.length}`);
-  console.log(`   ─────────────────────────`);
-  console.log(`   • TOTAL URLs:        ${totalUrls}`);
+  console.log(`   • Páginas estáticas:  ${staticRoutes.length}`);
+  console.log(`   • Coleções:           ${collections.length}`);
+  console.log(`   • Categorias:         ${categories.length}`);
+  console.log(`   • Produtos:           ${products.length}`);
+  console.log(`   ─────────────────────────────`);
+  console.log(`   • TOTAL URLs:         ${totalUrls}`);
   console.log('');
-  console.log('📁 Ficheiros gerados em /public:');
+  console.log('📁 Arquivos gerados em /public:');
   console.log('   • sitemap.xml');
   console.log('   • sitemap-static.xml');
   console.log('   • sitemap-collections.xml');
@@ -394,6 +444,7 @@ async function generateSitemaps() {
   console.log(`   • ${SITE_URL}/robots.txt`);
   console.log('');
   console.log('📌 Próximo passo: Submeter sitemap.xml no Google Search Console');
+  console.log('   https://search.google.com/search-console');
   console.log('');
 }
 
