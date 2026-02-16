@@ -19,7 +19,7 @@ const ProductDetails = () => {
     products,
     navigate,
     currency,
-    addToCart,
+    setShowCartSidebar,
     cartItems,
     updateCartItem,
     axios,
@@ -410,6 +410,7 @@ const ProductDetails = () => {
     updateCartItem(displayProduct._id, newTotal);
     toast.success(`${quantity} ${quantity === 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho!`);
     setQuantity(1);
+    setShowCartSidebar(true); // ← Abre o sidebar
   };
 
   // ✅ COMPRAR AGORA

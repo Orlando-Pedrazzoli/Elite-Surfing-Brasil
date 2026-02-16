@@ -23,11 +23,11 @@ html, body {
 }
 
 @theme {
-  /* Cores base - usadas onde gradiente nao funciona */
-  --color-primary: #f85032;
-  --color-primary-dull: #e73827;
-  --color-primary-light: #ff6b4a;
-  --color-primary-dark: #d62a1a;
+  /* Cores base - Azul Oceânico */
+  --color-primary: #0F3057;
+  --color-primary-dull: #0A2240;
+  --color-primary-light: #1A4A7A;
+  --color-primary-dark: #071A30;
 }
 
 /* ============================================================================
@@ -36,42 +36,42 @@ html, body {
 
 /* Background gradiente */
 .bg-gradient-primary {
-  background: #f85032;
-  background: -webkit-linear-gradient(to right, #e73827, #f85032);
-  background: linear-gradient(to right, #e73827, #f85032);
+  background: #0F3057;
+  background: -webkit-linear-gradient(to right, #0A2240, #0F3057);
+  background: linear-gradient(to right, #0A2240, #0F3057);
 }
 
 /* Background gradiente hover (mais intenso) */
 .bg-gradient-primary-hover {
-  background: #e73827;
-  background: -webkit-linear-gradient(to right, #d62a1a, #e73827);
-  background: linear-gradient(to right, #d62a1a, #e73827);
+  background: #0A2240;
+  background: -webkit-linear-gradient(to right, #071A30, #0A2240);
+  background: linear-gradient(to right, #071A30, #0A2240);
 }
 
 /* Background gradiente invertido */
 .bg-gradient-primary-reverse {
-  background: #e73827;
-  background: -webkit-linear-gradient(to left, #e73827, #f85032);
-  background: linear-gradient(to left, #e73827, #f85032);
+  background: #0A2240;
+  background: -webkit-linear-gradient(to left, #0A2240, #0F3057);
+  background: linear-gradient(to left, #0A2240, #0F3057);
 }
 
 /* Background gradiente vertical */
 .bg-gradient-primary-vertical {
-  background: #f85032;
-  background: -webkit-linear-gradient(to bottom, #f85032, #e73827);
-  background: linear-gradient(to bottom, #f85032, #e73827);
+  background: #0F3057;
+  background: -webkit-linear-gradient(to bottom, #0F3057, #0A2240);
+  background: linear-gradient(to bottom, #0F3057, #0A2240);
 }
 
 /* Background gradiente diagonal */
 .bg-gradient-primary-diagonal {
-  background: #f85032;
-  background: -webkit-linear-gradient(135deg, #e73827, #f85032);
-  background: linear-gradient(135deg, #e73827, #f85032);
+  background: #0F3057;
+  background: -webkit-linear-gradient(135deg, #0A2240, #0F3057);
+  background: linear-gradient(135deg, #0A2240, #0F3057);
 }
 
 /* Texto com gradiente */
 .text-gradient-primary {
-  background: linear-gradient(to right, #e73827, #f85032);
+  background: linear-gradient(to right, #0A2240, #1A4A7A);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -83,7 +83,7 @@ html, body {
 
 /* Botao primario com gradiente */
 .btn-gradient-primary {
-  background: linear-gradient(to right, #e73827, #f85032);
+  background: linear-gradient(to right, #0A2240, #0F3057);
   color: white;
   border: none;
   transition: all 0.3s ease;
@@ -92,26 +92,26 @@ html, body {
 }
 
 .btn-gradient-primary:hover {
-  background: linear-gradient(to right, #d62a1a, #e73827);
+  background: linear-gradient(to right, #071A30, #0A2240);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(248, 80, 50, 0.4);
+  box-shadow: 0 4px 15px rgba(15, 48, 87, 0.4);
 }
 
 .btn-gradient-primary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(248, 80, 50, 0.3);
+  box-shadow: 0 2px 8px rgba(15, 48, 87, 0.3);
 }
 
 /* Botao outline com gradiente no hover */
 .btn-outline-gradient {
   background: transparent;
-  border: 2px solid #f85032;
-  color: #f85032;
+  border: 2px solid #0F3057;
+  color: #0F3057;
   transition: all 0.3s ease;
 }
 
 .btn-outline-gradient:hover {
-  background: linear-gradient(to right, #e73827, #f85032);
+  background: linear-gradient(to right, #0A2240, #0F3057);
   color: white;
   border-color: transparent;
 }
@@ -124,26 +124,26 @@ html, body {
 .border-gradient-primary {
   border: 2px solid transparent;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(to right, #e73827, #f85032) border-box;
+              linear-gradient(to right, #0A2240, #0F3057) border-box;
 }
 
 /* Sombra com cor primaria */
 .shadow-primary {
-  box-shadow: 0 4px 14px 0 rgba(248, 80, 50, 0.25);
+  box-shadow: 0 4px 14px 0 rgba(15, 48, 87, 0.25);
 }
 
 .shadow-primary-lg {
-  box-shadow: 0 10px 25px -5px rgba(248, 80, 50, 0.3);
+  box-shadow: 0 10px 25px -5px rgba(15, 48, 87, 0.3);
 }
 
 /* Glow effect */
 .glow-primary {
-  box-shadow: 0 0 20px rgba(248, 80, 50, 0.5);
+  box-shadow: 0 0 20px rgba(15, 48, 87, 0.5);
 }
 
 /* Ring com gradiente */
 .ring-gradient-primary {
-  --tw-ring-color: #f85032;
+  --tw-ring-color: #0F3057;
 }
 
 /* ============================================================================
@@ -152,15 +152,15 @@ html, body {
 
 /* Background muito claro */
 .bg-primary-50 {
-  background-color: rgba(248, 80, 50, 0.05);
+  background-color: rgba(15, 48, 87, 0.05);
 }
 
 .bg-primary-100 {
-  background-color: rgba(248, 80, 50, 0.1);
+  background-color: rgba(15, 48, 87, 0.1);
 }
 
 .bg-primary-200 {
-  background-color: rgba(248, 80, 50, 0.2);
+  background-color: rgba(15, 48, 87, 0.2);
 }
 
 /* ============================================================================
@@ -181,7 +181,7 @@ html, body {
 }
 
 .bg-gradient-animated {
-  background: linear-gradient(270deg, #e73827, #f85032, #ff6b4a, #f85032, #e73827);
+  background: linear-gradient(270deg, #0A2240, #0F3057, #1A4A7A, #0F3057, #0A2240);
   background-size: 400% 400%;
   animation: gradientShift 8s ease infinite;
 }
@@ -189,10 +189,10 @@ html, body {
 /* Pulse com cor primaria */
 @keyframes pulsePrimary {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(248, 80, 50, 0.4);
+    box-shadow: 0 0 0 0 rgba(15, 48, 87, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(248, 80, 50, 0);
+    box-shadow: 0 0 0 10px rgba(15, 48, 87, 0);
   }
 }
 
@@ -231,12 +231,13 @@ html, body {
 }
 
 .scrollbar-primary::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #e73827, #f85032);
+  background: linear-gradient(to bottom, #0A2240, #0F3057);
   border-radius: 3px;
 }
 
 .scrollbar-primary::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #d62a1a, #e73827);
+  background: linear-gradient(to bottom, #071A30, #0A2240);
+  border-radius: 3px;
 }
 
 /* ============================================================================
@@ -244,12 +245,12 @@ html, body {
    ============================================================================ */
 
 ::selection {
-  background-color: rgba(248, 80, 50, 0.3);
+  background-color: rgba(15, 48, 87, 0.3);
   color: inherit;
 }
 
 ::-moz-selection {
-  background-color: rgba(248, 80, 50, 0.3);
+  background-color: rgba(15, 48, 87, 0.3);
   color: inherit;
 }
 
@@ -275,9 +276,7 @@ html, body {
 }
 
 /* Garantir que nenhum filho vaza do container - USAR CLIP, NÃO HIDDEN */
-main,
-section,
-article {
+main, section, article {
   max-width: 100%;
 }
 
