@@ -1,5 +1,7 @@
 // server/emails/OrderConfirmationEmail.js
 // VERSÃO BRASIL - Elite Surfing Brasil
+// ✅ URLs com www.elitesurfing.com.br
+// ✅ Contato: atendimento@elitesurfing.com.br
 
 const formatBRL = (value) => {
   return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -28,20 +30,6 @@ export const createOrderEmailTemplate = (order, user, products, address) => {
     })
     .filter(Boolean)
     .join('');
-
-  // Seção de desconto se aplicável
-  const discountHTML = order.promoCode
-    ? `
-    <tr style="background: #f0f8ff; border-bottom: 1px solid #ddd;">
-      <td colspan="3" style="padding: 15px; text-align: right; color: #2196f3; font-weight: bold;">
-        Desconto (${order.promoCode} - ${order.discountPercentage}%):
-      </td>
-      <td style="padding: 15px; text-align: right; color: #2196f3; font-weight: bold; font-size: 16px;">
-        -${formatBRL(order.discountAmount)}
-      </td>
-    </tr>
-  `
-    : '';
 
   // Template HTML completo
   return `
@@ -182,7 +170,10 @@ export const createOrderEmailTemplate = (order, user, products, address) => {
             Tem alguma dúvida sobre o seu pedido?
           </p>
           <p style="margin: 0; color: #666;">
-            Fale conosco: <a href="mailto:contato@elitesurfing.com.br" style="color: #667eea;">contato@elitesurfing.com.br</a>
+            Fale conosco: <a href="mailto:atendimento@elitesurfing.com.br" style="color: #667eea;">atendimento@elitesurfing.com.br</a>
+          </p>
+          <p style="margin: 5px 0; color: #666;">
+            📱 WhatsApp: +55 (21) 96435-8058
           </p>
         </div>
 
@@ -192,7 +183,7 @@ export const createOrderEmailTemplate = (order, user, products, address) => {
       <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #ddd; border-top: none;">
         <p style="margin: 0; color: #666; font-size: 14px;">
           Obrigado por escolher a Elite Surfing Brasil! 🏄‍♂️<br>
-          <a href="https://elitesurfing.com.br" style="color: #667eea;">www.elitesurfing.com.br</a>
+          <a href="https://www.elitesurfing.com.br" style="color: #667eea;">www.elitesurfing.com.br</a>
         </p>
       </div>
 

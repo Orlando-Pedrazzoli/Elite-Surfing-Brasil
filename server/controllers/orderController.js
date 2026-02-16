@@ -2,8 +2,10 @@
 // VERSÃO BRASIL - Elite Surfing Brasil
 // ✅ Moeda: BRL (R$)
 // ✅ Pagamentos: PIX, Boleto, Cartão (via Stripe)
+// ✅ Parcelamento: Até 10x sem juros (Cartão)
 // ✅ Locale: pt-BR
-// ✅ Domínio: elitesurfing.com.br
+// ✅ Domínio: www.elitesurfing.com.br
+// ✅ Notificações: Email + WhatsApp (via adminNotificationService)
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -13,9 +15,10 @@ import stripe from 'stripe';
 import nodemailer from 'nodemailer';
 
 // =============================================================================
-// IMPORTAÇÃO DO SERVIÇO DE EMAIL PARA STATUS UPDATES
+// IMPORTAÇÃO DOS SERVIÇOS
 // =============================================================================
 let sendOrderStatusUpdateEmail = null;
+let notifyAdminNewOrder = null;
 
 try {
   const emailService = await import('../services/emailService.js');
@@ -23,6 +26,14 @@ try {
   console.log('✅ emailService carregado com sucesso');
 } catch (error) {
   console.error('❌ ERRO ao carregar emailService:', error.message);
+}
+
+try {
+  const adminService = await import('../services/adminNotificationService.js');
+  notifyAdminNewOrder = adminService.notifyAdminNewOrder;
+  console.log('✅ adminNotificationService carregado com sucesso');
+} catch (error) {
+  console.error('❌ ERRO ao carregar adminNotificationService:', error.message);
 }
 
 // =============================================================================
@@ -185,7 +196,7 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
           <!-- Footer -->
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
             <p>Dúvidas? Fale conosco:</p>
-            <p>📧 contato@elitesurfing.com.br | 📱 +55 (11) 99999-9999</p>
+            <p>📧 atendimento@elitesurfing.com.br | 📱 +55 (21) 96435-8058</p>
             <p style="margin-top: 20px;">
               <a href="https://www.elitesurfing.com.br" style="color: #1a1a2e;">www.elitesurfing.com.br</a>
             </p>
@@ -305,7 +316,7 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
 };
 
 // =============================================================================
-// FUNÇÃO PRINCIPAL PARA ENVIAR TODOS OS EMAILS
+// FUNÇÃO PRINCIPAL PARA ENVIAR TODOS OS EMAILS + WHATSAPP
 // =============================================================================
 const sendAllOrderEmails = async (order, userOrEmail) => {
   console.log('');
@@ -323,6 +334,7 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
     let customerEmail = null;
     let customerName = null;
     let customerPhone = null;
+    let userObj = null;
     
     // Determinar email e nome do cliente
     if (order.isGuestOrder) {
@@ -338,17 +350,18 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
       } else {
         // É um userId - buscar user
         console.log('👤 Modo: Buscando user por ID...');
-        const user = await User.findById(userOrEmail);
-        if (user) {
-          customerEmail = user.email;
-          customerName = user.name;
-          customerPhone = user.phone || '';
-          console.log('👤 User encontrado:', user.name, '-', user.email);
+        userObj = await User.findById(userOrEmail);
+        if (userObj) {
+          customerEmail = userObj.email;
+          customerName = userObj.name;
+          customerPhone = userObj.phone || '';
+          console.log('👤 User encontrado:', userObj.name, '-', userObj.email);
         } else {
           console.error('❌ User não encontrado com ID:', userOrEmail);
         }
       }
     } else if (userOrEmail?._id) {
+      userObj = userOrEmail;
       customerEmail = userOrEmail.email;
       customerName = userOrEmail.name;
       customerPhone = userOrEmail.phone || '';
@@ -416,15 +429,23 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
     const adminHTML = generateAdminNotificationHTML(order, customerName, customerEmail, customerPhone, products, address);
     const adminSubject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - ${formatBRL(order.amount)}`;
     
-    // 6. ENVIAR EMAILS EM PARALELO
+    // 6. ENVIAR EMAILS EM PARALELO + NOTIFICAÇÃO ADMIN (WhatsApp)
     console.log('');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 ENVIANDO EMAILS EM PARALELO...');
+    console.log('📧 ENVIANDO EMAILS + NOTIFICAÇÕES EM PARALELO...');
     console.log('   → Cliente:', customerEmail);
     console.log('   → Admin:', adminEmail);
+    console.log('   → WhatsApp:', notifyAdminNewOrder ? '✅ Ativo' : '⚠️ Indisponível');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const [clientResult, adminResult] = await Promise.all([
+    // Preparar user object para adminNotificationService
+    const userForAdmin = userObj || {
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
+    };
+
+    const promises = [
       // Email para cliente
       transporter.sendMail({
         from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
@@ -442,21 +463,37 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
         html: adminHTML,
       }).then(r => ({ success: true, messageId: r.messageId }))
         .catch(e => ({ success: false, error: e.message })),
-    ]);
+    ];
+
+    // Notificação Admin centralizada (Email extra + WhatsApp)
+    if (notifyAdminNewOrder) {
+      promises.push(
+        notifyAdminNewOrder(order, userForAdmin, products, address)
+          .then(r => ({ success: true, details: r }))
+          .catch(e => ({ success: false, error: e.message }))
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const [clientResult, adminResult, adminNotifyResult] = results;
     
     // 7. LOG DOS RESULTADOS
     console.log('');
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📧 RESULTADO DOS EMAILS:');
+    console.log('📧 RESULTADO DAS NOTIFICAÇÕES:');
     console.log('   Cliente:', clientResult.success ? `✅ ENVIADO (${clientResult.messageId})` : `❌ FALHOU (${clientResult.error})`);
     console.log('   Admin:', adminResult.success ? `✅ ENVIADO (${adminResult.messageId})` : `❌ FALHOU (${adminResult.error})`);
+    if (adminNotifyResult) {
+      console.log('   Admin+WhatsApp:', adminNotifyResult.success ? '✅ ENVIADO' : `❌ FALHOU (${adminNotifyResult.error})`);
+    }
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('');
     
     return {
       success: clientResult.success || adminResult.success,
       clientEmail: clientResult,
-      adminEmail: adminResult
+      adminEmail: adminResult,
+      adminNotification: adminNotifyResult || null,
     };
     
   } catch (error) {
@@ -471,7 +508,7 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
 };
 
 // =============================================================================
-// PLACE ORDER STRIPE - SUPORTA PIX, BOLETO E CARTÃO (BRASIL)
+// PLACE ORDER STRIPE - SUPORTA PIX, BOLETO E CARTÃO COM PARCELAMENTO (BRASIL)
 // =============================================================================
 export const placeOrderStripe = async (req, res) => {
   console.log('');
@@ -490,6 +527,7 @@ export const placeOrderStripe = async (req, res) => {
       discountPercentage,
       promoCode,
       paymentMethod,
+      installments,
       isGuestOrder,
       guestEmail,
       guestName,
@@ -502,6 +540,7 @@ export const placeOrderStripe = async (req, res) => {
     console.log('💳 guestEmail:', guestEmail);
     console.log('💳 userId:', userId);
     console.log('💳 paymentMethod:', paymentMethod);
+    console.log('💳 installments:', installments || 1);
 
     if (!address || items.length === 0) {
       return res.json({ success: false, message: 'Dados inválidos' });
@@ -581,29 +620,20 @@ export const placeOrderStripe = async (req, res) => {
       };
     });
 
-    // Métodos de pagamento Brasil
+    // ═══════════════════════════════════════════════════════════════
+    // MÉTODOS DE PAGAMENTO BRASIL
+    // ═══════════════════════════════════════════════════════════════
     let payment_method_types;
-    switch (paymentMethod) {
-      case 'pix':
-        payment_method_types = ['pix'];
-        break;
-      case 'boleto':
-        payment_method_types = ['boleto'];
-        break;
-      default:
-        payment_method_types = ['card'];
-    }
-
     const sessionOptions = {
       line_items,
       mode: 'payment',
-      payment_method_types,
       success_url: `${origin}/order-success/${order._id}?payment=stripe&method=${paymentMethod || 'card'}${isGuestOrder ? '&guest=true' : ''}`,
       cancel_url: `${origin}/cart`,
       metadata: {
         orderId: order._id.toString(),
         userId: userId || '',
         paymentMethod: paymentMethod || 'card',
+        installments: String(installments || 1),
         isGuestOrder: isGuestOrder ? 'true' : 'false',
         guestEmail: guestEmail || '',
         guestName: guestName || '',
@@ -611,26 +641,50 @@ export const placeOrderStripe = async (req, res) => {
       },
     };
 
+    switch (paymentMethod) {
+      case 'pix':
+        payment_method_types = ['pix'];
+        sessionOptions.payment_method_options = {
+          pix: {
+            expires_after_seconds: 1800, // PIX expira em 30 minutos
+          }
+        };
+        break;
+
+      case 'boleto':
+        payment_method_types = ['boleto'];
+        sessionOptions.payment_method_options = {
+          boleto: {
+            expires_after_days: 3, // Boleto expira em 3 dias
+          }
+        };
+        break;
+
+      default:
+        // CARTÃO — sempre com opção de parcelamento
+        payment_method_types = ['card'];
+        
+        // Parcelamento: Stripe Brasil suporta installments nativamente
+        // Quando enabled: true, o Stripe Checkout mostra automaticamente
+        // as opções 1x, 2x, 3x... até 10x na página de pagamento.
+        // O CLIENTE escolhe as parcelas na página do Stripe.
+        // O lojista absorve os juros (10x "sem juros" = lojista paga taxa)
+        // NOTA: Requer que installments esteja habilitado na conta Stripe
+        sessionOptions.payment_method_options = {
+          card: {
+            installments: {
+              enabled: true,
+            }
+          }
+        };
+        console.log('💳 Parcelamento habilitado (cliente escolhe na página Stripe)');
+        break;
+    }
+
+    sessionOptions.payment_method_types = payment_method_types;
+
     if (isGuestOrder && guestEmail) {
       sessionOptions.customer_email = guestEmail;
-    }
-
-    // Opções específicas para PIX
-    if (paymentMethod === 'pix') {
-      sessionOptions.payment_method_options = {
-        pix: {
-          expires_after_seconds: 1800, // PIX expira em 30 minutos
-        }
-      };
-    }
-
-    // Opções específicas para Boleto
-    if (paymentMethod === 'boleto') {
-      sessionOptions.payment_method_options = {
-        boleto: {
-          expires_after_days: 3, // Boleto expira em 3 dias
-        }
-      };
     }
 
     const session = await stripeInstance.checkout.sessions.create(sessionOptions);
@@ -703,9 +757,9 @@ export const stripeWebhooks = async (request, response) => {
           await User.findByIdAndUpdate(userId, { cartItems: {} });
         }
 
-        // ✅ ENVIAR EMAILS COM AWAIT
+        // ✅ ENVIAR EMAILS + WHATSAPP COM AWAIT
         console.log('');
-        console.log('📧 Preparando envio de emails...');
+        console.log('📧 Preparando envio de emails + notificações...');
         
         let emailRecipient;
         if (isGuestOrder === 'true') {
@@ -724,7 +778,7 @@ export const stripeWebhooks = async (request, response) => {
         }
         
       } else if (session.payment_status === 'unpaid' && paymentMethod === 'boleto') {
-        // Boleto: pagamento pendente (similar ao multibanco)
+        // Boleto: pagamento pendente — será confirmado via payment_intent.succeeded
         console.log('⏳ Boleto: Aguardando pagamento');
       }
       break;
@@ -753,6 +807,9 @@ export const stripeWebhooks = async (request, response) => {
           break;
         }
         
+        // Este caso cobre BOLETO pago após emissão
+        console.log('💰 Pagamento assíncrono confirmado (provavelmente Boleto)');
+        
         const updatedOrder = await Order.findByIdAndUpdate(
           orderId, 
           { isPaid: true },
@@ -774,8 +831,19 @@ export const stripeWebhooks = async (request, response) => {
           await User.findByIdAndUpdate(userId, { cartItems: {} });
         }
 
-        // ⚠️ NÃO enviar emails aqui - já foram enviados no checkout.session.completed
-        console.log('⚠️ Emails já enviados no checkout.session.completed, ignorando aqui');
+        // ✅ Enviar emails para pagamentos assíncronos (Boleto pago depois)
+        let emailRecipient;
+        if (isGuestOrder === 'true') {
+          emailRecipient = guestEmail || updatedOrder.guestEmail;
+        } else {
+          emailRecipient = userId;
+        }
+        
+        if (emailRecipient) {
+          console.log('📧 Enviando emails para pagamento assíncrono (Boleto)...');
+          const emailResult = await sendAllOrderEmails(updatedOrder, emailRecipient);
+          console.log('📧 Resultado:', JSON.stringify(emailResult, null, 2));
+        }
       } catch (error) {
         console.error('❌ Erro no webhook payment_intent:', error.message);
       }

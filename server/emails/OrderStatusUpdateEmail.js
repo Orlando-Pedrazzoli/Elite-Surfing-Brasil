@@ -1,5 +1,7 @@
 // server/emails/OrderStatusUpdateEmail.js
 // VERSÃO BRASIL - Elite Surfing Brasil
+// ✅ URLs com www.elitesurfing.com.br
+// ✅ Contato: atendimento@elitesurfing.com.br
 
 const formatBRL = (value) => {
   return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -207,7 +209,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://elitesurfing.com.br/my-orders" 
+            <a href="https://www.elitesurfing.com.br/my-orders" 
                style="display: inline-block; background: ${statusInfo.color}; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">
               Ver Meus Pedidos
             </a>
@@ -233,7 +235,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
                 adoraríamos ouvir a sua opinião sobre os produtos.
               </p>
               <div style="text-align: center; margin-top: 15px;">
-                <a href="https://elitesurfing.com.br/write-review" 
+                <a href="https://www.elitesurfing.com.br/write-review" 
                    style="display: inline-block; background: #10B981; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 14px;">
                   Deixar Avaliação
                 </a>
@@ -247,9 +249,12 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
               Tem alguma dúvida sobre o seu pedido?
             </p>
             <p style="margin: 0;">
-              <a href="mailto:contato@elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-weight: 500;">
-                contato@elitesurfing.com.br
+              <a href="mailto:atendimento@elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-weight: 500;">
+                atendimento@elitesurfing.com.br
               </a>
+            </p>
+            <p style="margin: 5px 0; color: #666; font-size: 13px;">
+              📱 WhatsApp: +55 (21) 96435-8058
             </p>
           </div>
 
@@ -261,7 +266,7 @@ export const createStatusUpdateEmailTemplate = (order, customerName, customerEma
             Obrigado por escolher a Elite Surfing Brasil! 🏄‍♂️
           </p>
           <p style="margin: 10px 0 0 0;">
-            <a href="https://elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-size: 13px;">
+            <a href="https://www.elitesurfing.com.br" style="color: ${statusInfo.color}; text-decoration: none; font-size: 13px;">
               www.elitesurfing.com.br
             </a>
           </p>
@@ -304,9 +309,10 @@ Total: ${formatBRL(order.amount)}
 ---
 
 Para ver todos os detalhes, acesse:
-https://elitesurfing.com.br/my-orders
+https://www.elitesurfing.com.br/my-orders
 
-Tem dúvidas? Fale conosco: contato@elitesurfing.com.br
+Tem dúvidas? Fale conosco: atendimento@elitesurfing.com.br
+WhatsApp: +55 (21) 96435-8058
 
 Obrigado por escolher a Elite Surfing Brasil!
 www.elitesurfing.com.br

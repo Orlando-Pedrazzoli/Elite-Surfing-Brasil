@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
-import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode } from 'lucide-react';
+import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode, FileText, Clock } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
 const Cart = () => {
@@ -31,7 +31,7 @@ const Cart = () => {
   const [addresses, setAddresses] = useState([]);
   const [showAddressList, setShowAddressList] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('pix'); // ✅ PIX como default
   const [promoCode, setPromoCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -225,7 +225,7 @@ const Cart = () => {
   };
 
   // =============================================================================
-  // HANDLE PLACE ORDER - SUPORTA GUEST CHECKOUT COMPLETO
+  // HANDLE PLACE ORDER - SUPORTA GUEST CHECKOUT + PIX/BOLETO/CARTÃO
   // =============================================================================
   const handlePlaceOrder = async () => {
     const currentAddress = getCurrentAddress();
@@ -264,20 +264,21 @@ const Cart = () => {
         pixDiscountPercentage: paymentMethod === 'pix' ? PIX_DISCOUNT * 100 : 0,
         promoCode: discountApplied ? promoCode.toUpperCase() : '',
         paymentType: 'Online',
-        paymentMethod: paymentMethod,
+        paymentMethod: paymentMethod, // 'pix', 'boleto', ou 'card'
         isPaid: false,
       };
 
       let endpoint;
-      let addressId;
 
       if (user) {
+        // ═══ UTILIZADOR LOGADO ═══
         orderData.userId = user._id;
         orderData.address = selectedAddress._id;
         orderData.isGuestOrder = false;
         endpoint = '/api/order/stripe';
         
       } else {
+        // ═══ GUEST CHECKOUT ═══
         const addressResponse = await axios.post('/api/address/guest', { 
           address: currentAddress 
         });
@@ -286,14 +287,19 @@ const Cart = () => {
           throw new Error(addressResponse.data.message || 'Erro ao salvar endereço');
         }
         
-        addressId = addressResponse.data.addressId;
+        const addressId = addressResponse.data.addressId;
         
         orderData.isGuestOrder = true;
         orderData.guestEmail = currentAddress.email;
         orderData.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
         orderData.guestPhone = currentAddress.phone;
         orderData.address = addressId;
-        endpoint = '/api/order/guest/stripe';
+        
+        // ✅ ROTA: Usar mesma rota /api/order/stripe
+        // O backend detecta isGuestOrder: true no body
+        // Se tiveres rota separada /api/order/guest/stripe, descomenta a linha abaixo:
+        // endpoint = '/api/order/guest/stripe';
+        endpoint = '/api/order/stripe';
       }
 
       const response = await axios.post(endpoint, orderData);
@@ -318,6 +324,10 @@ const Cart = () => {
         toast.error('Sessão expirada. Por favor, faça login novamente.');
         if (isMobile) localStorage.removeItem('mobile_auth_token');
         setShowUserLogin(true);
+      } else if (error.response?.status === 404) {
+        // Rota não encontrada — provável problema de guest endpoint
+        console.error('❌ Endpoint não encontrado:', error.response?.config?.url);
+        toast.error('Erro no servidor. Tente novamente ou entre em contato.');
       } else {
         toast.error(error.response?.data?.message || 'Falha ao processar o pedido.');
       }
@@ -341,10 +351,25 @@ const Cart = () => {
     toast('Cupom removido.');
   };
 
+  // ✅ ATUALIZADO: Texto do botão para PIX, Boleto e Cartão
   const getPaymentButtonText = () => {
     if (isProcessing) return 'Processando...';
-    if (paymentMethod === 'pix') return 'Pagar com PIX';
-    return 'Pagar com Cartão';
+    switch (paymentMethod) {
+      case 'pix': return 'Pagar com PIX';
+      case 'boleto': return 'Gerar Boleto';
+      case 'card': return 'Pagar com Cartão';
+      default: return 'Finalizar Compra';
+    }
+  };
+
+  // ✅ Ícone do botão baseado no método
+  const getPaymentButtonIcon = () => {
+    switch (paymentMethod) {
+      case 'pix': return <QrCode className='w-5 h-5' />;
+      case 'boleto': return <FileText className='w-5 h-5' />;
+      case 'card': return <CreditCard className='w-5 h-5' />;
+      default: return null;
+    }
   };
 
   // Handler para salvar endereço
@@ -598,7 +623,7 @@ const Cart = () => {
                         )}
                         
                         <p className='font-medium text-gray-700 mt-2 text-base sm:hidden'>
-                          {currency} {(product.offerPrice * product.quantity).toFixed(2)}
+                          {formatBRL(product.offerPrice * product.quantity)}
                         </p>
                       </div>
                     </div>
@@ -627,8 +652,7 @@ const Cart = () => {
 
                       <div className='text-right hidden sm:block'>
                         <p className='font-bold text-lg text-gray-800 flex items-baseline justify-end'>
-                          <span className='mr-0.5'>{currency}</span>
-                          <span>{(product.offerPrice * product.quantity).toFixed(2)}</span>
+                          <span>{formatBRL(product.offerPrice * product.quantity)}</span>
                         </p>
                       </div>
                       <button onClick={() => removeFromCart(product._id)} className='text-red-500 hover:text-red-700 text-sm font-medium transition-colors duration-200 ml-4 cursor-pointer'>
@@ -779,13 +803,14 @@ const Cart = () => {
               </div>
 
               {/* ═══════════════════════════════════════════════ */}
-              {/* FORMA DE PAGAMENTO — PIX + Cartão */}
+              {/* FORMA DE PAGAMENTO — PIX + Boleto + Cartão     */}
               {/* ═══════════════════════════════════════════════ */}
               {hasAddress() && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <h3 className='font-semibold text-gray-700 mb-3'>Forma de Pagamento</h3>
                   <div className='space-y-3'>
-                    {/* PIX */}
+
+                    {/* ═══ PIX ═══ */}
                     <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='pix' checked={paymentMethod === 'pix'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
@@ -798,7 +823,7 @@ const Cart = () => {
                         </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <span className='text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium'>10% OFF</span>
+                        <span className='text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold'>10% OFF</span>
                         {paymentMethod === 'pix' && (
                           <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
                             <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
@@ -809,7 +834,7 @@ const Cart = () => {
                       </div>
                     </label>
 
-                    {/* Cartão */}
+                    {/* ═══ CARTÃO ═══ */}
                     <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='card' checked={paymentMethod === 'card'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
@@ -821,6 +846,7 @@ const Cart = () => {
                           <div className='flex gap-1 mt-0.5'>
                             <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded'>Visa</span>
                             <span className='text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded'>MC</span>
+                            <span className='text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded'>Elo</span>
                             <span className='text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded'>até 10x</span>
                           </div>
                         </div>
@@ -833,6 +859,38 @@ const Cart = () => {
                         </div>
                       )}
                     </label>
+
+                    {/* ═══ BOLETO ═══ */}
+                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'boleto' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
+                      <input type='radio' name='paymentMethod' value='boleto' checked={paymentMethod === 'boleto'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
+                      <div className='flex items-center flex-1'>
+                        <div className='w-10 h-10 flex items-center justify-center bg-primary/10 rounded-lg mr-3'>
+                          <FileText className='w-5 h-5 text-primary' />
+                        </div>
+                        <div>
+                          <span className='font-medium text-gray-800'>Boleto Bancário</span>
+                          <p className='text-xs text-gray-500'>Vencimento em 3 dias úteis</p>
+                        </div>
+                      </div>
+                      {paymentMethod === 'boleto' && (
+                        <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
+                          <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
+                            <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                          </svg>
+                        </div>
+                      )}
+                    </label>
+
+                    {/* Info extra para Boleto */}
+                    {paymentMethod === 'boleto' && (
+                      <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800'>
+                        <Clock className='w-4 h-4 mt-0.5 flex-shrink-0' />
+                        <div>
+                          <p className='font-medium'>Atenção:</p>
+                          <p className='text-xs mt-0.5'>O pedido será confirmado após a compensação do boleto (1-3 dias úteis). O boleto será gerado pelo Stripe.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -876,15 +934,24 @@ const Cart = () => {
                   </span>
                 </div>
 
+                {/* Info parcelamento cartão */}
                 {paymentMethod === 'card' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
                     ou até 10x de {formatBRL(parseFloat(calculateTotal()) / 10)} sem juros
                   </p>
                 )}
 
+                {/* Info economia PIX */}
                 {paymentMethod === 'pix' && (
-                  <p className='text-xs text-primary mt-1 text-right font-medium'>
-                    Você está economizando {formatBRL(getPixDiscount())} com PIX!
+                  <p className='text-xs text-green-600 mt-1 text-right font-medium'>
+                    Você economiza {formatBRL(getPixDiscount())} com PIX!
+                  </p>
+                )}
+
+                {/* Info boleto */}
+                {paymentMethod === 'boleto' && (
+                  <p className='text-xs text-gray-500 mt-1 text-right'>
+                    Pagamento via boleto bancário • Vence em 3 dias
                   </p>
                 )}
               </div>
@@ -911,8 +978,7 @@ const Cart = () => {
                   <span>Adicione um endereço</span>
                 ) : (
                   <>
-                    {paymentMethod === 'pix' && <QrCode className='w-5 h-5' />}
-                    {paymentMethod === 'card' && <CreditCard className='w-5 h-5' />}
+                    {getPaymentButtonIcon()}
                     <span>{getPaymentButtonText()}</span>
                   </>
                 )}
