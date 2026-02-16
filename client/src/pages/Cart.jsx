@@ -295,11 +295,8 @@ const Cart = () => {
         orderData.guestPhone = currentAddress.phone;
         orderData.address = addressId;
         
-        // ✅ ROTA: Usar mesma rota /api/order/stripe
-        // O backend detecta isGuestOrder: true no body
-        // Se tiveres rota separada /api/order/guest/stripe, descomenta a linha abaixo:
-        // endpoint = '/api/order/guest/stripe';
-        endpoint = '/api/order/stripe';
+        // ✅ ROTA GUEST: Sem middleware de auth
+        endpoint = '/api/order/guest/stripe';
       }
 
       const response = await axios.post(endpoint, orderData);
