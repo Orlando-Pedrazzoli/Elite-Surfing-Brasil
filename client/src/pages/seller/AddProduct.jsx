@@ -33,8 +33,9 @@ const PRESET_DUAL_COLORS = [
   { name: 'Preto/Vermelho', code1: '#000000', code2: '#dc2333' },
 ];
 
-// 🆕 TAMANHOS PRÉ-DEFINIDOS (para capas e sarcófagos)
+// 🆕 TAMANHOS PRÉ-DEFINIDOS (para capas, sarcófagos e acessórios)
 const PRESET_SIZES = [
+  "P", "M", "G", "GG",
   "5'10", "6'0", "6'2", "6'3", "6'4", "6'6", "6'8",
   "7'0", "7'2", "7'6",
   "8'0", "8'5",
