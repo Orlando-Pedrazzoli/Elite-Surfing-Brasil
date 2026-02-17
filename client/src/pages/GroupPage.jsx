@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X } from 'lucide-react';
@@ -90,14 +90,13 @@ const GroupPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, navigate } = useAppContext();
 
-  // 🆕 Inicializar filtros a partir dos query params da URL
+  // Inicializar filtros a partir dos query params da URL
   const [activeFilters, setActiveFilters] = useState(() => {
     const initial = {};
     const defs = filterDefinitions[groupSlug] || [];
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
       if (paramValue) {
-        // Verificar se o valor existe nas options do filtro
         const validOption = fd.options.find(o => o.value === paramValue);
         if (validOption) {
           initial[fd.key] = [paramValue];
@@ -106,6 +105,23 @@ const GroupPage = () => {
     });
     return initial;
   });
+
+  // 🆕 FIX: Sincronizar filtros quando os searchParams mudam
+  // (ex: clicar "Ver Todos" na navbar navega para o mesmo pathname mas sem query params)
+  useEffect(() => {
+    const defs = filterDefinitions[groupSlug] || [];
+    const fromUrl = {};
+    defs.forEach(fd => {
+      const paramValue = searchParams.get(fd.key);
+      if (paramValue) {
+        const validOption = fd.options.find(o => o.value === paramValue);
+        if (validOption) {
+          fromUrl[fd.key] = [paramValue];
+        }
+      }
+    });
+    setActiveFilters(fromUrl);
+  }, [searchParams, groupSlug]);
 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [mobileGridCols, setMobileGridCols] = useState(2);
@@ -122,12 +138,12 @@ const GroupPage = () => {
     { name: group?.name || groupSlug, url: `/collections/${groupSlug}` }
   ];
 
-  // 🆕 Obter definições de filtros deste grupo
+  // Obter definições de filtros deste grupo
   const filterDefs = useMemo(() => {
     return getFiltersByGroup(groupSlug);
   }, [groupSlug]);
 
-  // 🆕 Filtros visíveis (respeita parent-child)
+  // Filtros visíveis (respeita parent-child)
   const visibleFilterDefs = useMemo(() => {
     return filterDefs.filter(fd => {
       if (!fd.parentKey) return true;
@@ -161,7 +177,7 @@ const GroupPage = () => {
     });
   }, [allGroupProducts, activeFilters]);
 
-  // 🆕 Contagem de produtos por filtro
+  // Contagem de produtos por filtro
   const getProductCountsForFilter = useCallback((filterKey) => {
     const counts = {};
     const filterDef = filterDefs.find(f => f.key === filterKey);
@@ -188,7 +204,7 @@ const GroupPage = () => {
     return counts;
   }, [filterDefs, activeFilters, allGroupProducts]);
 
-  // 🆕 Toggle filtro + sincronizar URL
+  // Toggle filtro + sincronizar URL
   const toggleFilterValue = useCallback((filterKey, value) => {
     setActiveFilters(prev => {
       const currentValues = prev[filterKey] || [];
@@ -214,7 +230,7 @@ const GroupPage = () => {
         if (updated[key].length === 0) delete updated[key];
       });
 
-      // 🆕 Sincronizar query params na URL
+      // Sincronizar query params na URL
       const params = new URLSearchParams();
       Object.entries(updated).forEach(([k, values]) => {
         if (values.length === 1) {
