@@ -114,9 +114,12 @@ const GroupPage = () => {
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
       if (paramValue) {
-        const validOption = fd.options.find(o => o.value === paramValue);
-        if (validOption) {
-          fromUrl[fd.key] = [paramValue];
+        // Suporta múltiplos valores separados por vírgula (ex: ?tipo=shortboard,longboard)
+        const values = paramValue.split(',').filter(v => {
+          return fd.options.some(o => o.value === v);
+        });
+        if (values.length > 0) {
+          fromUrl[fd.key] = values;
         }
       }
     });
