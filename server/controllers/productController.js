@@ -228,12 +228,19 @@ export const changeStock = async (req, res) => {
   }
 };
 
+// ═══════════════════════════════════════════════════════════════════
 // Update Product : /api/product/update
+// 🆕 ATUALIZADO: Suporta sistema de imagens com ordem
+//    - Mantém imagens existentes selecionadas (sem re-upload)
+//    - Faz upload apenas de imagens novas
+//    - Respeita a ordem definida pelo utilizador (drag & drop)
+//    - Remove do Cloudinary imagens que foram descartadas
+// ═══════════════════════════════════════════════════════════════════
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.body;
     let productData = JSON.parse(req.body.productData);
-    const images = req.files?.images || [];
+    const newImageFiles = req.files?.images || [];
     const videoFile = req.files?.video?.[0] || null;
 
     // Buscar produto existente
@@ -242,34 +249,89 @@ export const updateProduct = async (req, res) => {
       return res.json({ success: false, message: 'Produto não encontrado' });
     }
 
-    // Se houver novas imagens, fazer upload
-    let imagesUrl = existingProduct.image;
-    if (images && images.length > 0) {
-      // Excluir imagens antigas do Cloudinary
-      for (const imageUrl of existingProduct.image) {
-        try {
-          const publicId = imageUrl.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(publicId);
-        } catch (error) {
-          console.log('Erro ao excluir imagem antiga:', error.message);
-        }
-      }
+    // ═══════════════════════════════════════════════════════════
+    // SISTEMA DE IMAGENS COM ORDEM (existentes + novas)
+    // ═══════════════════════════════════════════════════════════
+    // O frontend envia:
+    //   productData.existingImages = ['url1', 'url2']  → URLs mantidas
+    //   productData.imageOrder = [{ index, type, url }] → ordem final
+    //   req.files.images = [File, File]                 → ficheiros novos
+    // ═══════════════════════════════════════════════════════════
 
-      // Upload das novas imagens
-      imagesUrl = await Promise.all(
-        images.map(async item => {
-          let result = await cloudinary.uploader.upload(item.path, {
+    let finalImageUrls;
+    const { existingImages, imageOrder } = productData;
+
+    // Limpar campos auxiliares (não são campos do modelo)
+    delete productData.existingImages;
+    delete productData.imageOrder;
+
+    if (imageOrder && Array.isArray(imageOrder)) {
+      // ── NOVO SISTEMA: reconstruir array na ordem correta ──
+
+      // 1. Upload das novas imagens
+      const uploadedNewUrls = await Promise.all(
+        newImageFiles.map(async (file) => {
+          const result = await cloudinary.uploader.upload(file.path, {
             resource_type: 'image',
           });
           return result.secure_url;
         })
       );
+
+      // 2. Montar array final respeitando a ordem do imageOrder
+      let newFileIndex = 0;
+      finalImageUrls = imageOrder.map((item) => {
+        if (item.type === 'existing' && item.url) {
+          return item.url;
+        } else {
+          // tipo 'new' — pegar da lista de uploads na ordem
+          const url = uploadedNewUrls[newFileIndex];
+          newFileIndex++;
+          return url;
+        }
+      }).filter(Boolean);
+
+      // 3. Apagar do Cloudinary as imagens que foram removidas
+      const keptUrls = new Set(existingImages || []);
+      for (const oldUrl of existingProduct.image) {
+        if (!keptUrls.has(oldUrl)) {
+          try {
+            const publicId = oldUrl.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            console.log('Erro ao excluir imagem removida:', err.message);
+          }
+        }
+      }
+    } else if (newImageFiles.length > 0) {
+      // ── FALLBACK: comportamento antigo (substitui todas) ──
+      for (const imageUrl of existingProduct.image) {
+        try {
+          const publicId = imageUrl.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.log('Erro ao excluir imagem antiga:', err.message);
+        }
+      }
+
+      finalImageUrls = await Promise.all(
+        newImageFiles.map(async (file) => {
+          const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'image',
+          });
+          return result.secure_url;
+        })
+      );
+    } else {
+      // Sem alterações nas imagens
+      finalImageUrls = existingProduct.image;
     }
 
-    // 🆕 Se houver novo vídeo, fazer upload
+    // ═══════════════════════════════════════════════════════════
+    // VÍDEO
+    // ═══════════════════════════════════════════════════════════
     let videoUrl = existingProduct.video;
     if (videoFile) {
-      // Excluir vídeo antigo do Cloudinary (se existir)
       if (existingProduct.video) {
         try {
           const videoPublicId = existingProduct.video.split('/').slice(-2).join('/').split('.')[0];
@@ -279,7 +341,6 @@ export const updateProduct = async (req, res) => {
         }
       }
 
-      // Upload do novo vídeo
       const videoResult = await cloudinary.uploader.upload(videoFile.path, {
         resource_type: 'video',
         folder: 'products/videos',
@@ -287,7 +348,6 @@ export const updateProduct = async (req, res) => {
       videoUrl = videoResult.secure_url;
     }
     
-    // 🆕 Se pediu para remover o vídeo
     if (productData.removeVideo && existingProduct.video) {
       try {
         const videoPublicId = existingProduct.video.split('/').slice(-2).join('/').split('.')[0];
@@ -307,7 +367,7 @@ export const updateProduct = async (req, res) => {
     // Atualizar produto
     await Product.findByIdAndUpdate(id, {
       ...productData,
-      image: imagesUrl,
+      image: finalImageUrls,
       video: videoUrl,
     });
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
 import toast from 'react-hot-toast';
+import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
 const PRESET_COLORS = [
@@ -31,6 +32,20 @@ const PRESET_DUAL_COLORS = [
   { name: 'Preto/Branco', code1: '#000000', code2: '#dfdfe1' },
   { name: 'Preto/Vermelho', code1: '#000000', code2: '#dc2333' },
 ];
+
+// 🆕 TAMANHOS PRÉ-DEFINIDOS (para capas, sarcófagos e acessórios)
+const PRESET_SIZES = [
+  "P", "M", "G", "GG",
+  "5'10", "6'0", "6'2", "6'3", "6'4", "6'6", "6'8",
+  "7'0", "7'2", "7'6",
+  "8'0", "8'5",
+  "9'2", "9'6", "9'8",
+  "10'0", "10'5",
+  "11'0", "11'6",
+  "12'6", "14'0",
+];
+
+const MAX_IMAGES = 8;
 
 // Componente para renderizar bolinha de cor
 const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }) => {
@@ -81,8 +96,311 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
   );
 };
 
+// 🆕 Componente SizeBadge para preview de tamanho
+const SizeBadge = ({ label, size = 'md', selected = false, onClick, title, disabled = false }) => {
+  const sizeClasses = {
+    sm: 'text-xs px-2 py-1',
+    md: 'text-sm px-3 py-1.5',
+  };
+
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className={`rounded-lg font-medium transition-all duration-200 hover:scale-105 ${sizeClasses[size]} ${
+        selected
+          ? 'bg-primary text-white ring-2 ring-primary ring-offset-1'
+          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+      {label}
+    </button>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 EDIT IMAGE ZONE — Imagens atuais + Novas com Drag & Drop
+// ═══════════════════════════════════════════════════════════════
+// Cada item no array `images` é:
+//   { type: 'existing', url: '...' }   ← imagem já salva no servidor
+//   { type: 'new', file: File }        ← imagem nova (upload)
+// ═══════════════════════════════════════════════════════════════
+const EditImageZone = ({ images, setImages, disabled = false }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [dragSourceIndex, setDragSourceIndex] = useState(null);
+  const fileInputRef = useRef(null);
+  const dragCounter = useRef(0);
+
+  const addFiles = useCallback((newFiles) => {
+    const imageFiles = Array.from(newFiles).filter(file => {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`"${file.name}" não é uma imagem`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}" excede 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    if (imageFiles.length === 0) return;
+
+    setImages(prev => {
+      const available = MAX_IMAGES - prev.length;
+      if (available <= 0) {
+        toast.error(`Máximo de ${MAX_IMAGES} imagens`);
+        return prev;
+      }
+      const toAdd = imageFiles.slice(0, available).map(file => ({ type: 'new', file }));
+      if (imageFiles.length > available) {
+        toast(`Apenas ${available} imagem(ns) adicionada(s) (limite: ${MAX_IMAGES})`, { icon: 'ℹ️' });
+      }
+      return [...prev, ...toAdd];
+    });
+  }, [setImages]);
+
+  const removeImage = useCallback((index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  }, [setImages]);
+
+  // Drag & Drop — zona de upload
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setIsDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleClickUpload = () => {
+    if (!disabled) fileInputRef.current?.click();
+  };
+
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
+      e.target.value = '';
+    }
+  };
+
+  // Drag & Drop — reordenar thumbnails
+  const handleThumbDragStart = (e, index) => {
+    if (disabled) return;
+    setDragSourceIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleThumbDragOver = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragSourceIndex !== null && dragSourceIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleThumbDrop = (e, targetIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+      setImages(prev => {
+        const updated = [...prev];
+        const [moved] = updated.splice(dragSourceIndex, 1);
+        updated.splice(targetIndex, 0, moved);
+        return updated;
+      });
+    }
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleThumbDragEnd = () => {
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const slotsLeft = MAX_IMAGES - images.length;
+
+  const getImageSrc = (img) => {
+    return img.type === 'existing' ? img.url : URL.createObjectURL(img.file);
+  };
+
+  return (
+    <div>
+      <p className='text-base font-medium mb-2'>Imagens do Produto</p>
+
+      {/* Thumbnails grid */}
+      {images.length > 0 && (
+        <div className='mb-4'>
+          <div className='flex items-center justify-between mb-2'>
+            <p className='text-sm font-medium text-gray-600'>
+              {images.length} imagem{images.length !== 1 ? 's' : ''}
+            </p>
+            {images.length > 1 && (
+              <p className='text-xs text-gray-400'>Arraste para reordenar • A primeira é a imagem principal</p>
+            )}
+          </div>
+
+          <div className='grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3'>
+            {images.map((img, index) => (
+              <div
+                key={`${img.type}-${img.type === 'existing' ? img.url : img.file.name}-${index}`}
+                draggable={!disabled}
+                onDragStart={(e) => handleThumbDragStart(e, index)}
+                onDragOver={(e) => handleThumbDragOver(e, index)}
+                onDrop={(e) => handleThumbDrop(e, index)}
+                onDragEnd={handleThumbDragEnd}
+                className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-150 aspect-square ${
+                  dragOverIndex === index
+                    ? 'border-primary scale-105 shadow-md'
+                    : dragSourceIndex === index
+                      ? 'border-gray-300 opacity-40'
+                      : index === 0
+                        ? 'border-primary/50 ring-1 ring-primary/20'
+                        : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <img
+                  src={getImageSrc(img)}
+                  alt={`Imagem ${index + 1}`}
+                  className='w-full h-full object-cover'
+                />
+
+                {/* Overlay com ações */}
+                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-150'>
+                  {/* Botão remover */}
+                  {!disabled && (
+                    <button
+                      type='button'
+                      onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                      className='absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm'
+                      title='Remover imagem'
+                    >
+                      <X className='w-3.5 h-3.5' />
+                    </button>
+                  )}
+
+                  {/* Indicador drag */}
+                  {!disabled && (
+                    <div className='absolute bottom-1 left-1 opacity-0 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing'>
+                      <GripVertical className='w-4 h-4 text-white drop-shadow' />
+                    </div>
+                  )}
+                </div>
+
+                {/* Badge principal */}
+                {index === 0 && (
+                  <div className='absolute top-1 left-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm'>
+                    Principal
+                  </div>
+                )}
+
+                {/* Badge tipo */}
+                {img.type === 'new' && (
+                  <div className='absolute bottom-1 right-1 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm'>
+                    Nova
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Drop zone para adicionar mais */}
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={slotsLeft > 0 && !disabled ? handleClickUpload : undefined}
+        className={`relative border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
+          slotsLeft <= 0 || disabled
+            ? 'border-gray-200 bg-gray-50 cursor-default'
+            : isDragging
+              ? 'border-primary bg-primary/5 scale-[1.01] shadow-lg'
+              : 'border-gray-300 hover:border-primary/50 hover:bg-gray-50 cursor-pointer'
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='image/*'
+          multiple
+          onChange={handleFileInput}
+          className='hidden'
+          disabled={disabled}
+        />
+
+        {isDragging ? (
+          <div className='py-2'>
+            <Upload className='w-8 h-8 text-primary mx-auto mb-1 animate-bounce' />
+            <p className='text-primary font-semibold'>Solte as imagens aqui</p>
+          </div>
+        ) : slotsLeft > 0 && !disabled ? (
+          <div className='py-1'>
+            <div className='flex items-center justify-center gap-2 mb-1'>
+              <ImageIcon className='w-5 h-5 text-gray-400' />
+              <p className='text-gray-700 font-medium text-sm'>
+                Arraste ou <span className='text-primary underline'>clique para adicionar</span>
+              </p>
+            </div>
+            <p className='text-xs text-gray-400'>
+              PNG, JPG ou WEBP • Máx. 10MB • {slotsLeft} de {MAX_IMAGES} disponíveis
+            </p>
+          </div>
+        ) : (
+          <p className='text-gray-500 text-sm py-1'>
+            {disabled ? 'Enviando...' : `Limite de ${MAX_IMAGES} imagens atingido`}
+          </p>
+        )}
+      </div>
+
+      {/* Ação limpar todas */}
+      {images.length > 1 && !disabled && (
+        <button
+          type='button'
+          onClick={() => setImages([])}
+          className='mt-2 text-xs text-red-500 hover:text-red-700 transition-colors font-medium'
+        >
+          Remover todas as imagens
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
 const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
-  const [files, setFiles] = useState([]);
+  // 🆕 Sistema de imagens unificado: [{ type: 'existing', url }, { type: 'new', file }]
+  const [images, setImages] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,25 +415,31 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   // CAMPOS DE STOCK
   const [stock, setStock] = useState('');
 
-  // 🆕 SKU + PESO + DIMENSÕES
+  // SKU + PESO + DIMENSÕES
   const [sku, setSku] = useState('');
   const [weight, setWeight] = useState('');
   const [dimensions, setDimensions] = useState({ length: '', width: '', height: '' });
 
-  // 🆕 FILTROS DINÂMICOS (baseados no grupo selecionado)
+  // FILTROS DINÂMICOS
   const [productFilters, setProductFilters] = useState({});
 
-  // CAMPOS DE FAMÍLIA/COR
+  // SISTEMA DE FAMÍLIA
   const [productFamily, setProductFamily] = useState('');
+  const [isMainVariant, setIsMainVariant] = useState(true);
+
+  // 🆕 TIPO DE VARIANTE
+  const [variantType, setVariantType] = useState('color');
+
+  // VARIANTE POR COR
   const [hasColor, setHasColor] = useState(false);
   const [color, setColor] = useState('');
   const [colorCode, setColorCode] = useState('#000000');
-  
-  // COR DUPLA
   const [isDualColor, setIsDualColor] = useState(false);
   const [colorCode2, setColorCode2] = useState('#2563EB');
-  
-  const [isMainVariant, setIsMainVariant] = useState(true);
+
+  // 🆕 VARIANTE POR TAMANHO
+  const [hasSize, setHasSize] = useState(false);
+  const [sizeValue, setSizeValue] = useState('');
 
   // Filtrar categorias baseado no grupo selecionado
   const filteredCategories = useMemo(() => {
@@ -123,13 +447,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     return getCategoriesByGroup(selectedGroup);
   }, [selectedGroup]);
 
-  // 🆕 Obter filtros disponíveis para o grupo selecionado
+  // Obter filtros disponíveis para o grupo selecionado
   const groupFilterDefs = useMemo(() => {
     if (!selectedGroup) return [];
     return getFiltersByGroup(selectedGroup);
   }, [selectedGroup]);
 
-  // 🆕 Filtros visíveis (respeita parent-child)
+  // Filtros visíveis (respeita parent-child)
   const visibleFilters = useMemo(() => {
     return groupFilterDefs.filter(filterDef => {
       if (!filterDef.parentKey) return true;
@@ -153,7 +477,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       // Stock
       setStock((product.stock || 0).toString());
       
-      // 🆕 SKU + Peso + Dimensões
+      // SKU + Peso + Dimensões
       setSku(product.sku || '');
       setWeight(product.weight ? product.weight.toString() : '');
       setDimensions({
@@ -162,7 +486,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         height: product.dimensions?.height ? product.dimensions.height.toString() : '',
       });
 
-      // 🆕 Filtros do produto
+      // Filtros do produto
       if (product.filters) {
         const filters = product.filters instanceof Map 
           ? Object.fromEntries(product.filters) 
@@ -172,14 +496,28 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         setProductFilters({});
       }
       
-      // Família/cor
+      // Família
       setProductFamily(product.productFamily || '');
       setIsMainVariant(product.isMainVariant !== false);
       
-      if (product.color || product.colorCode) {
+      // 🆕 Tipo de variante + dados
+      const vType = product.variantType || 'color';
+      setVariantType(vType);
+
+      if (vType === 'size' && product.size) {
+        setHasSize(true);
+        setSizeValue(product.size || '');
+        setHasColor(false);
+        setColor('');
+        setColorCode('#000000');
+        setIsDualColor(false);
+        setColorCode2('#2563EB');
+      } else if (product.color || product.colorCode) {
         setHasColor(true);
         setColor(product.color || '');
         setColorCode(product.colorCode || '#000000');
+        setHasSize(false);
+        setSizeValue('');
         
         if (product.colorCode2 && product.colorCode2 !== product.colorCode) {
           setIsDualColor(true);
@@ -194,6 +532,15 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         setColorCode('#000000');
         setIsDualColor(false);
         setColorCode2('#2563EB');
+        setHasSize(false);
+        setSizeValue('');
+      }
+
+      // 🆕 Imagens existentes
+      if (product.image && product.image.length > 0) {
+        setImages(product.image.map(url => ({ type: 'existing', url })));
+      } else {
+        setImages([]);
       }
     }
   }, [product]);
@@ -206,11 +553,10 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     setProductFilters({});
   };
 
-  // 🆕 Atualizar valor de um filtro
+  // Atualizar valor de um filtro
   const handleFilterChange = (filterKey, value) => {
     setProductFilters(prev => {
       const updated = { ...prev, [filterKey]: value };
-      // Limpar filtros filhos quando o parent muda
       groupFilterDefs.forEach(fd => {
         if (fd.parentKey === filterKey && fd.parentValue !== value) {
           delete updated[fd.key];
@@ -230,7 +576,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       .replace(/(^-|-$)/g, '');
   };
 
-  // 🆕 GERAR SKU AUTOMÁTICO
+  // GERAR SKU AUTOMÁTICO
   const generateSku = () => {
     const groupPrefix = {
       decks: 'DK',
@@ -263,11 +609,32 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     setIsDualColor(true);
   };
 
+  // 🆕 Handler para trocar tipo de variante
+  const handleVariantTypeChange = (type) => {
+    setVariantType(type);
+    if (type === 'color') {
+      setHasSize(false);
+      setSizeValue('');
+    } else {
+      setHasColor(false);
+      setColor('');
+      setColorCode('#000000');
+      setColorCode2('#2563EB');
+      setIsDualColor(false);
+    }
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setIsSubmitting(true);
 
     try {
+      if (images.length === 0) {
+        toast.error('Adicione pelo menos uma imagem');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (!selectedGroup) {
         toast.error('Selecione um grupo');
         setIsSubmitting(false);
@@ -292,6 +659,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         return;
       }
 
+      // 🆕 Validação de tamanho
+      if (hasSize && !sizeValue.trim()) {
+        toast.error('Defina o tamanho do produto');
+        setIsSubmitting(false);
+        return;
+      }
+
       const productData = {
         name,
         description: description.split('\n').filter(line => line.trim()),
@@ -301,11 +675,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         offerPrice: parseFloat(offerPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
-        // 🆕 SKU
         sku: sku.trim() || null,
-        // 🆕 Peso
         weight: weight ? Number(weight) : null,
-        // 🆕 Dimensões
         dimensions: (dimensions.length || dimensions.width || dimensions.height)
           ? {
               length: Number(dimensions.length) || 0,
@@ -315,33 +686,27 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
           : null,
       };
 
-      // 🆕 Adicionar filtros se algum foi preenchido
+      // Filtros
       const filledFilters = {};
       Object.entries(productFilters).forEach(([key, value]) => {
         if (value) filledFilters[key] = value;
       });
-      if (Object.keys(filledFilters).length > 0) {
-        productData.filters = filledFilters;
-      } else {
-        productData.filters = {};
-      }
+      productData.filters = Object.keys(filledFilters).length > 0 ? filledFilters : {};
 
-      // Dados de família/cor
+      // Dados de família
       if (productFamily.trim()) {
         productData.productFamily = generateFamilySlug(productFamily);
       } else {
         productData.productFamily = null;
       }
       
+      // 🆕 Variante por cor
       if (hasColor && color.trim()) {
+        productData.variantType = 'color';
         productData.color = color;
         productData.colorCode = colorCode;
-        
-        if (isDualColor && colorCode2) {
-          productData.colorCode2 = colorCode2;
-        } else {
-          productData.colorCode2 = null;
-        }
+        productData.colorCode2 = (isDualColor && colorCode2) ? colorCode2 : null;
+        productData.size = null;
         
         if (!productFamily.trim()) {
           const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
@@ -349,20 +714,53 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             productData.productFamily = generateFamilySlug(baseName);
           }
         }
-      } else {
+      // 🆕 Variante por tamanho
+      } else if (hasSize && sizeValue.trim()) {
+        productData.variantType = 'size';
+        productData.size = sizeValue.trim();
         productData.color = null;
         productData.colorCode = null;
         productData.colorCode2 = null;
+
+        if (!productFamily.trim()) {
+          const baseName = name.replace(new RegExp(sizeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
+          if (baseName) {
+            productData.productFamily = generateFamilySlug(baseName);
+          }
+        }
+      } else {
+        productData.variantType = 'color';
+        productData.color = null;
+        productData.colorCode = null;
+        productData.colorCode2 = null;
+        productData.size = null;
       }
+
+      // 🆕 Separar imagens existentes (URLs) e novas (Files)
+      const existingImageUrls = images
+        .filter(img => img.type === 'existing')
+        .map(img => img.url);
+
+      const newImageFiles = images
+        .filter(img => img.type === 'new')
+        .map(img => img.file);
+
+      // Passar a ordem completa das imagens para o backend
+      const imageOrder = images.map((img, index) => ({
+        index,
+        type: img.type,
+        url: img.type === 'existing' ? img.url : null,
+      }));
+
+      productData.existingImages = existingImageUrls;
+      productData.imageOrder = imageOrder;
 
       const formData = new FormData();
       formData.append('id', product._id);
       formData.append('productData', JSON.stringify(productData));
 
-      for (let i = 0; i < files.length; i++) {
-        if (files[i]) {
-          formData.append('images', files[i]);
-        }
+      for (let i = 0; i < newImageFiles.length; i++) {
+        formData.append('images', newImageFiles[i]);
       }
 
       const { data } = await axios.post('/api/product/update', formData, {
@@ -408,63 +806,11 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className='p-6 space-y-5'>
-          {/* Imagens do Produto */}
-          <div>
-            <p className='text-base font-medium mb-2'>Imagens do Produto</p>
-            <p className='text-sm text-gray-600 mb-3'>
-              Imagens atuais serão mantidas se não adicionar novas
-            </p>
-
-            {/* Imagens Atuais */}
-            <div className='mb-3 flex flex-wrap gap-2'>
-              {product.image.map((img, index) => (
-                <div key={index} className='relative'>
-                  <img
-                    src={img}
-                    alt={`Atual ${index}`}
-                    className='w-20 h-20 object-contain border border-gray-300 rounded-lg p-1'
-                  />
-                  <div className='absolute -top-1 -right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full'>
-                    Atual
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Upload Novas Imagens */}
-            <div className='flex flex-wrap items-center gap-3'>
-              {Array(8).fill('').map((_, index) => (
-                <label key={index} htmlFor={`edit-image${index}`}>
-                  <input
-                    onChange={e => {
-                      const updatedFiles = [...files];
-                      updatedFiles[index] = e.target.files[0];
-                      setFiles(updatedFiles);
-                    }}
-                    type='file'
-                    id={`edit-image${index}`}
-                    hidden
-                    accept='image/*'
-                    disabled={isSubmitting}
-                  />
-                  <div className='relative'>
-                    <img
-                      className='max-w-24 cursor-pointer border border-gray-300 rounded-lg p-2'
-                      src={files[index] ? URL.createObjectURL(files[index]) : assets.upload_area}
-                      alt='Upload'
-                      width={100}
-                      height={100}
-                    />
-                    {files[index] && (
-                      <div className='absolute -top-1 -right-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full'>
-                        Nova
-                      </div>
-                    )}
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
+          
+          {/* ═══════════════════════════════════════════════════════ */}
+          {/* 🆕 IMAGENS — Drag & Drop + Reordenar                  */}
+          {/* ═══════════════════════════════════════════════════════ */}
+          <EditImageZone images={images} setImages={setImages} disabled={isSubmitting} />
 
           {/* Nome do Produto */}
           <div className='flex flex-col gap-1'>
@@ -483,14 +829,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
           {/* Descrição */}
           <div className='flex flex-col gap-1'>
-            <label className='text-base font-medium' htmlFor='edit-product-description'>Descrição do Produto</label>
+            <label className='text-base font-medium' htmlFor='edit-product-description'>Descrição / Especificações</label>
             <textarea
               onChange={e => setDescription(e.target.value)}
               value={description}
               id='edit-product-description'
               rows={4}
               className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors resize-none'
-              placeholder='Digite a descrição'
+              placeholder='Escreva cada especificação numa linha separada'
               disabled={isSubmitting}
             ></textarea>
             <p className='text-xs text-gray-500'>Cada linha será um item da lista</p>
@@ -550,7 +896,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════ */}
-          {/* 🆕 FILTROS DINÂMICOS                                      */}
+          {/* FILTROS DINÂMICOS                                          */}
           {/* ═══════════════════════════════════════════════════════════ */}
           {selectedGroup && visibleFilters.length > 0 && (
             <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
@@ -558,9 +904,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                 <svg className='w-5 h-5 text-blue-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' />
                 </svg>
-                <h3 className='text-base font-semibold text-blue-800'>
-                  Filtros do Produto
-                </h3>
+                <h3 className='text-base font-semibold text-blue-800'>Filtros do Produto</h3>
               </div>
               <p className='text-xs text-blue-600 -mt-2'>
                 Esses filtros permitem que o cliente encontre o produto na página da coleção
@@ -569,9 +913,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 {visibleFilters.map((filterDef) => (
                   <div key={filterDef.key} className='flex flex-col gap-1'>
-                    <label className='text-sm font-medium text-gray-700'>
-                      {filterDef.label}
-                    </label>
+                    <label className='text-sm font-medium text-gray-700'>{filterDef.label}</label>
                     <select
                       value={productFilters[filterDef.key] || ''}
                       onChange={e => handleFilterChange(filterDef.key, e.target.value)}
@@ -580,9 +922,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                     >
                       <option value=''>— Selecionar —</option>
                       {filterDef.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
                   </div>
@@ -668,28 +1008,21 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
           </div>
 
           {/* ═══════════════════════════════════════════════════════════ */}
-          {/* 🆕 CÓDIGO, PESO E DIMENSÕES                               */}
+          {/* CÓDIGO, PESO E DIMENSÕES                                   */}
           {/* ═══════════════════════════════════════════════════════════ */}
           <div className='border border-gray-200 bg-gray-50/50 rounded-lg p-4 space-y-5'>
             <div className='flex items-center gap-2'>
               <svg className='w-5 h-5 text-gray-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' />
               </svg>
-              <h3 className='text-base font-semibold text-gray-800'>
-                Código, Peso e Dimensões
-              </h3>
+              <h3 className='text-base font-semibold text-gray-800'>Código, Peso e Dimensões</h3>
             </div>
-            <p className='text-xs text-gray-500 -mt-3'>
-              Informações para identificação e cálculo de frete
-            </p>
+            <p className='text-xs text-gray-500 -mt-3'>Informações para identificação e cálculo de frete</p>
 
             {/* SKU + Peso */}
             <div className='flex items-start gap-4 flex-wrap'>
-              {/* SKU */}
               <div className='flex-1 flex flex-col gap-1 min-w-[200px]'>
-                <label className='text-sm font-medium text-gray-700' htmlFor='edit-sku'>
-                  Código do Produto (SKU)
-                </label>
+                <label className='text-sm font-medium text-gray-700' htmlFor='edit-sku'>Código do Produto (SKU)</label>
                 <div className='flex gap-2'>
                   <input
                     onChange={e => setSku(e.target.value.toUpperCase())}
@@ -717,11 +1050,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                 <p className='text-xs text-gray-500'>Código único do produto</p>
               </div>
 
-              {/* Peso */}
               <div className='flex flex-col gap-1 min-w-[160px]'>
-                <label className='text-sm font-medium text-gray-700' htmlFor='edit-weight'>
-                  Peso Líquido (gramas)
-                </label>
+                <label className='text-sm font-medium text-gray-700' htmlFor='edit-weight'>Peso Líquido (gramas)</label>
                 <input
                   onChange={e => setWeight(e.target.value)}
                   value={weight}
@@ -743,9 +1073,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
             {/* Dimensões */}
             <div className='flex flex-col gap-1'>
-              <label className='text-sm font-medium text-gray-700'>
-                Dimensões da Embalagem (cm)
-              </label>
+              <label className='text-sm font-medium text-gray-700'>Dimensões da Embalagem (cm)</label>
               <div className='flex items-center gap-3'>
                 <div className='flex-1'>
                   <input
@@ -787,9 +1115,15 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             </div>
           </div>
 
-          {/* FAMÍLIA DE PRODUTOS */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* FAMÍLIA DE PRODUTOS (Variantes)                            */}
+          {/* ═══════════════════════════════════════════════════════════ */}
           <div className='border-t border-gray-200 pt-5 mt-5'>
-            <h3 className='text-lg font-semibold text-gray-800 mb-4'>Família de Produtos (Variantes de Cor)</h3>
+            <h3 className='text-lg font-semibold text-gray-800 mb-4'>Família de Produtos (Variantes)</h3>
+            <p className='text-sm text-gray-600 mb-4'>
+              Se este produto faz parte de uma família com várias cores ou tamanhos, 
+              defina a família abaixo. Produtos da mesma família permitem alternar entre variantes na página do produto.
+            </p>
 
             {/* Nome da Família */}
             <div className='flex flex-col gap-1 mb-4'>
@@ -799,191 +1133,301 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                 value={productFamily}
                 id='edit-product-family'
                 type='text'
-                placeholder='Ex: Deck J-Bay (deixe em branco se não aplicável)'
+                placeholder='Ex: Deck J-Bay ou Capa Refletiva Combate Shortboard'
                 className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
                 disabled={isSubmitting}
               />
               <p className='text-xs text-gray-500'>Produtos com o mesmo nome de família serão agrupados</p>
             </div>
 
-            {/* Toggle Cor */}
-            <div className='flex items-center gap-3 mb-4'>
-              <input
-                type='checkbox'
-                id='edit-hasColor'
-                checked={hasColor}
-                onChange={e => setHasColor(e.target.checked)}
-                className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
-                disabled={isSubmitting}
-              />
-              <label htmlFor='edit-hasColor' className='text-base font-medium cursor-pointer'>
-                Este produto tem uma cor específica
+            {/* 🆕 Toggle Tipo de Variante */}
+            <div className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4'>
+              <span className='text-sm font-medium text-gray-700'>Tipo de Variante:</span>
+              <label className='flex items-center gap-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='editVariantType'
+                  checked={variantType === 'color'}
+                  onChange={() => handleVariantTypeChange('color')}
+                  className='w-4 h-4 text-primary focus:ring-primary'
+                  disabled={isSubmitting}
+                />
+                <span className='text-sm font-medium'>Cor</span>
+                <div className='w-4 h-4 rounded-full bg-primary'></div>
+              </label>
+              <label className='flex items-center gap-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='editVariantType'
+                  checked={variantType === 'size'}
+                  onChange={() => handleVariantTypeChange('size')}
+                  className='w-4 h-4 text-primary focus:ring-primary'
+                  disabled={isSubmitting}
+                />
+                <span className='text-sm font-medium'>Tamanho</span>
+                <span className='text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium'>6'0</span>
               </label>
             </div>
 
-            {/* Campos de Cor */}
-            {hasColor && (
-              <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
-                
-                {/* Toggle Cor Simples / Dupla */}
-                <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='editColorType'
-                      checked={!isDualColor}
-                      onChange={() => setIsDualColor(false)}
-                      className='w-4 h-4 text-primary focus:ring-primary'
-                      disabled={isSubmitting}
-                    />
-                    <span className='text-sm font-medium'>Cor Única</span>
-                    <div className='w-5 h-5 rounded-full bg-primary'></div>
-                  </label>
-                  <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='radio'
-                      name='editColorType'
-                      checked={isDualColor}
-                      onChange={() => setIsDualColor(true)}
-                      className='w-4 h-4 text-primary focus:ring-primary'
-                      disabled={isSubmitting}
-                    />
-                    <span className='text-sm font-medium'>Duas Cores</span>
-                    <div 
-                      className='w-5 h-5 rounded-full'
-                      style={{ background: 'linear-gradient(135deg, #2563EB 50%, #000000 50%)' }}
-                    ></div>
-                  </label>
-                </div>
-
-                {/* Nome da Cor */}
-                <div className='flex flex-col gap-1'>
-                  <label className='text-sm font-medium'>Nome da Cor</label>
+            {/* ═══════════════════════════════════════════════ */}
+            {/* VARIANTE POR COR                               */}
+            {/* ═══════════════════════════════════════════════ */}
+            {variantType === 'color' && (
+              <>
+                {/* Toggle Cor */}
+                <div className='flex items-center gap-3 mb-4'>
                   <input
-                    type='text'
-                    value={color}
-                    onChange={e => setColor(e.target.value)}
-                    placeholder={isDualColor ? 'Ex: Preto/Azul' : 'Ex: Preto, Azul Marinho'}
-                    className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
+                    type='checkbox'
+                    id='edit-hasColor'
+                    checked={hasColor}
+                    onChange={e => setHasColor(e.target.checked)}
+                    className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                     disabled={isSubmitting}
                   />
+                  <label htmlFor='edit-hasColor' className='text-base font-medium cursor-pointer'>
+                    Este produto tem uma cor específica
+                  </label>
                 </div>
 
-                {/* Seletor de Cores */}
-                {!isDualColor ? (
-                  <>
-                    <div className='flex flex-col gap-1'>
-                      <label className='text-sm font-medium'>Código da Cor</label>
-                      <div className='flex items-center gap-3'>
+                {/* Campos de Cor */}
+                {hasColor && (
+                  <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
+                    
+                    {/* Toggle Cor Simples / Dupla */}
+                    <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
+                      <label className='flex items-center gap-2 cursor-pointer'>
                         <input
-                          type='color'
-                          value={colorCode}
-                          onChange={e => setColorCode(e.target.value)}
-                          className='w-12 h-10 rounded border border-gray-300 cursor-pointer'
+                          type='radio'
+                          name='editColorType'
+                          checked={!isDualColor}
+                          onChange={() => setIsDualColor(false)}
+                          className='w-4 h-4 text-primary focus:ring-primary'
                           disabled={isSubmitting}
                         />
+                        <span className='text-sm font-medium'>Cor Única</span>
+                        <div className='w-5 h-5 rounded-full bg-primary'></div>
+                      </label>
+                      <label className='flex items-center gap-2 cursor-pointer'>
                         <input
-                          type='text'
-                          value={colorCode}
-                          onChange={e => setColorCode(e.target.value)}
-                          placeholder='#000000'
-                          className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono'
+                          type='radio'
+                          name='editColorType'
+                          checked={isDualColor}
+                          onChange={() => setIsDualColor(true)}
+                          className='w-4 h-4 text-primary focus:ring-primary'
                           disabled={isSubmitting}
                         />
-                      </div>
+                        <span className='text-sm font-medium'>Duas Cores</span>
+                        <div 
+                          className='w-5 h-5 rounded-full'
+                          style={{ background: 'linear-gradient(135deg, #2563EB 50%, #000000 50%)' }}
+                        ></div>
+                      </label>
                     </div>
-                    <div>
-                      <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
-                      <div className='flex flex-wrap gap-2'>
-                        {PRESET_COLORS.map((preset, index) => (
-                          <ColorBall
-                            key={index}
-                            code1={preset.code}
-                            size={32}
-                            selected={colorCode === preset.code && !isDualColor}
-                            onClick={() => !isSubmitting && selectPresetColor(preset)}
-                            title={preset.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className='grid grid-cols-2 gap-4'>
-                      <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
-                        <div className='flex items-center gap-2'>
-                          <input
-                            type='color' value={colorCode}
-                            onChange={e => setColorCode(e.target.value)}
-                            className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
-                            disabled={isSubmitting}
-                          />
-                          <input
-                            type='text' value={colorCode}
-                            onChange={e => setColorCode(e.target.value)}
-                            placeholder='#000000'
-                            className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      </div>
-                      <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium'>Cor 2 (Direita)</label>
-                        <div className='flex items-center gap-2'>
-                          <input
-                            type='color' value={colorCode2}
-                            onChange={e => setColorCode2(e.target.value)}
-                            className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
-                            disabled={isSubmitting}
-                          />
-                          <input
-                            type='text' value={colorCode2}
-                            onChange={e => setColorCode2(e.target.value)}
-                            placeholder='#2563EB'
-                            className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
-                      <div className='flex flex-wrap gap-2'>
-                        {PRESET_DUAL_COLORS.map((preset, index) => (
-                          <ColorBall
-                            key={index}
-                            code1={preset.code1}
-                            code2={preset.code2}
-                            size={32}
-                            selected={isDualColor && colorCode === preset.code1 && colorCode2 === preset.code2}
-                            onClick={() => !isSubmitting && selectPresetDualColor(preset)}
-                            title={preset.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
 
-                {/* Preview da Cor */}
-                {color && (
-                  <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
-                    <ColorBall 
-                      code1={colorCode} 
-                      code2={isDualColor ? colorCode2 : null} 
-                      size={40}
-                    />
-                    <div>
-                      <p className='font-medium'>{color}</p>
-                      <p className='text-xs text-gray-500 font-mono'>
-                        {isDualColor ? `${colorCode} / ${colorCode2}` : colorCode}
-                      </p>
+                    {/* Nome da Cor */}
+                    <div className='flex flex-col gap-1'>
+                      <label className='text-sm font-medium'>Nome da Cor</label>
+                      <input
+                        type='text'
+                        value={color}
+                        onChange={e => setColor(e.target.value)}
+                        placeholder={isDualColor ? 'Ex: Preto/Azul' : 'Ex: Preto, Azul Marinho'}
+                        className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
+                        disabled={isSubmitting}
+                      />
                     </div>
+
+                    {/* Seletor de Cores */}
+                    {!isDualColor ? (
+                      <>
+                        <div className='flex flex-col gap-1'>
+                          <label className='text-sm font-medium'>Código da Cor</label>
+                          <div className='flex items-center gap-3'>
+                            <input
+                              type='color'
+                              value={colorCode}
+                              onChange={e => setColorCode(e.target.value)}
+                              className='w-12 h-10 rounded border border-gray-300 cursor-pointer'
+                              disabled={isSubmitting}
+                            />
+                            <input
+                              type='text'
+                              value={colorCode}
+                              onChange={e => setColorCode(e.target.value)}
+                              placeholder='#000000'
+                              className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono'
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
+                          <div className='flex flex-wrap gap-2'>
+                            {PRESET_COLORS.map((preset, index) => (
+                              <ColorBall
+                                key={index}
+                                code1={preset.code}
+                                size={32}
+                                selected={colorCode === preset.code && !isDualColor}
+                                onClick={() => !isSubmitting && selectPresetColor(preset)}
+                                title={preset.name}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className='grid grid-cols-2 gap-4'>
+                          <div className='flex flex-col gap-1'>
+                            <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
+                            <div className='flex items-center gap-2'>
+                              <input
+                                type='color' value={colorCode}
+                                onChange={e => setColorCode(e.target.value)}
+                                className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
+                                disabled={isSubmitting}
+                              />
+                              <input
+                                type='text' value={colorCode}
+                                onChange={e => setColorCode(e.target.value)}
+                                placeholder='#000000'
+                                className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
+                                disabled={isSubmitting}
+                              />
+                            </div>
+                          </div>
+                          <div className='flex flex-col gap-1'>
+                            <label className='text-sm font-medium'>Cor 2 (Direita)</label>
+                            <div className='flex items-center gap-2'>
+                              <input
+                                type='color' value={colorCode2}
+                                onChange={e => setColorCode2(e.target.value)}
+                                className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
+                                disabled={isSubmitting}
+                              />
+                              <input
+                                type='text' value={colorCode2}
+                                onChange={e => setColorCode2(e.target.value)}
+                                placeholder='#2563EB'
+                                className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
+                                disabled={isSubmitting}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
+                          <div className='flex flex-wrap gap-2'>
+                            {PRESET_DUAL_COLORS.map((preset, index) => (
+                              <ColorBall
+                                key={index}
+                                code1={preset.code1}
+                                code2={preset.code2}
+                                size={32}
+                                selected={isDualColor && colorCode === preset.code1 && colorCode2 === preset.code2}
+                                onClick={() => !isSubmitting && selectPresetDualColor(preset)}
+                                title={preset.name}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Preview da Cor */}
+                    {color && (
+                      <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
+                        <ColorBall 
+                          code1={colorCode} 
+                          code2={isDualColor ? colorCode2 : null} 
+                          size={40}
+                        />
+                        <div>
+                          <p className='font-medium'>{color}</p>
+                          <p className='text-xs text-gray-500 font-mono'>
+                            {isDualColor ? `${colorCode} / ${colorCode2}` : colorCode}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </>
+            )}
+
+            {/* ═══════════════════════════════════════════════ */}
+            {/* 🆕 VARIANTE POR TAMANHO                        */}
+            {/* ═══════════════════════════════════════════════ */}
+            {variantType === 'size' && (
+              <>
+                {/* Toggle Tamanho */}
+                <div className='flex items-center gap-3 mb-4'>
+                  <input
+                    type='checkbox'
+                    id='edit-hasSize'
+                    checked={hasSize}
+                    onChange={e => setHasSize(e.target.checked)}
+                    className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
+                    disabled={isSubmitting}
+                  />
+                  <label htmlFor='edit-hasSize' className='text-base font-medium cursor-pointer'>
+                    Este produto tem um tamanho específico
+                  </label>
+                </div>
+
+                {/* Campos de Tamanho */}
+                {hasSize && (
+                  <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
+                    
+                    {/* Input Manual */}
+                    <div className='flex flex-col gap-1'>
+                      <label className='text-sm font-medium'>Tamanho</label>
+                      <input
+                        type='text'
+                        value={sizeValue}
+                        onChange={e => setSizeValue(e.target.value)}
+                        placeholder="Ex: 6'0, 7'2, 10'0, P, M, G"
+                        className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors max-w-[200px]'
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    {/* Tamanhos Rápidos */}
+                    <div>
+                      <p className='text-sm font-medium mb-2'>Tamanhos Rápidos:</p>
+                      <div className='flex flex-wrap gap-2'>
+                        {PRESET_SIZES.map((preset) => (
+                          <SizeBadge
+                            key={preset}
+                            label={preset}
+                            size='sm'
+                            selected={sizeValue === preset}
+                            onClick={() => setSizeValue(preset)}
+                            title={`Selecionar ${preset}`}
+                            disabled={isSubmitting}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Preview do Tamanho */}
+                    {sizeValue && (
+                      <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
+                        <span className='bg-primary text-white text-sm font-semibold px-3 py-1.5 rounded-lg'>
+                          {sizeValue}
+                        </span>
+                        <div>
+                          <p className='font-medium'>Tamanho: {sizeValue}</p>
+                          <p className='text-xs text-gray-500'>
+                            Este tamanho será exibido como badge na página do produto
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Produto Principal */}
