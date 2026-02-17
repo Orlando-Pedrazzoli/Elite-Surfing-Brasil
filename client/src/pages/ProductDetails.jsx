@@ -99,6 +99,12 @@ const ProductDetails = () => {
         const sorted = [...family].sort((a, b) => {
           if (a._id === product._id) return -1;
           if (b._id === product._id) return 1;
+          // 🆕 Ordenar por tamanho numérico se for variante de tamanho, senão por cor
+          if (a.variantType === 'size' || b.variantType === 'size') {
+            const sizeA = parseFloat((a.size || '0').replace("'", '.'));
+            const sizeB = parseFloat((b.size || '0').replace("'", '.'));
+            return sizeA - sizeB;
+          }
           return (a.color || '').localeCompare(b.color || '');
         });
         setFamilyProducts(sorted);
@@ -118,6 +124,11 @@ const ProductDetails = () => {
   const cartQuantity = displayProduct ? (cartItems[displayProduct._id] || 0) : 0;
   const availableToAdd = currentStock - cartQuantity;
   const hasItemsInCart = cartQuantity > 0;
+
+  // 🆕 Detectar tipo de variante da família
+  const familyVariantType = familyProducts.length > 0 
+    ? (familyProducts[0].variantType || 'color') 
+    : 'color';
 
   // SEO
   const generateProductDescription = (product) => {
@@ -185,7 +196,7 @@ const ProductDetails = () => {
     }
   };
 
-  // Handler para trocar cor
+  // Handler para trocar cor/tamanho
   const handleColorClick = (familyProductId) => {
     if (familyProductId === displayProduct?._id) return;
     
@@ -566,6 +577,29 @@ const ProductDetails = () => {
     );
   };
 
+  // 🆕 Componente SizeBadge (inline — para variantes por tamanho)
+  const SizeBadge = ({ label, isSelected = false, isOutOfStock = false, onClick, title }) => {
+    return (
+      <button
+        onClick={onClick}
+        disabled={isColorTransitioning}
+        title={title}
+        className={`
+          relative text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200
+          transform hover:scale-105 active:scale-95
+          ${isSelected 
+            ? 'bg-gray-800 text-white ring-2 ring-gray-800 ring-offset-1 scale-105' 
+            : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
+          }
+          ${isOutOfStock && !isSelected ? 'opacity-50 line-through' : ''}
+          ${isColorTransitioning ? 'pointer-events-none' : ''}
+        `}
+      >
+        {label}
+      </button>
+    );
+  };
+
   if (!product || !displayProduct) {
     return (
       <div className='flex items-center justify-center min-h-[50vh]'>
@@ -939,34 +973,58 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Seletor de Cores */}
+            {/* 🆕 Seletor de Variantes — Cor (bolinhas) ou Tamanho (badges) */}
             {familyProducts.length > 1 && (
               <div className='bg-white border border-gray-200 p-4 rounded-lg'>
                 <div className='flex items-center justify-between mb-3'>
                   <h3 className={`text-sm font-semibold text-gray-900 transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-                    Cor: <span className='font-normal'>{displayProduct.color || 'Selecione'}</span>
+                    {familyVariantType === 'size' 
+                      ? <>Tamanho: <span className='font-normal'>{displayProduct.size || 'Selecione'}</span></>
+                      : <>Cor: <span className='font-normal'>{displayProduct.color || 'Selecione'}</span></>
+                    }
                   </h3>
                 </div>
                 
-                <div className='flex items-center gap-3 flex-wrap'>
-                  {familyProducts.map((familyProduct) => {
-                    const fpStock = familyProduct.stock || 0;
-                    const fpOutOfStock = fpStock <= 0;
-                    const isSelected = familyProduct._id === displayProduct._id;
-                    
-                    return (
-                      <ColorBall
-                        key={familyProduct._id}
-                        code1={familyProduct.colorCode}
-                        code2={familyProduct.colorCode2}
-                        size={44}
-                        isSelected={isSelected}
-                        isOutOfStock={fpOutOfStock}
-                        onClick={() => handleColorClick(familyProduct._id)}
-                        title={`${familyProduct.color || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
-                      />
-                    );
-                  })}
+                <div className={`flex items-center flex-wrap ${familyVariantType === 'size' ? 'gap-2' : 'gap-3'}`}>
+                  {familyVariantType === 'size' ? (
+                    /* 🆕 SIZE BADGES */
+                    familyProducts.map((familyProduct) => {
+                      const fpStock = familyProduct.stock || 0;
+                      const fpOutOfStock = fpStock <= 0;
+                      const isSelected = familyProduct._id === displayProduct._id;
+                      
+                      return (
+                        <SizeBadge
+                          key={familyProduct._id}
+                          label={familyProduct.size || '?'}
+                          isSelected={isSelected}
+                          isOutOfStock={fpOutOfStock}
+                          onClick={() => handleColorClick(familyProduct._id)}
+                          title={`${familyProduct.size || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
+                        />
+                      );
+                    })
+                  ) : (
+                    /* COLOR BALLS (existente — sem alterações) */
+                    familyProducts.map((familyProduct) => {
+                      const fpStock = familyProduct.stock || 0;
+                      const fpOutOfStock = fpStock <= 0;
+                      const isSelected = familyProduct._id === displayProduct._id;
+                      
+                      return (
+                        <ColorBall
+                          key={familyProduct._id}
+                          code1={familyProduct.colorCode}
+                          code2={familyProduct.colorCode2}
+                          size={44}
+                          isSelected={isSelected}
+                          isOutOfStock={fpOutOfStock}
+                          onClick={() => handleColorClick(familyProduct._id)}
+                          title={`${familyProduct.color || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
+                        />
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}

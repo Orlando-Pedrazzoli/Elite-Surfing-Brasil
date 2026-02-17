@@ -33,6 +33,17 @@ const PRESET_DUAL_COLORS = [
   { name: 'Preto/Vermelho', code1: '#000000', code2: '#dc2333' },
 ];
 
+// 🆕 TAMANHOS PRÉ-DEFINIDOS (para capas e sarcófagos)
+const PRESET_SIZES = [
+  "5'10", "6'0", "6'2", "6'3", "6'4", "6'6", "6'8",
+  "7'0", "7'2", "7'6",
+  "8'0", "8'5",
+  "9'2", "9'6", "9'8",
+  "10'0", "10'5",
+  "11'0", "11'6",
+  "12'6", "14'0",
+];
+
 const MAX_IMAGES = 8;
 
 // 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
@@ -69,6 +80,29 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
           }}
         />
       )}
+    </button>
+  );
+};
+
+// 🆕 Componente SizeBadge para preview de tamanho
+const SizeBadge = ({ label, size = 'md', selected = false, onClick, title }) => {
+  const sizeClasses = {
+    sm: 'text-xs px-2 py-1',
+    md: 'text-sm px-3 py-1.5',
+  };
+
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      title={title}
+      className={`rounded-lg font-medium transition-all duration-200 hover:scale-105 ${sizeClasses[size]} ${
+        selected
+          ? 'bg-primary text-white ring-2 ring-primary ring-offset-1'
+          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200'
+      }`}
+    >
+      {label}
     </button>
   );
 };
@@ -383,6 +417,11 @@ const AddProduct = () => {
   
   const [isMainVariant, setIsMainVariant] = useState(true);
 
+  // 🆕 SISTEMA DE VARIANTE POR TAMANHO
+  const [variantType, setVariantType] = useState('color'); // 'color' ou 'size'
+  const [hasSize, setHasSize] = useState(false);
+  const [sizeValue, setSizeValue] = useState('');
+
   const { axios, fetchProducts } = useAppContext();
 
   // Filtrar categorias baseado no grupo selecionado
@@ -470,6 +509,23 @@ const AddProduct = () => {
     setIsDualColor(true);
   };
 
+  // 🆕 Handler para trocar tipo de variante
+  const handleVariantTypeChange = (type) => {
+    setVariantType(type);
+    if (type === 'color') {
+      // Limpar dados de tamanho
+      setHasSize(false);
+      setSizeValue('');
+    } else {
+      // Limpar dados de cor
+      setHasColor(false);
+      setColor('');
+      setColorCode('#000000');
+      setColorCode2('#2563EB');
+      setIsDualColor(false);
+    }
+  };
+
   const onSubmitHandler = async event => {
     try {
       event.preventDefault();
@@ -498,6 +554,12 @@ const AddProduct = () => {
 
       if (hasColor && !color.trim()) {
         toast.error('Defina o nome da cor');
+        return;
+      }
+
+      // 🆕 Validação de tamanho
+      if (hasSize && !sizeValue.trim()) {
+        toast.error('Defina o tamanho do produto');
         return;
       }
 
@@ -539,6 +601,7 @@ const AddProduct = () => {
       }
       
       if (hasColor && color.trim()) {
+        productData.variantType = 'color';
         productData.color = color;
         productData.colorCode = colorCode;
         
@@ -548,6 +611,20 @@ const AddProduct = () => {
         
         if (!productFamily.trim()) {
           const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
+          if (baseName) {
+            productData.productFamily = generateFamilySlug(baseName);
+          }
+        }
+      }
+
+      // 🆕 Adicionar dados de tamanho se definidos
+      if (hasSize && sizeValue.trim()) {
+        productData.variantType = 'size';
+        productData.size = sizeValue.trim();
+        
+        if (!productFamily.trim()) {
+          // Gerar família automaticamente removendo o tamanho do nome
+          const baseName = name.replace(new RegExp(sizeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
           if (baseName) {
             productData.productFamily = generateFamilySlug(baseName);
           }
@@ -581,11 +658,14 @@ const AddProduct = () => {
         setFiles([]);
         setProductFilters({});
         setProductFamily('');
+        setVariantType('color');
         setHasColor(false);
         setColor('');
         setColorCode('#000000');
         setColorCode2('#2563EB');
         setIsDualColor(false);
+        setHasSize(false);
+        setSizeValue('');
         setIsMainVariant(true);
       } else {
         toast.error(data.message);
@@ -938,14 +1018,16 @@ const AddProduct = () => {
           </div>
         </div>
 
-        {/* FAMÍLIA DE PRODUTOS */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* FAMÍLIA DE PRODUTOS (Variantes de Cor ou Tamanho)          */}
+        {/* ═══════════════════════════════════════════════════════════ */}
         <div className='border-t border-gray-200 pt-6 mt-6'>
           <h3 className='text-lg font-semibold text-gray-800 mb-4'>
-            Família de Produtos (Variantes de Cor)
+            Família de Produtos (Variantes)
           </h3>
           <p className='text-sm text-gray-600 mb-4'>
-            Se este produto faz parte de uma família com várias cores (ex: Deck J-Bay em Preto, Azul, Vermelho), 
-            defina a família abaixo. Produtos da mesma família mostram bolinhas de cor para alternar entre eles.
+            Se este produto faz parte de uma família com várias cores ou tamanhos, 
+            defina a família abaixo. Produtos da mesma família permitem alternar entre variantes na página do produto.
           </p>
 
           {/* Nome da Família */}
@@ -958,7 +1040,7 @@ const AddProduct = () => {
               value={productFamily}
               id='product-family'
               type='text'
-              placeholder='Ex: Deck J-Bay (deixe em branco se não aplicável)'
+              placeholder='Ex: Deck J-Bay ou Capa Refletiva Combate Shortboard (deixe em branco se não aplicável)'
               className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
             />
             <p className='text-xs text-gray-500'>
@@ -966,183 +1048,288 @@ const AddProduct = () => {
             </p>
           </div>
 
-          {/* Toggle Cor */}
-          <div className='flex items-center gap-3 mb-4'>
-            <input
-              type='checkbox'
-              id='hasColor'
-              checked={hasColor}
-              onChange={e => setHasColor(e.target.checked)}
-              className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
-            />
-            <label htmlFor='hasColor' className='text-base font-medium cursor-pointer'>
-              Este produto tem uma cor específica
+          {/* 🆕 Toggle Tipo de Variante */}
+          <div className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4'>
+            <span className='text-sm font-medium text-gray-700'>Tipo de Variante:</span>
+            <label className='flex items-center gap-2 cursor-pointer'>
+              <input
+                type='radio'
+                name='variantType'
+                checked={variantType === 'color'}
+                onChange={() => handleVariantTypeChange('color')}
+                className='w-4 h-4 text-primary focus:ring-primary'
+              />
+              <span className='text-sm font-medium'>Cor</span>
+              <div className='w-4 h-4 rounded-full bg-primary'></div>
+            </label>
+            <label className='flex items-center gap-2 cursor-pointer'>
+              <input
+                type='radio'
+                name='variantType'
+                checked={variantType === 'size'}
+                onChange={() => handleVariantTypeChange('size')}
+                className='w-4 h-4 text-primary focus:ring-primary'
+              />
+              <span className='text-sm font-medium'>Tamanho</span>
+              <span className='text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium'>6'0</span>
             </label>
           </div>
 
-          {/* Campos de Cor */}
-          {hasColor && (
-            <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
-              
-              {/* Toggle Cor Simples / Dupla */}
-              <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
-                <label className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='radio'
-                    name='colorType'
-                    checked={!isDualColor}
-                    onChange={() => setIsDualColor(false)}
-                    className='w-4 h-4 text-primary focus:ring-primary'
-                  />
-                  <span className='text-sm font-medium'>Cor Única</span>
-                  <div className='w-5 h-5 rounded-full bg-primary'></div>
-                </label>
-                <label className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='radio'
-                    name='colorType'
-                    checked={isDualColor}
-                    onChange={() => setIsDualColor(true)}
-                    className='w-4 h-4 text-primary focus:ring-primary'
-                  />
-                  <span className='text-sm font-medium'>Duas Cores</span>
-                  <div 
-                    className='w-5 h-5 rounded-full'
-                    style={{ background: 'linear-gradient(135deg, #2563EB 50%, #000000 50%)' }}
-                  ></div>
-                </label>
-              </div>
-
-              {/* Nome da Cor */}
-              <div className='flex flex-col gap-1'>
-                <label className='text-sm font-medium'>Nome da Cor</label>
+          {/* ═══════════════════════════════════════════════ */}
+          {/* VARIANTE POR COR (existente — sem alterações)  */}
+          {/* ═══════════════════════════════════════════════ */}
+          {variantType === 'color' && (
+            <>
+              {/* Toggle Cor */}
+              <div className='flex items-center gap-3 mb-4'>
                 <input
-                  type='text'
-                  value={color}
-                  onChange={e => setColor(e.target.value)}
-                  placeholder={isDualColor ? 'Ex: Preto/Azul' : 'Ex: Preto, Azul Marinho'}
-                  className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
+                  type='checkbox'
+                  id='hasColor'
+                  checked={hasColor}
+                  onChange={e => setHasColor(e.target.checked)}
+                  className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                 />
+                <label htmlFor='hasColor' className='text-base font-medium cursor-pointer'>
+                  Este produto tem uma cor específica
+                </label>
               </div>
 
-              {/* Seletor de Cores - Simples ou Dupla */}
-              {!isDualColor ? (
-                <>
+              {/* Campos de Cor */}
+              {hasColor && (
+                <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
+                  
+                  {/* Toggle Cor Simples / Dupla */}
+                  <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        name='colorType'
+                        checked={!isDualColor}
+                        onChange={() => setIsDualColor(false)}
+                        className='w-4 h-4 text-primary focus:ring-primary'
+                      />
+                      <span className='text-sm font-medium'>Cor Única</span>
+                      <div className='w-5 h-5 rounded-full bg-primary'></div>
+                    </label>
+                    <label className='flex items-center gap-2 cursor-pointer'>
+                      <input
+                        type='radio'
+                        name='colorType'
+                        checked={isDualColor}
+                        onChange={() => setIsDualColor(true)}
+                        className='w-4 h-4 text-primary focus:ring-primary'
+                      />
+                      <span className='text-sm font-medium'>Duas Cores</span>
+                      <div 
+                        className='w-5 h-5 rounded-full'
+                        style={{ background: 'linear-gradient(135deg, #2563EB 50%, #000000 50%)' }}
+                      ></div>
+                    </label>
+                  </div>
+
+                  {/* Nome da Cor */}
                   <div className='flex flex-col gap-1'>
-                    <label className='text-sm font-medium'>Código da Cor</label>
-                    <div className='flex items-center gap-3'>
-                      <input
-                        type='color'
-                        value={colorCode}
-                        onChange={e => setColorCode(e.target.value)}
-                        className='w-12 h-10 rounded border border-gray-300 cursor-pointer'
-                      />
-                      <input
-                        type='text'
-                        value={colorCode}
-                        onChange={e => setColorCode(e.target.value)}
-                        placeholder='#000000'
-                        className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono'
-                      />
-                    </div>
+                    <label className='text-sm font-medium'>Nome da Cor</label>
+                    <input
+                      type='text'
+                      value={color}
+                      onChange={e => setColor(e.target.value)}
+                      placeholder={isDualColor ? 'Ex: Preto/Azul' : 'Ex: Preto, Azul Marinho'}
+                      className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
+                    />
                   </div>
 
-                  {/* Cores Rápidas - Simples */}
-                  <div>
-                    <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
-                    <div className='flex flex-wrap gap-2'>
-                      {PRESET_COLORS.map((preset, index) => (
-                        <ColorBall
-                          key={index}
-                          code1={preset.code}
-                          size={32}
-                          selected={colorCode === preset.code && !isDualColor}
-                          onClick={() => selectPresetColor(preset)}
-                          title={preset.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='flex flex-col gap-1'>
-                      <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
-                      <div className='flex items-center gap-2'>
-                        <input
-                          type='color'
-                          value={colorCode}
-                          onChange={e => setColorCode(e.target.value)}
-                          className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
-                        />
-                        <input
-                          type='text'
-                          value={colorCode}
-                          onChange={e => setColorCode(e.target.value)}
-                          placeholder='#000000'
-                          className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
-                        />
+                  {/* Seletor de Cores - Simples ou Dupla */}
+                  {!isDualColor ? (
+                    <>
+                      <div className='flex flex-col gap-1'>
+                        <label className='text-sm font-medium'>Código da Cor</label>
+                        <div className='flex items-center gap-3'>
+                          <input
+                            type='color'
+                            value={colorCode}
+                            onChange={e => setColorCode(e.target.value)}
+                            className='w-12 h-10 rounded border border-gray-300 cursor-pointer'
+                          />
+                          <input
+                            type='text'
+                            value={colorCode}
+                            onChange={e => setColorCode(e.target.value)}
+                            placeholder='#000000'
+                            className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono'
+                          />
+                        </div>
+                      </div>
+
+                      {/* Cores Rápidas - Simples */}
+                      <div>
+                        <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
+                        <div className='flex flex-wrap gap-2'>
+                          {PRESET_COLORS.map((preset, index) => (
+                            <ColorBall
+                              key={index}
+                              code1={preset.code}
+                              size={32}
+                              selected={colorCode === preset.code && !isDualColor}
+                              onClick={() => selectPresetColor(preset)}
+                              title={preset.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className='grid grid-cols-2 gap-4'>
+                        <div className='flex flex-col gap-1'>
+                          <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
+                          <div className='flex items-center gap-2'>
+                            <input
+                              type='color'
+                              value={colorCode}
+                              onChange={e => setColorCode(e.target.value)}
+                              className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
+                            />
+                            <input
+                              type='text'
+                              value={colorCode}
+                              onChange={e => setColorCode(e.target.value)}
+                              placeholder='#000000'
+                              className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className='flex flex-col gap-1'>
+                          <label className='text-sm font-medium'>Cor 2 (Direita)</label>
+                          <div className='flex items-center gap-2'>
+                            <input
+                              type='color'
+                              value={colorCode2}
+                              onChange={e => setColorCode2(e.target.value)}
+                              className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
+                            />
+                            <input
+                              type='text'
+                              value={colorCode2}
+                              onChange={e => setColorCode2(e.target.value)}
+                              placeholder='#2563EB'
+                              className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cores Rápidas - Duplas */}
+                      <div>
+                        <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
+                        <div className='flex flex-wrap gap-2'>
+                          {PRESET_DUAL_COLORS.map((preset, index) => (
+                            <ColorBall
+                              key={index}
+                              code1={preset.code1}
+                              code2={preset.code2}
+                              size={32}
+                              selected={isDualColor && colorCode === preset.code1 && colorCode2 === preset.code2}
+                              onClick={() => selectPresetDualColor(preset)}
+                              title={preset.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Preview da Cor */}
+                  {color && (
+                    <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
+                      <ColorBall 
+                        code1={colorCode} 
+                        code2={isDualColor ? colorCode2 : null} 
+                        size={40}
+                      />
+                      <div>
+                        <p className='font-medium'>{color}</p>
+                        <p className='text-xs text-gray-500 font-mono'>
+                          {isDualColor ? `${colorCode} / ${colorCode2}` : colorCode}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className='flex flex-col gap-1'>
-                      <label className='text-sm font-medium'>Cor 2 (Direita)</label>
-                      <div className='flex items-center gap-2'>
-                        <input
-                          type='color'
-                          value={colorCode2}
-                          onChange={e => setColorCode2(e.target.value)}
-                          className='w-10 h-10 rounded border border-gray-300 cursor-pointer'
-                        />
-                        <input
-                          type='text'
-                          value={colorCode2}
-                          onChange={e => setColorCode2(e.target.value)}
-                          placeholder='#2563EB'
-                          className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors flex-1 font-mono text-sm'
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cores Rápidas - Duplas */}
-                  <div>
-                    <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
-                    <div className='flex flex-wrap gap-2'>
-                      {PRESET_DUAL_COLORS.map((preset, index) => (
-                        <ColorBall
-                          key={index}
-                          code1={preset.code1}
-                          code2={preset.code2}
-                          size={32}
-                          selected={isDualColor && colorCode === preset.code1 && colorCode2 === preset.code2}
-                          onClick={() => selectPresetDualColor(preset)}
-                          title={preset.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Preview da Cor */}
-              {color && (
-                <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
-                  <ColorBall 
-                    code1={colorCode} 
-                    code2={isDualColor ? colorCode2 : null} 
-                    size={40}
-                  />
-                  <div>
-                    <p className='font-medium'>{color}</p>
-                    <p className='text-xs text-gray-500 font-mono'>
-                      {isDualColor ? `${colorCode} / ${colorCode2}` : colorCode}
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
+          )}
+
+          {/* ═══════════════════════════════════════════════ */}
+          {/* 🆕 VARIANTE POR TAMANHO                        */}
+          {/* ═══════════════════════════════════════════════ */}
+          {variantType === 'size' && (
+            <>
+              {/* Toggle Tamanho */}
+              <div className='flex items-center gap-3 mb-4'>
+                <input
+                  type='checkbox'
+                  id='hasSize'
+                  checked={hasSize}
+                  onChange={e => setHasSize(e.target.checked)}
+                  className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
+                />
+                <label htmlFor='hasSize' className='text-base font-medium cursor-pointer'>
+                  Este produto tem um tamanho específico
+                </label>
+              </div>
+
+              {/* Campos de Tamanho */}
+              {hasSize && (
+                <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
+                  
+                  {/* Input Manual */}
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium'>Tamanho</label>
+                    <input
+                      type='text'
+                      value={sizeValue}
+                      onChange={e => setSizeValue(e.target.value)}
+                      placeholder="Ex: 6'0, 7'2, 10'0"
+                      className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors max-w-[200px]'
+                    />
+                  </div>
+
+                  {/* Tamanhos Rápidos */}
+                  <div>
+                    <p className='text-sm font-medium mb-2'>Tamanhos Rápidos:</p>
+                    <div className='flex flex-wrap gap-2'>
+                      {PRESET_SIZES.map((preset) => (
+                        <SizeBadge
+                          key={preset}
+                          label={preset}
+                          size='sm'
+                          selected={sizeValue === preset}
+                          onClick={() => setSizeValue(preset)}
+                          title={`Selecionar ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Preview do Tamanho */}
+                  {sizeValue && (
+                    <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
+                      <span className='bg-primary text-white text-sm font-semibold px-3 py-1.5 rounded-lg'>
+                        {sizeValue}
+                      </span>
+                      <div>
+                        <p className='font-medium'>Tamanho: {sizeValue}</p>
+                        <p className='text-xs text-gray-500'>
+                          Este tamanho será exibido como badge na página do produto
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {/* Produto Principal */}

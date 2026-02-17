@@ -46,6 +46,27 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
   );
 };
 
+// 🆕 Componente SizeBadge para variantes por tamanho (no card)
+const SizeBadge = ({ label, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      title={title}
+      className={`
+        relative text-[10px] font-semibold px-1.5 py-0.5 rounded transition-all duration-200
+        ${selected 
+          ? 'bg-gray-800 text-white ring-1 ring-gray-800' 
+          : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:scale-105'
+        }
+        ${outOfStock ? 'opacity-40 line-through' : ''}
+      `}
+    >
+      {label}
+    </button>
+  );
+};
+
 const ProductCard = memo(({ product, largeSwatches = false }) => {
   const { currency, addToCart, removeFromCart, cartItems, navigate, getProductFamily } =
     useAppContext();
@@ -63,6 +84,12 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         const sorted = [...family].sort((a, b) => {
           if (a._id === product._id) return -1;
           if (b._id === product._id) return 1;
+          // 🆕 Ordenar por tamanho numérico se for variante de tamanho, senão por cor
+          if (a.variantType === 'size' || b.variantType === 'size') {
+            const sizeA = parseFloat((a.size || '0').replace("'", '.'));
+            const sizeB = parseFloat((b.size || '0').replace("'", '.'));
+            return sizeA - sizeB;
+          }
           return (a.color || '').localeCompare(b.color || '');
         });
         setFamilyProducts(sorted);
@@ -83,6 +110,11 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
 
   const displayProduct = selectedProduct || product;
   const isInactive = !displayProduct.inStock || displayProduct.stock <= 0;
+
+  // 🆕 Detectar tipo de variante da família
+  const familyVariantType = familyProducts.length > 0 
+    ? (familyProducts[0].variantType || 'color') 
+    : 'color';
 
   // Trocar para outro produto da família
   const handleColorClick = (familyProduct, e) => {
@@ -206,29 +238,59 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       {/* Product Info */}
       <div className='pt-3 pb-2 px-1 flex flex-col flex-grow'>
         
-        {/* Bolinhas de Cor */}
+        {/* 🆕 Variantes — Cor (bolinhas) ou Tamanho (badges) */}
         {familyProducts.length > 1 && (
-         <div className={`flex items-center justify-center mb-2 ${largeSwatches ? 'gap-2.5' : 'gap-2'}`}>
-            {familyProducts.slice(0, 6).map((familyProduct) => {
-              const isSelected = familyProduct._id === displayProduct._id;
-              const familyOutOfStock = (familyProduct.stock || 0) <= 0;
+          <div className={`flex items-center justify-center mb-2 flex-wrap ${
+            familyVariantType === 'size' ? 'gap-1.5' : (largeSwatches ? 'gap-2.5' : 'gap-2')
+          }`}>
+            {familyVariantType === 'size' ? (
+              /* 🆕 SIZE BADGES */
+              <>
+                {familyProducts.slice(0, 6).map((familyProduct) => {
+                  const isSelected = familyProduct._id === displayProduct._id;
+                  const familyOutOfStock = (familyProduct.stock || 0) <= 0;
 
-              return (
-                <ColorBall
-                  key={familyProduct._id}
-                  code1={familyProduct.colorCode || '#ccc'}
-                  code2={familyProduct.colorCode2}
-                  size={largeSwatches ? 26 : 20}
-                  selected={isSelected}
-                  outOfStock={familyOutOfStock}
-                  onClick={(e) => handleColorClick(familyProduct, e)}
-                  onMouseEnter={() => handleColorHover(familyProduct)}
-                  title={`${familyProduct.color || familyProduct.name}${familyOutOfStock ? ' (Esgotado)' : ''}`}
-                />
-              );
-            })}
-            {familyProducts.length > 6 && (
-              <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
+                  return (
+                    <SizeBadge
+                      key={familyProduct._id}
+                      label={familyProduct.size || '?'}
+                      selected={isSelected}
+                      outOfStock={familyOutOfStock}
+                      onClick={(e) => handleColorClick(familyProduct, e)}
+                      onMouseEnter={() => handleColorHover(familyProduct)}
+                      title={`${familyProduct.size || familyProduct.name}${familyOutOfStock ? ' (Esgotado)' : ''}`}
+                    />
+                  );
+                })}
+                {familyProducts.length > 6 && (
+                  <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
+                )}
+              </>
+            ) : (
+              /* COLOR BALLS (existente — sem alterações) */
+              <>
+                {familyProducts.slice(0, 6).map((familyProduct) => {
+                  const isSelected = familyProduct._id === displayProduct._id;
+                  const familyOutOfStock = (familyProduct.stock || 0) <= 0;
+
+                  return (
+                    <ColorBall
+                      key={familyProduct._id}
+                      code1={familyProduct.colorCode || '#ccc'}
+                      code2={familyProduct.colorCode2}
+                      size={largeSwatches ? 26 : 20}
+                      selected={isSelected}
+                      outOfStock={familyOutOfStock}
+                      onClick={(e) => handleColorClick(familyProduct, e)}
+                      onMouseEnter={() => handleColorHover(familyProduct)}
+                      title={`${familyProduct.color || familyProduct.name}${familyOutOfStock ? ' (Esgotado)' : ''}`}
+                    />
+                  );
+                })}
+                {familyProducts.length > 6 && (
+                  <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
+                )}
+              </>
             )}
           </div>
         )}

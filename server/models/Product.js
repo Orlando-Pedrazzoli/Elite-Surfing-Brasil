@@ -70,6 +70,12 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // 🆕 Tipo de variante da família: "color" (bolinhas de cor) ou "size" (badges de tamanho)
+    variantType: {
+      type: String,
+      enum: ['color', 'size'],
+      default: 'color',
+    },
     color: {
       type: String,
       default: null,
@@ -79,6 +85,11 @@ const productSchema = new mongoose.Schema(
       default: null,
     },
     colorCode2: {
+      type: String,
+      default: null,
+    },
+    // 🆕 Tamanho da variante (ex: "6'0", "6'3", "7'0") — usado quando variantType = "size"
+    size: {
       type: String,
       default: null,
     },
