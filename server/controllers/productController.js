@@ -48,19 +48,44 @@ export const addProduct = async (req, res) => {
 };
 
 // Get Product List : /api/product/list
-// 🎯 ATUALIZADO: Retorna apenas produtos principais (isMainVariant: true)
+// 🎯 ATUALIZADO: Ordena por displayOrder (manual) e retorna apenas principais por defeito
 export const productList = async (req, res) => {
   try {
     const { all } = req.query; // ?all=true para admin ver todos
     
     let query = {};
     if (!all) {
-      // Por defeito, só mostra produtos principais
-      query = { isMainVariant: { $ne: false } }; // true ou null/undefined
+      query = { isMainVariant: { $ne: false } };
     }
     
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const products = await Product.find(query).sort({ displayOrder: 1, createdAt: -1 });
     res.json({ success: true, products });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// 🆕 Reorder Products : /api/product/reorder
+// Recebe array de { id, displayOrder } e atualiza em batch
+export const reorderProducts = async (req, res) => {
+  try {
+    const { orders } = req.body; // [{ id: '...', displayOrder: 0 }, { id: '...', displayOrder: 1 }, ...]
+    
+    if (!orders || !Array.isArray(orders)) {
+      return res.json({ success: false, message: 'Array de ordens é obrigatório' });
+    }
+
+    const bulkOps = orders.map(({ id, displayOrder }) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { displayOrder } },
+      },
+    }));
+
+    await Product.bulkWrite(bulkOps);
+
+    res.json({ success: true, message: 'Ordem atualizada com sucesso' });
   } catch (error) {
     console.log(error.message);
     res.json({ success: false, message: error.message });

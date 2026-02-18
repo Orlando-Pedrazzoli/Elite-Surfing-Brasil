@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { groups, getCategoriesByGroup } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import EditProductModal from '../../components/seller/EditProductModal';
-import { Package, Layers, Eye, EyeOff, Search, Filter, X, Grid3X3, List, AlertTriangle } from 'lucide-react';
+import { Package, Layers, Eye, EyeOff, Search, Filter, X, Grid3X3, List, AlertTriangle, GripVertical, Save, ArrowUpDown } from 'lucide-react';
 
 // 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
 const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title, className = '' }) => {
@@ -92,6 +92,14 @@ const ProductList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('table');
 
+  // 🆕 REORDENAÇÃO
+  const [reorderMode, setReorderMode] = useState(false);
+  const [dragSourceIndex, setDragSourceIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [localOrder, setLocalOrder] = useState([]); // IDs na ordem local
+  const [hasOrderChanges, setHasOrderChanges] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+
   useEffect(() => {
     fetchAllProducts();
   }, []);
@@ -114,6 +122,7 @@ const ProductList = () => {
   const refreshAllProducts = async () => {
     await fetchAllProducts();
     await fetchProducts();
+    setHasOrderChanges(false);
   };
 
   const getGroupStats = (groupSlug) => {
@@ -136,39 +145,145 @@ const ProductList = () => {
 
   const uniqueFamilies = [...new Set(allProducts.filter(p => p.productFamily).map(p => p.productFamily))];
 
-  const filteredProducts = allProducts.filter(product => {
-    if (selectedGroup) {
-      const groupCategoryPaths = getCategoriesByGroup(selectedGroup).map(cat => cat.path.toLowerCase());
-      const belongsToGroup = product.group === selectedGroup || 
-        groupCategoryPaths.includes((product.category || '').toLowerCase());
-      if (!belongsToGroup) return false;
+  // Produtos filtrados
+  const filteredProducts = (() => {
+    let result = allProducts.filter(product => {
+      if (selectedGroup) {
+        const groupCategoryPaths = getCategoriesByGroup(selectedGroup).map(cat => cat.path.toLowerCase());
+        const belongsToGroup = product.group === selectedGroup || 
+          groupCategoryPaths.includes((product.category || '').toLowerCase());
+        if (!belongsToGroup) return false;
+      }
+
+      if (filterCategory && (product.category || '').toLowerCase() !== filterCategory.toLowerCase()) {
+        return false;
+      }
+
+      if (filterFamily && product.productFamily !== filterFamily) return false;
+
+      if (filterStatus === 'active' && !product.inStock) return false;
+      if (filterStatus === 'inactive' && product.inStock) return false;
+      if (filterStatus === 'low-stock' && !((product.stock || 0) <= 3 && (product.stock || 0) > 0)) return false;
+      if (filterStatus === 'out-of-stock' && (product.stock || 0) !== 0) return false;
+
+      if (showOnlyMain && product.isMainVariant === false) return false;
+
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchesName = product.name?.toLowerCase().includes(search);
+        const matchesCategory = product.category?.toLowerCase().includes(search);
+        const matchesColor = product.color?.toLowerCase().includes(search);
+        const matchesFamily = product.productFamily?.toLowerCase().includes(search);
+        const matchesSku = product.sku?.toLowerCase().includes(search);
+        if (!matchesName && !matchesCategory && !matchesColor && !matchesFamily && !matchesSku) return false;
+      }
+
+      return true;
+    });
+
+    // 🆕 No modo reorder, aplicar a ordem local
+    if (reorderMode && localOrder.length > 0) {
+      const orderMap = new Map(localOrder.map((id, idx) => [id, idx]));
+      result = [...result].sort((a, b) => {
+        const orderA = orderMap.has(a._id) ? orderMap.get(a._id) : 99999;
+        const orderB = orderMap.has(b._id) ? orderMap.get(b._id) : 99999;
+        return orderA - orderB;
+      });
     }
 
-    if (filterCategory && (product.category || '').toLowerCase() !== filterCategory.toLowerCase()) {
-      return false;
+    return result;
+  })();
+
+  // 🆕 Ao entrar no modo reorder, capturar a ordem atual
+  const enterReorderMode = () => {
+    setLocalOrder(filteredProducts.map(p => p._id));
+    setReorderMode(true);
+    setHasOrderChanges(false);
+    setViewMode('table'); // Forçar tabela para drag & drop
+  };
+
+  const exitReorderMode = () => {
+    setReorderMode(false);
+    setLocalOrder([]);
+    setHasOrderChanges(false);
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // 🆕 Salvar ordem no backend
+  const saveOrder = async () => {
+    setIsSavingOrder(true);
+    try {
+      const orders = localOrder.map((id, index) => ({
+        id,
+        displayOrder: index,
+      }));
+
+      const { data } = await axios.post('/api/product/reorder', { orders });
+      if (data.success) {
+        toast.success('Ordem salva com sucesso!');
+        await refreshAllProducts();
+        exitReorderMode();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error('Erro ao salvar ordem');
+    } finally {
+      setIsSavingOrder(false);
     }
+  };
 
-    if (filterFamily && product.productFamily !== filterFamily) return false;
+  // 🆕 Drag handlers para reordenar
+  const handleDragStart = (e, index) => {
+    setDragSourceIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+    // Styling visual do elemento arrastado
+    e.currentTarget.style.opacity = '0.4';
+  };
 
-    if (filterStatus === 'active' && !product.inStock) return false;
-    if (filterStatus === 'inactive' && product.inStock) return false;
-    if (filterStatus === 'low-stock' && !((product.stock || 0) <= 3 && (product.stock || 0) > 0)) return false;
-    if (filterStatus === 'out-of-stock' && (product.stock || 0) !== 0) return false;
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
 
-    if (showOnlyMain && product.isMainVariant === false) return false;
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      const matchesName = product.name?.toLowerCase().includes(search);
-      const matchesCategory = product.category?.toLowerCase().includes(search);
-      const matchesColor = product.color?.toLowerCase().includes(search);
-      const matchesFamily = product.productFamily?.toLowerCase().includes(search);
-      const matchesSku = product.sku?.toLowerCase().includes(search);
-      if (!matchesName && !matchesCategory && !matchesColor && !matchesFamily && !matchesSku) return false;
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSourceIndex !== null && dragSourceIndex !== index) {
+      setDragOverIndex(index);
     }
+  };
 
-    return true;
-  });
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (dragSourceIndex === null || dragSourceIndex === targetIndex) return;
+
+    setLocalOrder(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(dragSourceIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      return updated;
+    });
+    setHasOrderChanges(true);
+    setDragSourceIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // 🆕 Mover com botões (up/down)
+  const moveProduct = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= localOrder.length) return;
+    
+    setLocalOrder(prev => {
+      const updated = [...prev];
+      [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+      return updated;
+    });
+    setHasOrderChanges(true);
+  };
 
   const clearAllFilters = () => {
     setSelectedGroup('');
@@ -544,13 +659,75 @@ const ProductList = () => {
           )}
         </div>
 
-        {/* CONTADOR */}
+        {/* CONTADOR + BOTÃO REORDENAR */}
         <div className='flex items-center justify-between mb-4'>
           <p className='text-sm text-gray-600'>
             Mostrando <span className='font-semibold text-gray-900'>{filteredProducts.length}</span> 
             {hasActiveFilters && ` de ${allProducts.length}`} produtos
           </p>
+
+          {/* 🆕 Botões de reordenação */}
+          <div className='flex items-center gap-2'>
+            {reorderMode ? (
+              <>
+                <button
+                  onClick={exitReorderMode}
+                  className='px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveOrder}
+                  disabled={!hasOrderChanges || isSavingOrder}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                    hasOrderChanges && !isSavingOrder
+                      ? 'bg-green-600 text-white hover:bg-green-700 shadow-md'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isSavingOrder ? (
+                    <>
+                      <span className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'></span>
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className='w-4 h-4' />
+                      Salvar Ordem
+                    </>
+                  )}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={enterReorderMode}
+                disabled={filteredProducts.length < 2}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  filteredProducts.length >= 2
+                    ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+                title='Arraste os produtos para definir a ordem de exibição na loja'
+              >
+                <ArrowUpDown className='w-4 h-4' />
+                Reordenar
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* 🆕 Banner do modo reorder */}
+        {reorderMode && (
+          <div className='mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3'>
+            <ArrowUpDown className='w-5 h-5 text-amber-600 flex-shrink-0' />
+            <div className='flex-1'>
+              <p className='text-sm font-medium text-amber-800'>Modo de Reordenação Ativo</p>
+              <p className='text-xs text-amber-600'>
+                Arraste as linhas pelo ícone ⠿ ou use as setas ↑↓ para definir a ordem. Clique "Salvar Ordem" para aplicar na loja.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ═══ TABELA ═══ */}
         {viewMode === 'table' ? (
@@ -559,6 +736,12 @@ const ProductList = () => {
               <table className='w-full'>
                 <thead className='bg-gray-50 border-b border-gray-200'>
                   <tr>
+                    {/* 🆕 Coluna de drag handle no modo reorder */}
+                    {reorderMode && (
+                      <th className='px-2 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-16'>
+                        #
+                      </th>
+                    )}
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider'>Produto</th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider'>Cor</th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell'>Categoria</th>
@@ -569,25 +752,64 @@ const ProductList = () => {
                   </tr>
                 </thead>
                 <tbody className='divide-y divide-gray-100'>
-                  {filteredProducts.map(product => {
+                  {filteredProducts.map((product, index) => {
                     const isUpdating = updatingProducts.has(product._id);
                     const isActive = product.inStock;
                     const currentStock = product.stock || 0;
                     const isLowStock = currentStock > 0 && currentStock <= 3;
                     const isMainVariant = product.isMainVariant !== false;
                     const hasDualColor = product.colorCode && product.colorCode2 && product.colorCode !== product.colorCode2;
+                    const isDragOver = dragOverIndex === index;
 
                     return (
                       <tr
                         key={product._id}
-                        className={`hover:bg-gray-50 transition-colors ${
+                        draggable={reorderMode}
+                        onDragStart={reorderMode ? (e) => handleDragStart(e, index) : undefined}
+                        onDragEnd={reorderMode ? handleDragEnd : undefined}
+                        onDragOver={reorderMode ? (e) => handleDragOver(e, index) : undefined}
+                        onDrop={reorderMode ? (e) => handleDrop(e, index) : undefined}
+                        className={`transition-colors ${
                           isUpdating ? 'opacity-50 pointer-events-none' : ''
-                        } ${!isMainVariant ? 'bg-gray-50/50' : ''}`}
+                        } ${!isMainVariant ? 'bg-gray-50/50' : ''} ${
+                          reorderMode ? 'cursor-grab active:cursor-grabbing' : 'hover:bg-gray-50'
+                        } ${isDragOver ? 'border-t-2 !border-t-primary bg-primary/5' : ''}`}
                       >
-                        {/* Produto */}
+                        {/* 🆕 Drag handle + posição */}
+                        {reorderMode && (
+                          <td className='px-2 py-3'>
+                            <div className='flex items-center justify-center gap-1'>
+                              <div className='flex flex-col gap-0.5'>
+                                <button
+                                  onClick={() => moveProduct(index, -1)}
+                                  disabled={index === 0}
+                                  className={`p-0.5 rounded ${index === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                                  title='Mover para cima'
+                                >
+                                  <svg className='w-3 h-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 15l7-7 7 7' />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => moveProduct(index, 1)}
+                                  disabled={index === filteredProducts.length - 1}
+                                  className={`p-0.5 rounded ${index === filteredProducts.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                                  title='Mover para baixo'
+                                >
+                                  <svg className='w-3 h-3' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+                                  </svg>
+                                </button>
+                              </div>
+                              <GripVertical className='w-4 h-4 text-gray-300' />
+                              <span className='text-xs text-gray-400 font-mono w-5 text-center'>{index + 1}</span>
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Produto — 🆕 nome completo (sem truncate) */}
                         <td className='px-4 py-3'>
                           <div className='flex items-center gap-3'>
-                            {/* 🆕 Imagem SEM blur/grayscale — apenas badge de inativo */}
                             <div className='relative w-14 h-14 rounded-lg border border-gray-200 bg-white overflow-hidden flex-shrink-0'>
                               <img
                                 src={product.image[0]}
@@ -602,14 +824,14 @@ const ProductList = () => {
                             </div>
                             <div className='min-w-0'>
                               <div className='flex items-center gap-2'>
-                                <p className='font-medium text-gray-900 truncate max-w-[180px]'>{product.name}</p>
+                                {/* 🆕 Nome completo — removido truncate max-w */}
+                                <p className='font-medium text-gray-900'>{product.name}</p>
                                 {isMainVariant ? (
-                                  <span className='px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded'>P</span>
+                                  <span className='px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded flex-shrink-0'>P</span>
                                 ) : (
-                                  <span className='px-1.5 py-0.5 bg-gray-200 text-gray-500 text-[10px] font-bold rounded'>V</span>
+                                  <span className='px-1.5 py-0.5 bg-gray-200 text-gray-500 text-[10px] font-bold rounded flex-shrink-0'>V</span>
                                 )}
                               </div>
-                              {/* 🆕 SKU + Família */}
                               <div className='flex items-center gap-2 mt-0.5'>
                                 {product.sku && (
                                   <span className='text-[11px] text-gray-400 font-mono'>{product.sku}</span>
@@ -621,7 +843,6 @@ const ProductList = () => {
                                   <span className='text-xs text-gray-500'>{product.productFamily}</span>
                                 )}
                               </div>
-                              {/* 🆕 Peso + Dimensões (compacto) */}
                               {(product.weight || product.dimensions?.length) && (
                                 <div className='flex items-center gap-2 mt-0.5'>
                                   {product.weight && (
@@ -657,6 +878,10 @@ const ProductList = () => {
                                 )}
                               </div>
                             </div>
+                          ) : product.size ? (
+                            <span className='inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md'>
+                              {product.size}
+                            </span>
                           ) : (
                             <span className='text-gray-400 text-xs'>-</span>
                           )}
@@ -812,7 +1037,6 @@ const ProductList = () => {
                     isUpdating ? 'opacity-50' : ''
                   }`}
                 >
-                  {/* 🆕 Imagem SEM blur/grayscale */}
                   <div className='relative aspect-square bg-gray-50 p-4'>
                     <img
                       src={product.image[0]}
@@ -820,7 +1044,6 @@ const ProductList = () => {
                       className='w-full h-full object-contain'
                     />
                     
-                    {/* Badges */}
                     <div className='absolute top-2 left-2 flex flex-col gap-1'>
                       {isMainVariant ? (
                         <span className='px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded'>PRINCIPAL</span>
@@ -838,7 +1061,6 @@ const ProductList = () => {
                       )}
                     </div>
 
-                    {/* Cor */}
                     {product.colorCode && (
                       <ColorBall
                         code1={product.colorCode}
@@ -849,7 +1071,6 @@ const ProductList = () => {
                       />
                     )}
 
-                    {/* Toggle Status */}
                     <button
                       onClick={() => toggleStock(product._id, !product.inStock)}
                       disabled={isUpdating}
@@ -863,9 +1084,9 @@ const ProductList = () => {
                     </button>
                   </div>
 
-                  {/* Info */}
                   <div className='p-3'>
-                    <p className='font-medium text-gray-900 text-sm truncate'>{product.name}</p>
+                    {/* 🆕 Nome completo no grid também */}
+                    <p className='font-medium text-gray-900 text-sm'>{product.name}</p>
                     <div className='flex items-center gap-2 mt-0.5'>
                       {product.sku && (
                         <span className='text-[10px] text-gray-400 font-mono'>{product.sku}</span>
@@ -885,7 +1106,6 @@ const ProductList = () => {
                       </div>
                     </div>
 
-                    {/* Ações */}
                     <div className='flex items-center gap-2 mt-3 pt-3 border-t border-gray-100'>
                       <button
                         onClick={() => setProductToEdit(product)}

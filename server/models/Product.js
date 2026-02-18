@@ -97,6 +97,11 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // 🆕 Ordem de exibição na loja (menor = aparece primeiro)
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
