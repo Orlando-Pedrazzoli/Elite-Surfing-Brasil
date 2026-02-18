@@ -100,8 +100,13 @@ const ProductList = () => {
   const [hasOrderChanges, setHasOrderChanges] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
+  // 🆕 Auto-scroll durante drag
+  const scrollContainerRef = useRef(null);
+  const autoScrollRef = useRef(null);
+
   useEffect(() => {
     fetchAllProducts();
+    return () => stopAutoScroll(); // Limpar auto-scroll no unmount
   }, []);
 
   const fetchAllProducts = async () => {
@@ -234,12 +239,59 @@ const ProductList = () => {
     }
   };
 
-  // 🆕 Drag handlers para reordenar
+  // 🆕 Auto-scroll: scroll automático quando arrasta perto das bordas
+  const startAutoScroll = useCallback((clientY) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const edgeZone = 80; // pixels da borda que ativam scroll
+    const maxSpeed = 12; // velocidade máxima de scroll
+
+    const distFromTop = clientY - rect.top;
+    const distFromBottom = rect.bottom - clientY;
+
+    let scrollSpeed = 0;
+    if (distFromTop < edgeZone) {
+      // Scroll para cima — mais perto da borda = mais rápido
+      scrollSpeed = -maxSpeed * (1 - distFromTop / edgeZone);
+    } else if (distFromBottom < edgeZone) {
+      // Scroll para baixo
+      scrollSpeed = maxSpeed * (1 - distFromBottom / edgeZone);
+    }
+
+    // Parar se não precisa scrollar
+    if (scrollSpeed === 0) {
+      if (autoScrollRef.current) {
+        cancelAnimationFrame(autoScrollRef.current);
+        autoScrollRef.current = null;
+      }
+      return;
+    }
+
+    const doScroll = () => {
+      if (!scrollContainerRef.current) return;
+      scrollContainerRef.current.scrollTop += scrollSpeed;
+      autoScrollRef.current = requestAnimationFrame(doScroll);
+    };
+
+    if (!autoScrollRef.current) {
+      autoScrollRef.current = requestAnimationFrame(doScroll);
+    }
+  }, []);
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRef.current) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+  }, []);
+
+  // Drag handlers para reordenar
   const handleDragStart = (e, index) => {
     setDragSourceIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', index.toString());
-    // Styling visual do elemento arrastado
     e.currentTarget.style.opacity = '0.4';
   };
 
@@ -247,6 +299,7 @@ const ProductList = () => {
     e.currentTarget.style.opacity = '1';
     setDragSourceIndex(null);
     setDragOverIndex(null);
+    stopAutoScroll();
   };
 
   const handleDragOver = (e, index) => {
@@ -255,10 +308,13 @@ const ProductList = () => {
     if (dragSourceIndex !== null && dragSourceIndex !== index) {
       setDragOverIndex(index);
     }
+    // 🆕 Auto-scroll baseado na posição do cursor
+    startAutoScroll(e.clientY);
   };
 
   const handleDrop = (e, targetIndex) => {
     e.preventDefault();
+    stopAutoScroll();
     if (dragSourceIndex === null || dragSourceIndex === targetIndex) return;
 
     setLocalOrder(prev => {
@@ -367,7 +423,13 @@ const ProductList = () => {
   }
 
   return (
-    <div className='flex-1 h-[95vh] overflow-y-auto bg-gray-50'>
+    <div
+      ref={scrollContainerRef}
+      className='flex-1 h-[95vh] overflow-y-auto bg-gray-50'
+      onDragOver={reorderMode ? (e) => { e.preventDefault(); startAutoScroll(e.clientY); } : undefined}
+      onDragLeave={reorderMode ? stopAutoScroll : undefined}
+      onDrop={reorderMode ? stopAutoScroll : undefined}
+    >
       <div className='w-full md:p-8 p-4'>
         
         {/* HEADER */}
