@@ -258,7 +258,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       <div className={`pt-3 pb-2 px-1 flex flex-col flex-grow text-center transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
         
         {/* Variantes — Cor ou Tamanho */}
-        {familyProducts.length > 1 && (
+        {familyProducts.length >= 1 ? (
           <div className={`flex items-center justify-center mb-2 flex-wrap ${
             familyVariantType === 'size' ? 'gap-1.5' : (largeSwatches ? 'gap-2.5' : 'gap-2')
           }`}>
@@ -300,6 +300,27 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
               </>
             )}
           </div>
+        ) : (
+          /* Produto sem família mas com cor ou tamanho — mostra 1 swatch avulso */
+          (displayProduct.variantType === 'size' && displayProduct.size) ? (
+            <div className='flex items-center justify-center mb-2'>
+              <SizeBadge
+                label={displayProduct.size}
+                selected={true}
+                title={displayProduct.size}
+              />
+            </div>
+          ) : displayProduct.colorCode ? (
+            <div className='flex items-center justify-center mb-2'>
+              <ColorBall
+                code1={displayProduct.colorCode}
+                code2={displayProduct.colorCode2}
+                size={largeSwatches ? 26 : 20}
+                selected={true}
+                title={displayProduct.color || ''}
+              />
+            </div>
+          ) : null
         )}
 
         {/* Nome do Produto */}
@@ -307,40 +328,27 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
           {displayProduct.name}
         </h3>
 
-        {/* ═══ BLOCO DE PREÇOS — Layout da referência ═══ */}
+        {/* ═══ BLOCO DE PREÇOS ═══ */}
         <div className='mt-auto'>
           
-          {/* PREÇO PIX — destaque principal */}
-          <p className='text-primary font-bold text-base leading-tight'>
-            {formatBRL(installmentData.pixPrice)}
+          {/* PREÇO PIX / BOLETO */}
+          <p className='text-[#2196F3] font-extrabold text-[15px] leading-tight'>
+            {formatBRL(installmentData.pixPrice)} PIX / BOLETO
           </p>
           
-          {/* % de desconto */}
-          <p className='text-[11px] text-primary/80 font-medium mt-0.5 leading-tight'>
-            {Math.round(installmentData.pixDiscount * 100)}% de desconto
+          {/* PREÇO CARTÃO */}
+          <p className='text-gray-600 text-[13px] font-medium mt-1.5 leading-tight'>
+            {formatBRL(displayProduct.offerPrice)}
           </p>
           
-          {/* * PIX / Boleto */}
-          <p className='text-[10px] text-gray-400 mt-0.5 leading-tight'>
-            * PIX / Boleto
-          </p>
-
-          {/* PREÇO CARTÃO + PARCELAMENTO */}
-          <div className='mt-2'>
-            <p className='text-gray-800 font-semibold text-sm leading-tight'>
-              {formatBRL(displayProduct.offerPrice)}
+          {/* PARCELAMENTO */}
+          {installmentData.maxInstallments > 1 && (
+            <p className='text-gray-500 text-[11px] font-bold mt-0.5 leading-tight uppercase tracking-wide'>
+              EM {installmentData.maxInstallments}X DE{' '}
+              {formatBRL(installmentData.installmentValue)}
+              {' '}SEM JUROS
             </p>
-            
-            {installmentData.maxInstallments > 1 && (
-              <p className='text-[11px] text-gray-500 mt-0.5 leading-tight'>
-                {installmentData.maxInstallments}X DE{' '}
-                <span className='font-semibold text-gray-600'>
-                  {formatBRL(installmentData.installmentValue)}
-                </span>
-                {' '}SEM JUROS
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
