@@ -7,6 +7,9 @@ import NewsLetter from '../components/NewsLetter';
 import ReviewsCarousel from '../components/ReviewsCarousel';
 import { SEO, OrganizationSchema, WebSiteSchema, SiteNavigationSchema } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
+import Novidades from '../components/Novidades';
+
+import NovidadesCarousel from '../components/NovidadesCarousel';
 
 const Home = () => {
   return (
@@ -26,6 +29,7 @@ const Home = () => {
         <BenefitsBar />
         <CollectionsGrid />
         <FeatureBanners />
+        <Novidades/>
         <ReviewsCarousel />
         <NewsLetter />
       </div>

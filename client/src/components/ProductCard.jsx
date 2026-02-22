@@ -1,8 +1,9 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { calculateInstallments, formatBRL } from '../utils/installmentUtils';
 
-// 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
+// Componente para renderizar bolinha de cor (simples ou dupla)
 const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
   const isDual = code2 && code2 !== code1;
   const isLight = (code) => ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA'].includes(code);
@@ -46,7 +47,7 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
   );
 };
 
-// 🆕 Componente SizeBadge para variantes por tamanho (no card)
+// Componente SizeBadge para variantes por tamanho
 const SizeBadge = ({ label, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
   return (
     <button
@@ -76,7 +77,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const [selectedProduct, setSelectedProduct] = useState(product);
   const [isColorTransitioning, setIsColorTransitioning] = useState(false);
 
-  // 🎯 Buscar produtos da mesma família
+  // Buscar produtos da mesma família
   useEffect(() => {
     const fetchFamily = async () => {
       if (product?.productFamily) {
@@ -84,7 +85,6 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         const sorted = [...family].sort((a, b) => {
           if (a._id === product._id) return -1;
           if (b._id === product._id) return 1;
-          // 🆕 Ordenar por tamanho numérico se for variante de tamanho, senão por cor
           if (a.variantType === 'size' || b.variantType === 'size') {
             const sizeA = parseFloat((a.size || '0').replace("'", '.'));
             const sizeB = parseFloat((b.size || '0').replace("'", '.'));
@@ -100,7 +100,6 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
     fetchFamily();
   }, [product?.productFamily, product?._id, getProductFamily]);
 
-  // Reset quando o produto base muda
   useEffect(() => {
     setSelectedProduct(product);
     setCurrentImageIndex(0);
@@ -111,18 +110,17 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const displayProduct = selectedProduct || product;
   const isInactive = !displayProduct.inStock || displayProduct.stock <= 0;
 
-  // 🆕 Detectar tipo de variante da família
   const familyVariantType = familyProducts.length > 0 
     ? (familyProducts[0].variantType || 'color') 
     : 'color';
 
-  // Trocar para outro produto da família
+  // Cálculo de parcelas e preço PIX
+  const installmentData = calculateInstallments(displayProduct.offerPrice);
+
   const handleColorClick = (familyProduct, e) => {
     e.stopPropagation();
     e.preventDefault();
-    
     if (familyProduct._id === displayProduct._id) return;
-    
     setIsColorTransitioning(true);
     setTimeout(() => {
       setSelectedProduct(familyProduct);
@@ -161,12 +159,9 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const handleAddToCart = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    
     if (isInactive) return;
-    
     const currentInCart = cartItems[displayProduct._id] || 0;
     if (currentInCart >= displayProduct.stock) return;
-    
     addToCart(displayProduct._id);
   };
 
@@ -179,23 +174,14 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const cartQuantity = cartItems[displayProduct._id] || 0;
   const canAddMore = cartQuantity < displayProduct.stock;
 
-  // Formatar preço
-  const formatPrice = (price) => {
-    return price.toLocaleString('pt-PT', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   return (
     <div
       onClick={handleCardClick}
       className='bg-white w-full transition-all duration-300 flex flex-col h-full relative group cursor-pointer'
     >
-      {/* Image Container */}
+      {/* ═══ IMAGEM ═══ */}
       <div className='relative flex items-center justify-center bg-gray-50/50 rounded-lg overflow-hidden aspect-square'>
         
-        {/* Imagem */}
         <div className={`
           w-full h-full flex items-center justify-center p-2
           transition-all duration-150 ease-out
@@ -216,7 +202,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
           </div>
         )}
 
-        {/* Setas de navegação — Lucide ChevronLeft/Right */}
+        {/* Setas de navegação */}
         {displayProduct.image.length > 1 && (
           <>
             <button
@@ -233,60 +219,81 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
             </button>
           </>
         )}
+
+        {/* Botão Carrinho — hover sobre a imagem */}
+        <div className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200' onClick={e => e.stopPropagation()}>
+          {isInactive ? null : cartQuantity === 0 ? (
+            <button
+              onClick={handleAddToCart}
+              className='w-9 h-9 rounded-full bg-white/95 border border-gray-200 flex items-center justify-center shadow-md hover:shadow-lg hover:bg-white transition-all active:scale-95'
+            >
+              <ShoppingBag className='w-4 h-4 text-gray-700' />
+            </button>
+          ) : (
+            <div className='flex items-center gap-0.5 bg-white/95 border border-gray-200 rounded-full shadow-md px-1 py-0.5'>
+              <button
+                onClick={handleRemoveFromCart}
+                className='w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors'
+              >
+                <Minus className='w-3 h-3 text-gray-600' />
+              </button>
+              <span className='w-5 text-center text-xs font-semibold text-gray-800'>
+                {cartQuantity}
+              </span>
+              <button
+                onClick={handleAddToCart}
+                disabled={!canAddMore}
+                className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                  canAddMore ? 'hover:bg-gray-100' : 'opacity-40 cursor-not-allowed'
+                }`}
+              >
+                <Plus className='w-3 h-3 text-gray-600' />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Product Info */}
-      <div className='pt-3 pb-2 px-1 flex flex-col flex-grow'>
+      {/* ═══ INFORMAÇÕES DO PRODUTO ═══ */}
+      <div className={`pt-3 pb-2 px-1 flex flex-col flex-grow text-center transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
         
-        {/* 🆕 Variantes — Cor (bolinhas) ou Tamanho (badges) */}
+        {/* Variantes — Cor ou Tamanho */}
         {familyProducts.length > 1 && (
           <div className={`flex items-center justify-center mb-2 flex-wrap ${
             familyVariantType === 'size' ? 'gap-1.5' : (largeSwatches ? 'gap-2.5' : 'gap-2')
           }`}>
             {familyVariantType === 'size' ? (
-              /* 🆕 SIZE BADGES */
               <>
-                {familyProducts.slice(0, 6).map((familyProduct) => {
-                  const isSelected = familyProduct._id === displayProduct._id;
-                  const familyOutOfStock = (familyProduct.stock || 0) <= 0;
-
-                  return (
-                    <SizeBadge
-                      key={familyProduct._id}
-                      label={familyProduct.size || '?'}
-                      selected={isSelected}
-                      outOfStock={familyOutOfStock}
-                      onClick={(e) => handleColorClick(familyProduct, e)}
-                      onMouseEnter={() => handleColorHover(familyProduct)}
-                      title={`${familyProduct.size || familyProduct.name}${familyOutOfStock ? ' (Esgotado)' : ''}`}
-                    />
-                  );
-                })}
+                {familyProducts.slice(0, 6).map((fp) => (
+                  <SizeBadge
+                    key={fp._id}
+                    label={fp.size || '?'}
+                    selected={fp._id === displayProduct._id}
+                    outOfStock={(fp.stock || 0) <= 0}
+                    onClick={(e) => handleColorClick(fp, e)}
+                    onMouseEnter={() => handleColorHover(fp)}
+                    title={`${fp.size || fp.name}${(fp.stock || 0) <= 0 ? ' (Esgotado)' : ''}`}
+                  />
+                ))}
                 {familyProducts.length > 6 && (
                   <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
                 )}
               </>
             ) : (
-              /* COLOR BALLS (existente — sem alterações) */
               <>
-                {familyProducts.slice(0, 6).map((familyProduct) => {
-                  const isSelected = familyProduct._id === displayProduct._id;
-                  const familyOutOfStock = (familyProduct.stock || 0) <= 0;
-
-                  return (
-                    <ColorBall
-                      key={familyProduct._id}
-                      code1={familyProduct.colorCode || '#ccc'}
-                      code2={familyProduct.colorCode2}
-                      size={largeSwatches ? 26 : 20}
-                      selected={isSelected}
-                      outOfStock={familyOutOfStock}
-                      onClick={(e) => handleColorClick(familyProduct, e)}
-                      onMouseEnter={() => handleColorHover(familyProduct)}
-                      title={`${familyProduct.color || familyProduct.name}${familyOutOfStock ? ' (Esgotado)' : ''}`}
-                    />
-                  );
-                })}
+                {familyProducts.slice(0, 6).map((fp) => (
+                  <ColorBall
+                    key={fp._id}
+                    code1={fp.colorCode || '#ccc'}
+                    code2={fp.colorCode2}
+                    size={largeSwatches ? 26 : 20}
+                    selected={fp._id === displayProduct._id}
+                    outOfStock={(fp.stock || 0) <= 0}
+                    onClick={(e) => handleColorClick(fp, e)}
+                    onMouseEnter={() => handleColorHover(fp)}
+                    title={`${fp.color || fp.name}${(fp.stock || 0) <= 0 ? ' (Esgotado)' : ''}`}
+                  />
+                ))}
                 {familyProducts.length > 6 && (
                   <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
                 )}
@@ -296,63 +303,42 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         )}
 
         {/* Nome do Produto */}
-        <h3
-          className={`text-gray-900 font-medium text-sm leading-snug line-clamp-2 transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
-        >
+        <h3 className='text-gray-900 font-medium text-sm leading-snug line-clamp-2 mb-3'>
           {displayProduct.name}
         </h3>
 
-        {/* Preço + Botão Carrinho */}
-        <div className={`mt-auto pt-3 flex items-end justify-between transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-          {/* Preço */}
-          <div>
-            {displayProduct.offerPrice < displayProduct.price && (
-              <p className='text-gray-400 text-xs line-through'>
-                {currency}{formatPrice(displayProduct.price)}
-              </p>
-            )}
-            <p className='text-gray-900 font-semibold text-base'>
-              {currency}{formatPrice(displayProduct.offerPrice)}
-            </p>
-          </div>
+        {/* ═══ BLOCO DE PREÇOS — Layout da referência ═══ */}
+        <div className='mt-auto'>
+          
+          {/* PREÇO PIX — destaque principal */}
+          <p className='text-primary font-bold text-base leading-tight'>
+            {formatBRL(installmentData.pixPrice)}
+          </p>
+          
+          {/* % de desconto */}
+          <p className='text-[11px] text-primary/80 font-medium mt-0.5 leading-tight'>
+            {Math.round(installmentData.pixDiscount * 100)}% de desconto
+          </p>
+          
+          {/* * PIX / Boleto */}
+          <p className='text-[10px] text-gray-400 mt-0.5 leading-tight'>
+            * PIX / Boleto
+          </p>
 
-          {/* Botão Carrinho */}
-          <div onClick={e => e.stopPropagation()}>
-            {isInactive ? (
-              <div 
-                className='w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center cursor-not-allowed'
-                title='Produto esgotado'
-              >
-                <ShoppingBag className='w-4 h-4 text-gray-400' />
-              </div>
-            ) : cartQuantity === 0 ? (
-              <button
-                onClick={handleAddToCart}
-                className='w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:shadow-md hover:border-gray-300 transition-all active:scale-95'
-              >
-                <ShoppingBag className='w-4 h-4 text-gray-600' />
-              </button>
-            ) : (
-              <div className='flex items-center gap-0.5 bg-white border border-gray-200 rounded-full shadow-sm px-1 py-1'>
-                <button
-                  onClick={handleRemoveFromCart}
-                  className='w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors'
-                >
-                  <Minus className='w-3 h-3 text-gray-600' />
-                </button>
-                <span className='w-5 text-center text-sm font-medium text-gray-800'>
-                  {cartQuantity}
+          {/* PREÇO CARTÃO + PARCELAMENTO */}
+          <div className='mt-2'>
+            <p className='text-gray-800 font-semibold text-sm leading-tight'>
+              {formatBRL(displayProduct.offerPrice)}
+            </p>
+            
+            {installmentData.maxInstallments > 1 && (
+              <p className='text-[11px] text-gray-500 mt-0.5 leading-tight'>
+                {installmentData.maxInstallments}X DE{' '}
+                <span className='font-semibold text-gray-600'>
+                  {formatBRL(installmentData.installmentValue)}
                 </span>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!canAddMore}
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                    canAddMore ? 'hover:bg-gray-100' : 'opacity-40 cursor-not-allowed'
-                  }`}
-                >
-                  <Plus className='w-3 h-3 text-gray-600' />
-                </button>
-              </div>
+                {' '}SEM JUROS
+              </p>
             )}
           </div>
         </div>
