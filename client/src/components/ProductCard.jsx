@@ -225,7 +225,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
 
           {/* 🆕 Badge Lançamento */}
           {isLancamento && !isInactive && (
-            <span className='bg-violet-600 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
+            <span className='bg-gray-900 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
               Novo
             </span>
           )}
