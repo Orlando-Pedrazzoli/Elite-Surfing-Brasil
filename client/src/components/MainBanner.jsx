@@ -13,11 +13,11 @@ const slides = [
   {
     id: 2,
     // Unsplash — Jeremy Bishop (surfer on wave, free commercial use)
-    desktop: 'https://images.unsplash.com/photo-1502680390548-bdbac40b3981?auto=format&fit=crop&w=1920&q=80',
+    desktop: '/banner-carlos.jpg',
     mobile: 'https://images.unsplash.com/photo-1502680390548-bdbac40b3981?auto=format&fit=crop&w=800&q=80',
     alt: 'Surfer riding a powerful wave',
-    title: <>Ride The <br/>Perfect Wave</>,
-    subtitle: 'Elite Surfing',
+   
+    subtitle: 'Premium Accessories',
     objectPosition: 'center',
   },
   {
