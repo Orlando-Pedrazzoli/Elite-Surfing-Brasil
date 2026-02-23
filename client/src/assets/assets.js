@@ -36,6 +36,8 @@ import capas_card from './capas.png';
 import sarcofago_card from './sarcofago.png';
 import decktop_card from './decktop.png';
 import leash_tech from './leash-tech.png';
+import bodyboard from './bodyboard.jpg';
+import standup from './standup.jpg';
 
 
 export const assets = {
@@ -438,7 +440,7 @@ export const groups = [
     isTagGroup: true,
     tagKey: 'bodyboard',
     description: 'Tudo para bodyboard: pranchas, leashes, pés de pato e acessórios. Qualidade premium para todas as ondas.',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    image: bodyboard,
   },
   {
     id: 'sup',
@@ -447,7 +449,7 @@ export const groups = [
     isTagGroup: true,
     tagKey: 'sup',
     description: 'Pranchas, remos, leashes e acessórios de Stand Up Paddle. Para passeio, race e surf.',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    image: standup,
   },
   {
     id: 'outlet',
