@@ -14,7 +14,7 @@ const slides = [
     id: 2,
     // Unsplash — Jeremy Bishop (surfer on wave, free commercial use)
     desktop: '/banner-carlos.jpg',
-    mobile: 'https://images.unsplash.com/photo-1502680390548-bdbac40b3981?auto=format&fit=crop&w=800&q=80',
+    mobile: '/banner-carlos.jpg',
     alt: 'Surfer riding a powerful wave',
    
     subtitle: 'Premium Accessories',
