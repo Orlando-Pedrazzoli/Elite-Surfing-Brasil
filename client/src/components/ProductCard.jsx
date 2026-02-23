@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { calculateInstallments, formatBRL } from '../utils/installmentUtils';
 
 // Componente para renderizar bolinha de cor (simples ou dupla)
@@ -117,6 +117,18 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   // Cálculo de parcelas e preço PIX
   const installmentData = calculateInstallments(displayProduct.offerPrice);
 
+  // 🆕 Tags e badges
+  const tags = displayProduct.tags || [];
+  const hasFreeShipping = displayProduct.freeShipping === true;
+  const isOutlet = tags.includes('outlet');
+  const isLancamento = tags.includes('lancamento');
+  const isBestseller = tags.includes('bestseller');
+
+  // 🆕 Percentagem de desconto
+  const discountPercent = displayProduct.price > displayProduct.offerPrice
+    ? Math.round(((displayProduct.price - displayProduct.offerPrice) / displayProduct.price) * 100)
+    : 0;
+
   const handleColorClick = (familyProduct, e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -195,10 +207,44 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
           />
         </div>
 
-        {/* Badge Esgotado */}
-        {isInactive && (
-          <div className='absolute top-2 left-2 bg-gray-900/80 text-white text-[10px] px-2 py-1 rounded font-medium uppercase tracking-wider'>
-            Esgotado
+        {/* ═══ BADGES CANTO SUPERIOR ESQUERDO ═══ */}
+        <div className='absolute top-2 left-2 flex flex-col gap-1 z-10'>
+          {/* Badge Esgotado */}
+          {isInactive && (
+            <span className='bg-gray-900/80 text-white text-[10px] px-2 py-0.5 rounded font-medium uppercase tracking-wider'>
+              Esgotado
+            </span>
+          )}
+
+          {/* 🆕 Badge Outlet com % */}
+          {isOutlet && discountPercent > 0 && !isInactive && (
+            <span className='bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider'>
+              -{discountPercent}%
+            </span>
+          )}
+
+          {/* 🆕 Badge Lançamento */}
+          {isLancamento && !isInactive && (
+            <span className='bg-violet-600 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
+              Novo
+            </span>
+          )}
+
+          {/* 🆕 Badge Bestseller */}
+          {isBestseller && !isInactive && (
+            <span className='bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
+              ⭐ Top
+            </span>
+          )}
+        </div>
+
+        {/* 🆕 Badge Frete Grátis — canto superior direito */}
+        {hasFreeShipping && !isInactive && (
+          <div className='absolute top-2 right-2 z-10'>
+            <span className='inline-flex items-center gap-0.5 bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider'>
+              <Truck className='w-3 h-3' />
+              Free
+            </span>
           </div>
         )}
 
@@ -331,9 +377,10 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         {/* ═══ BLOCO DE PREÇOS ═══ */}
         <div className='mt-auto'>
           
-          {/* PREÇO PIX / BOLETO */}
-          <p className='text-[#2196F3] font-extrabold text-[15px] leading-tight'>
-            {formatBRL(installmentData.pixPrice)} PIX / BOLETO
+          {/* 🆕 PREÇO PIX / BOLETO — Verde (corrigido de azul #2196F3) */}
+          <p className='text-green-700 font-extrabold text-[15px] leading-tight'>
+            {formatBRL(installmentData.pixPrice)}
+            <span className='text-[11px] font-bold ml-1'>PIX / BOLETO</span>
           </p>
           
           {/* PREÇO CARTÃO */}

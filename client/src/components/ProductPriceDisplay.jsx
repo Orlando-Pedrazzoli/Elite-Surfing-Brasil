@@ -13,9 +13,9 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
   return (
     <div className='bg-gray-50 p-4 md:p-5 rounded-lg space-y-3'>
       
-      {/* 💰 PREÇO PIX — Destaque principal */}
+      {/* 💰 PREÇO PIX — Destaque principal (🆕 Verde) */}
       <div>
-        <p className='text-xl md:text-2xl font-extrabold text-primary'>
+        <p className='text-xl md:text-2xl font-extrabold text-green-700'>
           {formatBRL(installmentData.pixPrice)}
           <span className='text-base font-bold ml-2'>NO PIX</span>
         </p>
@@ -79,11 +79,11 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
                 <span className='text-green-600 font-medium'>sem juros</span>
               </div>
             ))}
-            {/* PIX na tabela */}
+            {/* PIX na tabela (🆕 Verde) */}
             <div className='border-t border-gray-100 pt-1.5 mt-1.5'>
               <div className='flex justify-between text-xs'>
-                <span className='text-primary font-medium'>PIX à vista</span>
-                <span className='text-primary font-bold'>{formatBRL(installmentData.pixPrice)}</span>
+                <span className='text-green-700 font-medium'>PIX à vista</span>
+                <span className='text-green-700 font-bold'>{formatBRL(installmentData.pixPrice)}</span>
               </div>
             </div>
           </div>

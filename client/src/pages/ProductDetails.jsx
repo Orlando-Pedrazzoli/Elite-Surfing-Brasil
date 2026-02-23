@@ -2,7 +2,7 @@ import '../styles/ProductDetails.css';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import ProductReviews from '../components/ProductReviews';
 import ShareProduct from '../components/ShareProduct';
@@ -99,7 +99,6 @@ const ProductDetails = () => {
         const sorted = [...family].sort((a, b) => {
           if (a._id === product._id) return -1;
           if (b._id === product._id) return 1;
-          // 🆕 Ordenar por tamanho numérico se for variante de tamanho, senão por cor
           if (a.variantType === 'size' || b.variantType === 'size') {
             const sizeA = parseFloat((a.size || '0').replace("'", '.'));
             const sizeB = parseFloat((b.size || '0').replace("'", '.'));
@@ -129,6 +128,18 @@ const ProductDetails = () => {
   const familyVariantType = familyProducts.length > 0 
     ? (familyProducts[0].variantType || 'color') 
     : 'color';
+
+  // 🆕 Tags e badges
+  const tags = displayProduct?.tags || [];
+  const hasFreeShipping = displayProduct?.freeShipping === true;
+  const isOutlet = tags.includes('outlet');
+  const isLancamento = tags.includes('lancamento');
+  const isBestseller = tags.includes('bestseller');
+
+  // 🆕 Percentagem de desconto
+  const discountPercent = displayProduct && displayProduct.price > displayProduct.offerPrice
+    ? Math.round(((displayProduct.price - displayProduct.offerPrice) / displayProduct.price) * 100)
+    : 0;
 
   // SEO
   const generateProductDescription = (product) => {
@@ -421,7 +432,7 @@ const ProductDetails = () => {
     updateCartItem(displayProduct._id, newTotal);
     toast.success(`${quantity} ${quantity === 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho!`);
     setQuantity(1);
-    setShowCartSidebar(true); // ← Abre o sidebar
+    setShowCartSidebar(true);
   };
 
   // ✅ COMPRAR AGORA
@@ -812,6 +823,47 @@ const ProductDetails = () => {
                   />
                 )}
 
+                {/* ═══ 🆕 BADGES SOBRE A IMAGEM PRINCIPAL ═══ */}
+                <div className='absolute top-3 left-3 flex flex-col gap-1.5 z-10'>
+                  {/* Badge Esgotado */}
+                  {isInactive && (
+                    <span className='bg-gray-900/85 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider'>
+                      Esgotado
+                    </span>
+                  )}
+
+                  {/* 🆕 Badge Outlet com % */}
+                  {isOutlet && discountPercent > 0 && !isInactive && (
+                    <span className='bg-red-600 text-white text-xs px-3 py-1 rounded-lg font-bold uppercase tracking-wider shadow-sm'>
+                      -{discountPercent}% OFF
+                    </span>
+                  )}
+
+                  {/* 🆕 Badge Lançamento */}
+                  {isLancamento && !isInactive && (
+                    <span className='bg-violet-600 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider shadow-sm'>
+                      🆕 Lançamento
+                    </span>
+                  )}
+
+                  {/* 🆕 Badge Bestseller */}
+                  {isBestseller && !isInactive && (
+                    <span className='bg-amber-500 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider shadow-sm'>
+                      ⭐ Mais Vendido
+                    </span>
+                  )}
+                </div>
+
+                {/* 🆕 Badge Frete Grátis — canto superior direito */}
+                {hasFreeShipping && !isInactive && (
+                  <div className='absolute top-3 right-3 z-10'>
+                    <span className='inline-flex items-center gap-1 bg-green-600 text-white text-xs px-3 py-1 rounded-lg font-bold uppercase tracking-wider shadow-sm'>
+                      <Truck className='w-4 h-4' />
+                      Frete Grátis
+                    </span>
+                  </div>
+                )}
+
                 <div className='absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg text-xs opacity-0 hover:opacity-100 transition-opacity'>
                   Clique para ampliar
                 </div>
@@ -929,6 +981,33 @@ const ProductDetails = () => {
             <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}>
               <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1'>
+                  {/* 🆕 Badges inline acima do título */}
+                  {(isOutlet || isLancamento || isBestseller || hasFreeShipping) && !isInactive && (
+                    <div className='flex flex-wrap gap-1.5 mb-2'>
+                      {isOutlet && discountPercent > 0 && (
+                        <span className='bg-red-100 text-red-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
+                          -{discountPercent}% OFF
+                        </span>
+                      )}
+                      {isLancamento && (
+                        <span className='bg-violet-100 text-violet-700 text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
+                          🆕 Lançamento
+                        </span>
+                      )}
+                      {isBestseller && (
+                        <span className='bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
+                          ⭐ Mais Vendido
+                        </span>
+                      )}
+                      {hasFreeShipping && (
+                        <span className='inline-flex items-center gap-1 bg-green-100 text-green-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
+                          <Truck className='w-3 h-3' />
+                          Frete Grátis
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight'>
                     {displayProduct.name}
                   </h1>
@@ -987,7 +1066,6 @@ const ProductDetails = () => {
                 
                 <div className={`flex items-center flex-wrap ${familyVariantType === 'size' ? 'gap-2' : 'gap-3'}`}>
                   {familyVariantType === 'size' ? (
-                    /* 🆕 SIZE BADGES */
                     familyProducts.map((familyProduct) => {
                       const fpStock = familyProduct.stock || 0;
                       const fpOutOfStock = fpStock <= 0;
@@ -1005,7 +1083,6 @@ const ProductDetails = () => {
                       );
                     })
                   ) : (
-                    /* COLOR BALLS (existente — sem alterações) */
                     familyProducts.map((familyProduct) => {
                       const fpStock = familyProduct.stock || 0;
                       const fpOutOfStock = fpStock <= 0;
@@ -1120,30 +1197,45 @@ const ProductDetails = () => {
             />
 
             {/* ═══════════════════════════════════════════════ */}
-            {/* INFO ADICIONAL — Benefícios                     */}
+            {/* 🆕 INFO ADICIONAL — Benefícios (dinâmico)      */}
             {/* ═══════════════════════════════════════════════ */}
-            <div className='p-3 md:p-4 rounded-lg bg-blue-50 border border-blue-200'>
+            <div className={`p-3 md:p-4 rounded-lg border ${hasFreeShipping ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
               <div className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
-                    <span className='text-white text-xs'>✓</span>
+                {/* 🆕 Frete Grátis — dinâmico baseado em freeShipping */}
+                {hasFreeShipping ? (
+                  <div className='flex items-center gap-2'>
+                    <div className='w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0'>
+                      <Truck className='w-3 h-3 text-white' />
+                    </div>
+                    <span className='text-xs md:text-sm text-green-800 font-semibold'>
+                      Frete Grátis para todo o Brasil neste produto!
+                    </span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Frete grátis a partir de R$ 199 (Sul/Sudeste) e R$ 299 (demais regiões)</span>
-                </div>
+                ) : (
+                  <div className='flex items-center gap-2'>
+                    <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0'>
+                      <span className='text-white text-xs'>✓</span>
+                    </div>
+                    <span className='text-xs md:text-sm text-gray-700'>
+                      Frete grátis a partir de R$ 199 (Sul/Sudeste) e R$ 299 (demais regiões)
+                    </span>
+                  </div>
+                )}
+                
                 <div className='flex items-center gap-2'>
-                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
+                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
                   <span className='text-xs md:text-sm text-gray-700'>Parcele em até 10x sem juros no cartão</span>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <div className='w-4 h-4 bg-primary rounded-full flex items-center justify-center'>
+                  <div className='w-4 h-4 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
                   <span className='text-xs md:text-sm text-gray-700 font-medium'>10% de desconto no PIX à vista</span>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center'>
+                  <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
                   <span className='text-xs md:text-sm text-gray-700'>Troca ou devolução em até 7 dias</span>
