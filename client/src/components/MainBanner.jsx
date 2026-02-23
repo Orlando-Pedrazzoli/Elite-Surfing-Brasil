@@ -12,27 +12,15 @@ const slides = [
   },
   {
     id: 2,
-    // Unsplash — Jeremy Bishop (surfer on wave, free commercial use)
-    desktop: '/banner-carlos.jpg',
+    desktop: '/banner-novo2.png',
     mobile: '/banner-carlos-mobile.jpg',
     alt: 'Surfer riding a powerful wave',
-   
-    subtitle: 'Premium Accessories',
-    objectPosition: 'center',
-  },
-  {
-    id: 3,
-    // Unsplash — Austin Neill (surfer silhouette at sunset, free commercial use)
-    desktop: 'https://images.unsplash.com/photo-1455729552865-3658a5d39692?auto=format&fit=crop&w=1920&q=80',
-    mobile: 'https://images.unsplash.com/photo-1455729552865-3658a5d39692?auto=format&fit=crop&w=800&q=80',
-    alt: 'Surfer walking on beach at sunset',
-    title: <>Born To <br/>Surf</>,
-    subtitle: 'Elite Surfing',
+    subtitle: 'Premium Surf Accessories',
     objectPosition: 'center',
   },
 ];
 
-const AUTOPLAY_INTERVAL = 6000; // 6s — best practice: 5-7s
+const AUTOPLAY_INTERVAL = 5000; // 5s — mais dinâmico
 const TRANSITION_DURATION = 700; // ms
 
 const MainBanner = () => {
@@ -81,7 +69,6 @@ const MainBanner = () => {
     setIsTransitioning(true);
     setCurrentSlide(index);
     setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    // Reset autoplay timer on manual interaction
     stopAutoplay();
     startAutoplay();
   }, [currentSlide, isTransitioning, stopAutoplay, startAutoplay]);

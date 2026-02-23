@@ -823,36 +823,7 @@ const ProductDetails = () => {
                   />
                 )}
 
-                {/* ═══ 🆕 BADGES SOBRE A IMAGEM PRINCIPAL ═══ */}
-                <div className='absolute top-3 left-3 flex flex-col gap-1.5 z-10'>
-                  {/* Badge Esgotado */}
-                  {isInactive && (
-                    <span className='bg-gray-900/85 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider'>
-                      Esgotado
-                    </span>
-                  )}
-
-                  {/* 🆕 Badge Outlet com % */}
-                  {isOutlet && discountPercent > 0 && !isInactive && (
-                    <span className='bg-red-600 text-white text-xs px-3 py-1 rounded-lg font-bold uppercase tracking-wider shadow-sm'>
-                      -{discountPercent}% OFF
-                    </span>
-                  )}
-
-                  {/* 🆕 Badge Lançamento */}
-                  {isLancamento && !isInactive && (
-                    <span className='bg-violet-600 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider shadow-sm'>
-                      🆕 Lançamento
-                    </span>
-                  )}
-
-                  {/* 🆕 Badge Bestseller */}
-                  {isBestseller && !isInactive && (
-                    <span className='bg-amber-500 text-white text-xs px-3 py-1 rounded-lg font-semibold uppercase tracking-wider shadow-sm'>
-                      ⭐ Mais Vendido
-                    </span>
-                  )}
-                </div>
+               
 
                 {/* 🆕 Badge Frete Grátis — canto superior direito */}
                 {hasFreeShipping && !isInactive && (
@@ -981,7 +952,7 @@ const ProductDetails = () => {
             <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}>
               <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1'>
-                  {/* 🆕 Badges inline acima do título */}
+                  {/* Badges inline acima do título */}
                   {(isOutlet || isLancamento || isBestseller || hasFreeShipping) && !isInactive && (
                     <div className='flex flex-wrap gap-1.5 mb-2'>
                       {isOutlet && discountPercent > 0 && (
@@ -990,8 +961,8 @@ const ProductDetails = () => {
                         </span>
                       )}
                       {isLancamento && (
-                        <span className='bg-violet-100 text-violet-700 text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
-                          🆕 Lançamento
+                        <span className='bg-gray-800 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
+                          Lançamento
                         </span>
                       )}
                       {isBestseller && (
