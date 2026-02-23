@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
+import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup, AVAILABLE_TAGS } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
@@ -423,6 +423,12 @@ const AddProduct = () => {
   const [hasSize, setHasSize] = useState(false);
   const [sizeValue, setSizeValue] = useState('');
 
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 TAGS TRANSVERSAIS + FRETE GRÁTIS
+  // ═══════════════════════════════════════════════════════════════
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [freeShipping, setFreeShipping] = useState(false);
+
   const { axios, fetchProducts } = useAppContext();
 
   // Filtrar categorias baseado no grupo selecionado
@@ -444,6 +450,38 @@ const AddProduct = () => {
       return productFilters[filterDef.parentKey] === filterDef.parentValue;
     });
   }, [groupFilterDefs, productFilters]);
+
+  // 🆕 Sugerir tags automaticamente baseado nos filtros preenchidos
+  const suggestedTags = useMemo(() => {
+    const suggestions = [];
+    const filters = productFilters || {};
+
+    // SUP: se boardType contém 'standup' ou tipo contém 'sup'
+    if (filters.boardType === 'standup' || filters.tipo === 'sup') {
+      if (!selectedTags.includes('sup')) suggestions.push('sup');
+    }
+
+    // Bodyboard: se boardType contém 'bodyboard'
+    if (filters.boardType === 'bodyboard') {
+      if (!selectedTags.includes('bodyboard')) suggestions.push('bodyboard');
+    }
+
+    // Outlet: se tem desconto significativo (15%+)
+    if (price && offerPrice && Number(offerPrice) < Number(price) * 0.85) {
+      if (!selectedTags.includes('outlet')) suggestions.push('outlet');
+    }
+
+    return suggestions;
+  }, [productFilters, selectedTags, price, offerPrice]);
+
+  // Toggle de tag
+  const toggleTag = (tagValue) => {
+    setSelectedTags(prev => 
+      prev.includes(tagValue) 
+        ? prev.filter(t => t !== tagValue) 
+        : [...prev, tagValue]
+    );
+  };
 
   // Quando o grupo muda, limpar a categoria e filtros
   const handleGroupChange = (e) => {
@@ -514,11 +552,9 @@ const AddProduct = () => {
   const handleVariantTypeChange = (type) => {
     setVariantType(type);
     if (type === 'color') {
-      // Limpar dados de tamanho
       setHasSize(false);
       setSizeValue('');
     } else {
-      // Limpar dados de cor
       setHasColor(false);
       setColor('');
       setColorCode('#000000');
@@ -558,7 +594,6 @@ const AddProduct = () => {
         return;
       }
 
-      // 🆕 Validação de tamanho
       if (hasSize && !sizeValue.trim()) {
         toast.error('Defina o tamanho do produto');
         return;
@@ -573,11 +608,8 @@ const AddProduct = () => {
         offerPrice: Number(offerPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
-        // 🆕 SKU
         sku: sku.trim() || undefined,
-        // 🆕 Peso
         weight: weight ? Number(weight) : undefined,
-        // 🆕 Dimensões
         dimensions: (dimensions.length || dimensions.width || dimensions.height)
           ? {
               length: Number(dimensions.length) || 0,
@@ -585,6 +617,10 @@ const AddProduct = () => {
               height: Number(dimensions.height) || 0,
             }
           : undefined,
+        // 🆕 Tags transversais
+        tags: selectedTags,
+        // 🆕 Frete grátis
+        freeShipping,
       };
 
       // Adicionar filtros se algum foi preenchido
@@ -618,13 +654,11 @@ const AddProduct = () => {
         }
       }
 
-      // 🆕 Adicionar dados de tamanho se definidos
       if (hasSize && sizeValue.trim()) {
         productData.variantType = 'size';
         productData.size = sizeValue.trim();
         
         if (!productFamily.trim()) {
-          // Gerar família automaticamente removendo o tamanho do nome
           const baseName = name.replace(new RegExp(sizeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
           if (baseName) {
             productData.productFamily = generateFamilySlug(baseName);
@@ -668,6 +702,9 @@ const AddProduct = () => {
         setHasSize(false);
         setSizeValue('');
         setIsMainVariant(true);
+        // 🆕 Reset tags e frete grátis
+        setSelectedTags([]);
+        setFreeShipping(false);
       } else {
         toast.error(data.message);
       }
@@ -734,7 +771,7 @@ const AddProduct = () => {
               required
             >
               <option value=''>Selecionar Grupo</option>
-              {groups.map((group) => (
+              {groups.filter(g => !g.isTagGroup).map((group) => (
                 <option key={group.id} value={group.slug}>
                   {group.name}
                 </option>
@@ -793,25 +830,29 @@ const AddProduct = () => {
             </p>
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              {visibleFilters.map((filterDef) => (
-                <div key={filterDef.key} className='flex flex-col gap-1'>
-                  <label className='text-sm font-medium text-gray-700'>
-                    {filterDef.label}
-                  </label>
-                  <select
-                    value={productFilters[filterDef.key] || ''}
-                    onChange={e => handleFilterChange(filterDef.key, e.target.value)}
-                    className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
-                  >
-                    <option value=''>— Selecionar —</option>
-                    {filterDef.options.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+              {visibleFilters.map((filterDef) => {
+                // 🆕 Não mostrar filtros com fieldPath no AddProduct (sourceGroup é automático)
+                if (filterDef.fieldPath) return null;
+                return (
+                  <div key={filterDef.key} className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      {filterDef.label}
+                    </label>
+                    <select
+                      value={productFilters[filterDef.key] || ''}
+                      onChange={e => handleFilterChange(filterDef.key, e.target.value)}
+                      className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
+                    >
+                      <option value=''>— Selecionar —</option>
+                      {filterDef.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Preview dos filtros preenchidos */}
@@ -892,6 +933,127 @@ const AddProduct = () => {
             required
           />
           <p className='text-xs text-gray-500'>Defina 0 para produto esgotado</p>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 🆕 TAGS TRANSVERSAIS + FRETE GRÁTIS                       */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div className='border border-green-200 bg-green-50/50 rounded-lg p-4 space-y-4'>
+          <div className='flex items-center gap-2 mb-1'>
+            <svg className='w-5 h-5 text-green-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' />
+            </svg>
+            <h3 className='text-base font-semibold text-green-800'>
+              Tags e Destaques
+            </h3>
+          </div>
+          <p className='text-xs text-green-600 -mt-2'>
+            Tags permitem que o produto apareça em coleções transversais (SUP, Bodyboard, Outlet)
+          </p>
+
+          {/* Frete Grátis — Toggle destacado */}
+          <div className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+            freeShipping ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'
+          }`}>
+            <input
+              type='checkbox'
+              id='freeShipping'
+              checked={freeShipping}
+              onChange={e => setFreeShipping(e.target.checked)}
+              className='w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer'
+            />
+            <div className='flex items-center gap-2'>
+              <svg className={`w-5 h-5 ${freeShipping ? 'text-green-600' : 'text-gray-400'}`} fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' />
+              </svg>
+              <label htmlFor='freeShipping' className='cursor-pointer'>
+                <span className={`text-base font-medium ${freeShipping ? 'text-green-700' : 'text-gray-700'}`}>
+                  Frete Grátis
+                </span>
+                <p className='text-xs text-gray-500'>
+                  Produto com frete grátis para todo o Brasil
+                </p>
+              </label>
+            </div>
+          </div>
+
+          {/* Tags de Coleção */}
+          <div>
+            <p className='text-sm font-medium text-gray-700 mb-2'>Tags de Coleção:</p>
+            <div className='flex flex-wrap gap-2'>
+              {AVAILABLE_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag.value);
+                const isSuggested = suggestedTags.includes(tag.value);
+                return (
+                  <button
+                    key={tag.value}
+                    type='button'
+                    onClick={() => toggleTag(tag.value)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : isSuggested
+                          ? 'bg-green-100 text-green-700 border-2 border-green-400 border-dashed animate-pulse'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:border-green-400 hover:bg-green-50'
+                    }`}
+                    title={tag.description}
+                  >
+                    <span>{tag.icon}</span>
+                    <span>{tag.label}</span>
+                    {isSelected && <span className='ml-1'>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sugestão automática */}
+            {suggestedTags.length > 0 && (
+              <div className='mt-2 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg'>
+                <span className='text-amber-600 text-xs'>💡</span>
+                <p className='text-xs text-amber-700'>
+                  Sugestão baseada nos filtros: <strong>{suggestedTags.map(t => 
+                    AVAILABLE_TAGS.find(at => at.value === t)?.label
+                  ).join(', ')}</strong>
+                </p>
+                <button
+                  type='button'
+                  onClick={() => setSelectedTags(prev => [...new Set([...prev, ...suggestedTags])])}
+                  className='ml-auto text-xs font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap'
+                >
+                  Adicionar
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Preview das tags selecionadas */}
+          {(selectedTags.length > 0 || freeShipping) && (
+            <div className='flex flex-wrap gap-2 pt-2 border-t border-green-200'>
+              {freeShipping && (
+                <span className='inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium'>
+                  🚚 Frete Grátis
+                </span>
+              )}
+              {selectedTags.map(tagValue => {
+                const tag = AVAILABLE_TAGS.find(t => t.value === tagValue);
+                return (
+                  <span 
+                    key={tagValue}
+                    className='inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium'
+                  >
+                    {tag?.icon} {tag?.label || tagValue}
+                    <button
+                      type='button'
+                      onClick={() => toggleTag(tagValue)}
+                      className='ml-0.5 hover:text-green-600'
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════════════════════ */}
@@ -1049,7 +1211,7 @@ const AddProduct = () => {
             </p>
           </div>
 
-          {/* 🆕 Toggle Tipo de Variante */}
+          {/* Toggle Tipo de Variante */}
           <div className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4'>
             <span className='text-sm font-medium text-gray-700'>Tipo de Variante:</span>
             <label className='flex items-center gap-2 cursor-pointer'>
@@ -1076,12 +1238,9 @@ const AddProduct = () => {
             </label>
           </div>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* VARIANTE POR COR (existente — sem alterações)  */}
-          {/* ═══════════════════════════════════════════════ */}
+          {/* VARIANTE POR COR */}
           {variantType === 'color' && (
             <>
-              {/* Toggle Cor */}
               <div className='flex items-center gap-3 mb-4'>
                 <input
                   type='checkbox'
@@ -1095,11 +1254,9 @@ const AddProduct = () => {
                 </label>
               </div>
 
-              {/* Campos de Cor */}
               {hasColor && (
                 <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
                   
-                  {/* Toggle Cor Simples / Dupla */}
                   <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
                     <label className='flex items-center gap-2 cursor-pointer'>
                       <input
@@ -1128,7 +1285,6 @@ const AddProduct = () => {
                     </label>
                   </div>
 
-                  {/* Nome da Cor */}
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium'>Nome da Cor</label>
                     <input
@@ -1140,7 +1296,6 @@ const AddProduct = () => {
                     />
                   </div>
 
-                  {/* Seletor de Cores - Simples ou Dupla */}
                   {!isDualColor ? (
                     <>
                       <div className='flex flex-col gap-1'>
@@ -1162,7 +1317,6 @@ const AddProduct = () => {
                         </div>
                       </div>
 
-                      {/* Cores Rápidas - Simples */}
                       <div>
                         <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
                         <div className='flex flex-wrap gap-2'>
@@ -1221,7 +1375,6 @@ const AddProduct = () => {
                         </div>
                       </div>
 
-                      {/* Cores Rápidas - Duplas */}
                       <div>
                         <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
                         <div className='flex flex-wrap gap-2'>
@@ -1241,7 +1394,6 @@ const AddProduct = () => {
                     </>
                   )}
 
-                  {/* Preview da Cor */}
                   {color && (
                     <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
                       <ColorBall 
@@ -1262,12 +1414,9 @@ const AddProduct = () => {
             </>
           )}
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* 🆕 VARIANTE POR TAMANHO                        */}
-          {/* ═══════════════════════════════════════════════ */}
+          {/* VARIANTE POR TAMANHO */}
           {variantType === 'size' && (
             <>
-              {/* Toggle Tamanho */}
               <div className='flex items-center gap-3 mb-4'>
                 <input
                   type='checkbox'
@@ -1281,11 +1430,9 @@ const AddProduct = () => {
                 </label>
               </div>
 
-              {/* Campos de Tamanho */}
               {hasSize && (
                 <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
                   
-                  {/* Input Manual */}
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium'>Tamanho</label>
                     <input
@@ -1297,7 +1444,6 @@ const AddProduct = () => {
                     />
                   </div>
 
-                  {/* Tamanhos Rápidos */}
                   <div>
                     <p className='text-sm font-medium mb-2'>Tamanhos Rápidos:</p>
                     <div className='flex flex-wrap gap-2'>
@@ -1314,7 +1460,6 @@ const AddProduct = () => {
                     </div>
                   </div>
 
-                  {/* Preview do Tamanho */}
                   {sizeValue && (
                     <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
                       <span className='bg-primary text-white text-sm font-semibold px-3 py-1.5 rounded-lg'>

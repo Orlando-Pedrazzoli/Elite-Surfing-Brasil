@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X } from 'lucide-react';
+import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X, Truck, Package } from 'lucide-react';
 import { getGroupBySlug, getFiltersByGroup, filterDefinitions, filterProductsByFilters, getFilterLabel } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
@@ -83,6 +83,153 @@ const FilterAccordion = ({ filterDef, activeValues, onToggleValue, productCounts
 };
 
 // ═══════════════════════════════════════════════════════════════
+// 🆕 Componente de Filtros Globais (Frete Grátis, Disponibilidade, Preço)
+// ═══════════════════════════════════════════════════════════════
+const GlobalFiltersPanel = ({ globalFilters, setGlobalFilters, productStats, isMobile = false }) => {
+  const [priceOpen, setPriceOpen] = useState(false);
+
+  const toggleFilter = (key) => {
+    setGlobalFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const updatePrice = (key, value) => {
+    setGlobalFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div className='flex flex-col gap-1'>
+      {/* Frete Grátis */}
+      {productStats.freeShippingCount > 0 && (
+        <label
+          className={`flex items-center cursor-pointer py-2 px-2 rounded-lg transition-colors duration-150 ${
+            globalFilters.freeShipping ? 'bg-green-50 border border-green-200' : 'hover:bg-gray-50'
+          }`}
+        >
+          <input
+            type='checkbox'
+            checked={globalFilters.freeShipping}
+            onChange={() => toggleFilter('freeShipping')}
+            className={`form-checkbox ${isMobile ? 'h-5 w-5' : 'h-4 w-4'} text-green-600 rounded border-gray-300 focus:ring-green-500 transition-colors duration-150`}
+          />
+          <Truck className={`ml-2 ${isMobile ? 'w-5 h-5' : 'w-4 h-4'} ${
+            globalFilters.freeShipping ? 'text-green-600' : 'text-gray-400'
+          }`} />
+          <span className={`ml-2 ${isMobile ? 'text-base' : 'text-sm'} ${
+            globalFilters.freeShipping ? 'font-semibold text-green-700' : 'font-medium text-gray-700'
+          }`}>
+            Frete Grátis
+          </span>
+          <span className='ml-auto text-xs text-gray-400'>
+            ({productStats.freeShippingCount})
+          </span>
+        </label>
+      )}
+
+      {/* Disponibilidade */}
+      <label
+        className={`flex items-center cursor-pointer py-2 px-2 rounded-lg transition-colors duration-150 ${
+          globalFilters.inStockOnly ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+        }`}
+      >
+        <input
+          type='checkbox'
+          checked={globalFilters.inStockOnly}
+          onChange={() => toggleFilter('inStockOnly')}
+          className={`form-checkbox ${isMobile ? 'h-5 w-5' : 'h-4 w-4'} text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition-colors duration-150`}
+        />
+        <Package className={`ml-2 ${isMobile ? 'w-5 h-5' : 'w-4 h-4'} ${
+          globalFilters.inStockOnly ? 'text-blue-600' : 'text-gray-400'
+        }`} />
+        <span className={`ml-2 ${isMobile ? 'text-base' : 'text-sm'} ${
+          globalFilters.inStockOnly ? 'font-semibold text-blue-700' : 'font-medium text-gray-700'
+        }`}>
+          Em Estoque
+        </span>
+        <span className='ml-auto text-xs text-gray-400'>
+          ({productStats.inStockCount})
+        </span>
+      </label>
+
+      {/* Faixa de Preço */}
+      <div className='border-b border-gray-200 last:border-b-0'>
+        <button
+          type='button'
+          onClick={() => setPriceOpen(!priceOpen)}
+          className='w-full flex items-center justify-between py-3 text-left group'
+        >
+          <span className={`${isMobile ? 'text-base' : 'text-sm'} font-semibold text-gray-800 group-hover:text-primary transition-colors`}>
+            Faixa de Preço
+            {(globalFilters.minPrice || globalFilters.maxPrice) && (
+              <span className='ml-2 text-xs bg-primary text-white px-1.5 py-0.5 rounded-full'>
+                1
+              </span>
+            )}
+          </span>
+          <ChevronDown 
+            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${priceOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {priceOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className='overflow-hidden'
+            >
+              <div className='pb-3 flex items-center gap-2'>
+                <div className='flex-1'>
+                  <label className='text-xs text-gray-500 mb-1 block'>Mínimo</label>
+                  <div className='relative'>
+                    <span className='absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400'>R$</span>
+                    <input
+                      type='number'
+                      min='0'
+                      step='1'
+                      value={globalFilters.minPrice}
+                      onChange={e => updatePrice('minPrice', e.target.value)}
+                      placeholder={String(productStats.minPrice || 0)}
+                      className={`w-full pl-8 pr-2 py-2 rounded-lg border border-gray-300 focus:border-primary outline-none transition-colors ${isMobile ? 'text-base' : 'text-sm'}`}
+                    />
+                  </div>
+                </div>
+                <span className='text-gray-300 mt-5'>—</span>
+                <div className='flex-1'>
+                  <label className='text-xs text-gray-500 mb-1 block'>Máximo</label>
+                  <div className='relative'>
+                    <span className='absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400'>R$</span>
+                    <input
+                      type='number'
+                      min='0'
+                      step='1'
+                      value={globalFilters.maxPrice}
+                      onChange={e => updatePrice('maxPrice', e.target.value)}
+                      placeholder={String(productStats.maxPrice || 0)}
+                      className={`w-full pl-8 pr-2 py-2 rounded-lg border border-gray-300 focus:border-primary outline-none transition-colors ${isMobile ? 'text-base' : 'text-sm'}`}
+                    />
+                  </div>
+                </div>
+              </div>
+              {(globalFilters.minPrice || globalFilters.maxPrice) && (
+                <button
+                  type='button'
+                  onClick={() => setGlobalFilters(prev => ({ ...prev, minPrice: '', maxPrice: '' }))}
+                  className='text-xs text-gray-500 hover:text-primary mb-2 transition-colors'
+                >
+                  Limpar preço
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
 // 📄 GROUPPAGE PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 const GroupPage = () => {
@@ -90,47 +237,68 @@ const GroupPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, navigate } = useAppContext();
 
-  // Inicializar filtros a partir dos query params da URL
+  // Obter dados do grupo
+  const group = getGroupBySlug(groupSlug);
+
+  // Obter definições de filtros deste grupo
+  const filterDefs = useMemo(() => {
+    return getFiltersByGroup(groupSlug);
+  }, [groupSlug]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // STATE: Filtros do grupo (acordeões checkbox)
+  // ═══════════════════════════════════════════════════════════════
   const [activeFilters, setActiveFilters] = useState(() => {
     const initial = {};
     const defs = filterDefinitions[groupSlug] || [];
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
       if (paramValue) {
-        const validOption = fd.options.find(o => o.value === paramValue);
-        if (validOption) {
-          initial[fd.key] = [paramValue];
-        }
+        const values = paramValue.split(',').filter(v =>
+          fd.options.some(o => o.value === v)
+        );
+        if (values.length > 0) initial[fd.key] = values;
       }
     });
     return initial;
   });
 
-  // 🆕 FIX: Sincronizar filtros quando os searchParams mudam
-  // (ex: clicar "Ver Todos" na navbar navega para o mesmo pathname mas sem query params)
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 STATE: Filtros globais (frete grátis, disponibilidade, preço)
+  // ═══════════════════════════════════════════════════════════════
+  const [globalFilters, setGlobalFilters] = useState(() => ({
+    freeShipping: searchParams.get('freeShipping') === 'true',
+    inStockOnly: searchParams.get('inStock') === 'true',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+  }));
+
+  // Sincronizar filtros do grupo quando searchParams mudam
   useEffect(() => {
     const defs = filterDefinitions[groupSlug] || [];
     const fromUrl = {};
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
       if (paramValue) {
-        // Suporta múltiplos valores separados por vírgula (ex: ?tipo=shortboard,longboard)
         const values = paramValue.split(',').filter(v => {
           return fd.options.some(o => o.value === v);
         });
-        if (values.length > 0) {
-          fromUrl[fd.key] = values;
-        }
+        if (values.length > 0) fromUrl[fd.key] = values;
       }
     });
     setActiveFilters(fromUrl);
+
+    // Sincronizar filtros globais também
+    setGlobalFilters({
+      freeShipping: searchParams.get('freeShipping') === 'true',
+      inStockOnly: searchParams.get('inStock') === 'true',
+      minPrice: searchParams.get('minPrice') || '',
+      maxPrice: searchParams.get('maxPrice') || '',
+    });
   }, [searchParams, groupSlug]);
 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [mobileGridCols, setMobileGridCols] = useState(2);
-
-  // Obter dados do grupo
-  const group = getGroupBySlug(groupSlug);
 
   // SEO
   const seoData = getCollectionSEO(groupSlug);
@@ -141,11 +309,6 @@ const GroupPage = () => {
     { name: group?.name || groupSlug, url: `/collections/${groupSlug}` }
   ];
 
-  // Obter definições de filtros deste grupo
-  const filterDefs = useMemo(() => {
-    return getFiltersByGroup(groupSlug);
-  }, [groupSlug]);
-
   // Filtros visíveis (respeita parent-child)
   const visibleFilterDefs = useMemo(() => {
     return filterDefs.filter(fd => {
@@ -155,21 +318,81 @@ const GroupPage = () => {
     });
   }, [filterDefs, activeFilters]);
 
-  // Todos os produtos deste grupo (sem filtros aplicados)
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 PRODUTOS DO GRUPO — suporta tag groups e grupos normais
+  // ═══════════════════════════════════════════════════════════════
   const allGroupProducts = useMemo(() => {
+    if (!group) return [];
+
+    // 🆕 TAG GROUP: buscar produtos por tag (cross-category)
+    if (group.isTagGroup) {
+      return products.filter(product => {
+        const tags = product.tags || [];
+        return tags.includes(group.tagKey) && product.isMainVariant !== false;
+      });
+    }
+
+    // GRUPO NORMAL: buscar por campo group
     return products.filter(product => {
       if (product.group && product.group === groupSlug) {
         return product.isMainVariant !== false;
       }
       return false;
     });
-  }, [products, groupSlug]);
+  }, [products, groupSlug, group]);
 
-  // Produtos filtrados (com filtros aplicados)
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 ESTATÍSTICAS dos produtos (para contagens nos filtros globais)
+  // ═══════════════════════════════════════════════════════════════
+  const productStats = useMemo(() => {
+    let minPrice = Infinity;
+    let maxPrice = 0;
+    let freeShippingCount = 0;
+    let inStockCount = 0;
+
+    allGroupProducts.forEach(p => {
+      const price = p.offerPrice || p.price;
+      if (price < minPrice) minPrice = price;
+      if (price > maxPrice) maxPrice = price;
+      if (p.freeShipping) freeShippingCount++;
+      if (p.inStock && (p.stock || 0) > 0) inStockCount++;
+    });
+
+    return {
+      minPrice: minPrice === Infinity ? 0 : Math.floor(minPrice),
+      maxPrice: Math.ceil(maxPrice),
+      freeShippingCount,
+      inStockCount,
+    };
+  }, [allGroupProducts]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // PRODUTOS FILTRADOS (filtros do grupo + filtros globais)
+  // ═══════════════════════════════════════════════════════════════
   const groupProducts = useMemo(() => {
-    let filtered = filterProductsByFilters(allGroupProducts, activeFilters);
+    // 1. Aplicar filtros do grupo (acordeões)
+    let filtered = filterProductsByFilters(allGroupProducts, activeFilters, groupSlug);
 
-    // Ordenar: disponíveis primeiro, esgotados no final
+    // 2. 🆕 Aplicar filtros globais
+    if (globalFilters.freeShipping) {
+      filtered = filtered.filter(p => p.freeShipping === true);
+    }
+
+    if (globalFilters.inStockOnly) {
+      filtered = filtered.filter(p => p.inStock && (p.stock || 0) > 0);
+    }
+
+    if (globalFilters.minPrice) {
+      const min = Number(globalFilters.minPrice);
+      filtered = filtered.filter(p => (p.offerPrice || p.price) >= min);
+    }
+
+    if (globalFilters.maxPrice) {
+      const max = Number(globalFilters.maxPrice);
+      filtered = filtered.filter(p => (p.offerPrice || p.price) <= max);
+    }
+
+    // 3. Ordenar: disponíveis primeiro, esgotados no final
     return filtered.sort((a, b) => {
       const aIsInactive = !a.inStock || (a.stock || 0) <= 0;
       const bIsInactive = !b.inStock || (b.stock || 0) <= 0;
@@ -178,14 +401,18 @@ const GroupPage = () => {
       if (!aIsInactive && bIsInactive) return -1;
       return 0;
     });
-  }, [allGroupProducts, activeFilters]);
+  }, [allGroupProducts, activeFilters, globalFilters, groupSlug]);
 
-  // Contagem de produtos por filtro
+  // ═══════════════════════════════════════════════════════════════
+  // CONTAGEM de produtos por filtro
+  // 🆕 Suporta fieldPath para filtros que mapeiam campos diretos
+  // ═══════════════════════════════════════════════════════════════
   const getProductCountsForFilter = useCallback((filterKey) => {
     const counts = {};
     const filterDef = filterDefs.find(f => f.key === filterKey);
     if (!filterDef) return counts;
 
+    // Base: outros filtros ativos (excluindo o filtro atual)
     const otherFilters = {};
     Object.entries(activeFilters).forEach(([key, values]) => {
       if (key !== filterKey && values.length > 0) {
@@ -193,10 +420,31 @@ const GroupPage = () => {
       }
     });
 
-    const baseProducts = filterProductsByFilters(allGroupProducts, otherFilters);
+    let baseProducts = filterProductsByFilters(allGroupProducts, otherFilters, groupSlug);
+
+    // 🆕 Aplicar filtros globais na contagem também
+    if (globalFilters.freeShipping) {
+      baseProducts = baseProducts.filter(p => p.freeShipping === true);
+    }
+    if (globalFilters.inStockOnly) {
+      baseProducts = baseProducts.filter(p => p.inStock && (p.stock || 0) > 0);
+    }
+    if (globalFilters.minPrice) {
+      const min = Number(globalFilters.minPrice);
+      baseProducts = baseProducts.filter(p => (p.offerPrice || p.price) >= min);
+    }
+    if (globalFilters.maxPrice) {
+      const max = Number(globalFilters.maxPrice);
+      baseProducts = baseProducts.filter(p => (p.offerPrice || p.price) <= max);
+    }
 
     filterDef.options.forEach(option => {
       counts[option.value] = baseProducts.filter(product => {
+        // 🆕 fieldPath: contar usando campo direto do produto
+        if (filterDef.fieldPath) {
+          return product[filterDef.fieldPath] === option.value;
+        }
+
         const productFilters = product.filters instanceof Map
           ? Object.fromEntries(product.filters)
           : (product.filters || {});
@@ -205,9 +453,33 @@ const GroupPage = () => {
     });
 
     return counts;
-  }, [filterDefs, activeFilters, allGroupProducts]);
+  }, [filterDefs, activeFilters, allGroupProducts, globalFilters, groupSlug]);
 
-  // Toggle filtro + sincronizar URL
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 Sincronizar TODOS os filtros com a URL
+  // ═══════════════════════════════════════════════════════════════
+  const syncFiltersToUrl = useCallback((groupFilters, globals) => {
+    const params = new URLSearchParams();
+
+    // Filtros do grupo
+    Object.entries(groupFilters).forEach(([k, values]) => {
+      if (values.length === 1) {
+        params.set(k, values[0]);
+      } else if (values.length > 1) {
+        params.set(k, values.join(','));
+      }
+    });
+
+    // Filtros globais
+    if (globals.freeShipping) params.set('freeShipping', 'true');
+    if (globals.inStockOnly) params.set('inStock', 'true');
+    if (globals.minPrice) params.set('minPrice', globals.minPrice);
+    if (globals.maxPrice) params.set('maxPrice', globals.maxPrice);
+
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
+
+  // Toggle filtro do grupo + sincronizar URL
   const toggleFilterValue = useCallback((filterKey, value) => {
     setActiveFilters(prev => {
       const currentValues = prev[filterKey] || [];
@@ -233,35 +505,47 @@ const GroupPage = () => {
         if (updated[key].length === 0) delete updated[key];
       });
 
-      // Sincronizar query params na URL
-      const params = new URLSearchParams();
-      Object.entries(updated).forEach(([k, values]) => {
-        if (values.length === 1) {
-          params.set(k, values[0]);
-        } else if (values.length > 1) {
-          params.set(k, values.join(','));
-        }
-      });
-      setSearchParams(params, { replace: true });
-
+      syncFiltersToUrl(updated, globalFilters);
       return updated;
     });
-  }, [filterDefs, setSearchParams]);
+  }, [filterDefs, globalFilters, syncFiltersToUrl]);
+
+  // 🆕 Handler para filtros globais com sync à URL
+  const handleSetGlobalFilters = useCallback((updater) => {
+    setGlobalFilters(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      syncFiltersToUrl(activeFilters, next);
+      return next;
+    });
+  }, [activeFilters, syncFiltersToUrl]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
     setActiveFilters({});
+    setGlobalFilters({
+      freeShipping: false,
+      inStockOnly: false,
+      minPrice: '',
+      maxPrice: '',
+    });
     setSearchParams({}, { replace: true });
     setShowFilterPanel(false);
   };
 
-  // Total de filtros ativos
-  const totalActiveFilters = Object.values(activeFilters).reduce(
+  // Total de filtros ativos (grupo + globais)
+  const totalActiveGroupFilters = Object.values(activeFilters).reduce(
     (sum, values) => sum + values.length, 0
   );
+  const totalActiveGlobalFilters = 
+    (globalFilters.freeShipping ? 1 : 0) +
+    (globalFilters.inStockOnly ? 1 : 0) +
+    (globalFilters.minPrice || globalFilters.maxPrice ? 1 : 0);
+  const totalActiveFilters = totalActiveGroupFilters + totalActiveGlobalFilters;
 
   // Verificar se tem filtros disponíveis
   const hasFilters = filterDefs.length > 0;
+  // 🆕 Sempre mostrar sidebar se há filtros do grupo OU se há produtos com frete grátis
+  const showSidebar = hasFilters || productStats.freeShippingCount > 0 || allGroupProducts.length > 0;
 
   // Se grupo não existe
   if (!group) {
@@ -299,6 +583,20 @@ const GroupPage = () => {
   // ═══════════════════════════════════════════════════════════════
   const FilterPanel = ({ isMobile = false }) => (
     <div className='flex flex-col'>
+      {/* 🆕 Filtros Globais (Frete Grátis, Disponibilidade, Preço) */}
+      <GlobalFiltersPanel
+        globalFilters={globalFilters}
+        setGlobalFilters={handleSetGlobalFilters}
+        productStats={productStats}
+        isMobile={isMobile}
+      />
+
+      {/* Separador entre globais e filtros do grupo */}
+      {visibleFilterDefs.length > 0 && (
+        <div className='border-b border-gray-200 my-1' />
+      )}
+
+      {/* Filtros específicos do grupo (acordeões) */}
       {visibleFilterDefs.map((filterDef) => (
         <FilterAccordion
           key={filterDef.key}
@@ -348,7 +646,7 @@ const GroupPage = () => {
           {/* ═══════════════════════════════════════════════════════ */}
           <div className='sm:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-3 border-b border-gray-100 shadow-sm'>
             <div className='flex items-center justify-between'>
-              {hasFilters ? (
+              {showSidebar ? (
                 <button
                   onClick={() => setShowFilterPanel(true)}
                   className='flex items-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors duration-200'
@@ -444,7 +742,7 @@ const GroupPage = () => {
           <div className='flex flex-col md:flex-row gap-8 mt-4 sm:mt-0'>
             
             {/* Coluna Esquerda: Filtros Desktop */}
-            {hasFilters && (
+            {showSidebar && (
               <div className='hidden sm:block md:w-1/4 lg:w-1/5 flex-shrink-0'>
                 {/* Breadcrumb Desktop */}
                 <motion.nav
@@ -491,8 +789,8 @@ const GroupPage = () => {
                   <span>Voltar</span>
                 </button>
                 
-                {/* Breadcrumb Desktop (quando não há filtros laterais) */}
-                {!hasFilters && (
+                {/* Breadcrumb Desktop (quando não há sidebar) */}
+                {!showSidebar && (
                   <motion.nav
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -513,6 +811,7 @@ const GroupPage = () => {
               {/* Tags de Filtros Ativos */}
               {totalActiveFilters > 0 && (
                 <div className='flex flex-wrap gap-2 mb-4'>
+                  {/* Tags dos filtros do grupo */}
                   {Object.entries(activeFilters).map(([filterKey, values]) =>
                     values.map(value => {
                       const label = getFilterLabel(groupSlug, filterKey, value);
@@ -531,6 +830,41 @@ const GroupPage = () => {
                         </span>
                       );
                     })
+                  )}
+                  {/* 🆕 Tags dos filtros globais */}
+                  {globalFilters.freeShipping && (
+                    <span className='inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full'>
+                      <Truck className='w-3.5 h-3.5' />
+                      Frete Grátis
+                      <button 
+                        onClick={() => handleSetGlobalFilters(prev => ({ ...prev, freeShipping: false }))}
+                        className='ml-1 hover:text-green-900'
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {globalFilters.inStockOnly && (
+                    <span className='inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full'>
+                      Em Estoque
+                      <button 
+                        onClick={() => handleSetGlobalFilters(prev => ({ ...prev, inStockOnly: false }))}
+                        className='ml-1 hover:text-blue-900'
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {(globalFilters.minPrice || globalFilters.maxPrice) && (
+                    <span className='inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full'>
+                      R$ {globalFilters.minPrice || '0'} — R$ {globalFilters.maxPrice || '∞'}
+                      <button 
+                        onClick={() => handleSetGlobalFilters(prev => ({ ...prev, minPrice: '', maxPrice: '' }))}
+                        className='ml-1 hover:text-amber-900'
+                      >
+                        ✕
+                      </button>
+                    </span>
                   )}
                   <button
                     onClick={clearAllFilters}

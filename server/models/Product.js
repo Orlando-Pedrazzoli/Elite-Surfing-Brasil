@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -57,6 +56,24 @@ const productSchema = new mongoose.Schema(
       of: String,
       default: {},
     },
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🆕 TAGS TRANSVERSAIS — permite que um produto apareça em
+    //    coleções cross-group (SUP, Bodyboard, Outlet, etc.)
+    //    Ex: um Leash Stand Up com tags: ['sup'] aparece tanto
+    //    em /collections/leashes quanto /collections/sup
+    // ═══════════════════════════════════════════════════════════════
+    tags: {
+      type: [String],
+      default: [],
+    },
+
+    // 🆕 FRETE GRÁTIS — indica se o produto tem frete grátis
+    freeShipping: {
+      type: Boolean,
+      default: false,
+    },
+
     inStock: {
       type: Boolean,
       default: true,
@@ -113,6 +130,8 @@ productSchema.index({ category: 1, inStock: 1 });
 productSchema.index({ productFamily: 1 });
 productSchema.index({ group: 1 });
 productSchema.index({ sku: 1 });
+productSchema.index({ tags: 1 });            // 🆕 Para queries por tag
+productSchema.index({ freeShipping: 1 });     // 🆕 Para filtro de frete grátis
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

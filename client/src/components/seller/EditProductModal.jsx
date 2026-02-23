@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup } from '../../assets/assets';
+import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup, AVAILABLE_TAGS } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 
@@ -441,6 +441,12 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   const [hasSize, setHasSize] = useState(false);
   const [sizeValue, setSizeValue] = useState('');
 
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 TAGS TRANSVERSAIS + FRETE GRÁTIS
+  // ═══════════════════════════════════════════════════════════════
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [freeShipping, setFreeShipping] = useState(false);
+
   // Filtrar categorias baseado no grupo selecionado
   const filteredCategories = useMemo(() => {
     if (!selectedGroup) return [];
@@ -460,6 +466,38 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       return productFilters[filterDef.parentKey] === filterDef.parentValue;
     });
   }, [groupFilterDefs, productFilters]);
+
+  // 🆕 Sugerir tags automaticamente baseado nos filtros preenchidos
+  const suggestedTags = useMemo(() => {
+    const suggestions = [];
+    const filters = productFilters || {};
+
+    // SUP: se boardType contém 'standup' ou tipo contém 'sup'
+    if (filters.boardType === 'standup' || filters.tipo === 'sup') {
+      if (!selectedTags.includes('sup')) suggestions.push('sup');
+    }
+
+    // Bodyboard: se boardType contém 'bodyboard'
+    if (filters.boardType === 'bodyboard') {
+      if (!selectedTags.includes('bodyboard')) suggestions.push('bodyboard');
+    }
+
+    // Outlet: se tem desconto significativo (15%+)
+    if (price && offerPrice && Number(offerPrice) < Number(price) * 0.85) {
+      if (!selectedTags.includes('outlet')) suggestions.push('outlet');
+    }
+
+    return suggestions;
+  }, [productFilters, selectedTags, price, offerPrice]);
+
+  // 🆕 Toggle de tag
+  const toggleTag = (tagValue) => {
+    setSelectedTags(prev => 
+      prev.includes(tagValue) 
+        ? prev.filter(t => t !== tagValue) 
+        : [...prev, tagValue]
+    );
+  };
 
   // Carregar dados do produto
   useEffect(() => {
@@ -535,6 +573,10 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         setHasSize(false);
         setSizeValue('');
       }
+
+      // 🆕 Tags e Frete Grátis
+      setSelectedTags(product.tags || []);
+      setFreeShipping(product.freeShipping || false);
 
       // 🆕 Imagens existentes
       if (product.image && product.image.length > 0) {
@@ -684,6 +726,9 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               height: Number(dimensions.height) || 0,
             }
           : null,
+        // 🆕 Tags transversais + Frete grátis
+        tags: selectedTags,
+        freeShipping,
       };
 
       // Filtros
@@ -856,7 +901,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                 disabled={isSubmitting}
               >
                 <option value=''>Selecionar Grupo</option>
-                {groups.map((group) => (
+                {groups.filter(g => !g.isTagGroup).map((group) => (
                   <option key={group.id} value={group.slug}>
                     {group.name}
                   </option>
@@ -897,8 +942,9 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
           {/* ═══════════════════════════════════════════════════════════ */}
           {/* FILTROS DINÂMICOS                                          */}
+          {/* 🆕 Filtros com fieldPath (sourceGroup) são ignorados aqui  */}
           {/* ═══════════════════════════════════════════════════════════ */}
-          {selectedGroup && visibleFilters.length > 0 && (
+          {selectedGroup && visibleFilters.filter(fd => !fd.fieldPath).length > 0 && (
             <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
               <div className='flex items-center gap-2 mb-1'>
                 <svg className='w-5 h-5 text-blue-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
@@ -911,22 +957,26 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               </p>
 
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                {visibleFilters.map((filterDef) => (
-                  <div key={filterDef.key} className='flex flex-col gap-1'>
-                    <label className='text-sm font-medium text-gray-700'>{filterDef.label}</label>
-                    <select
-                      value={productFilters[filterDef.key] || ''}
-                      onChange={e => handleFilterChange(filterDef.key, e.target.value)}
-                      className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
-                      disabled={isSubmitting}
-                    >
-                      <option value=''>— Selecionar —</option>
-                      {filterDef.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                {visibleFilters.map((filterDef) => {
+                  // 🆕 Não mostrar filtros com fieldPath no Edit (sourceGroup é automático)
+                  if (filterDef.fieldPath) return null;
+                  return (
+                    <div key={filterDef.key} className='flex flex-col gap-1'>
+                      <label className='text-sm font-medium text-gray-700'>{filterDef.label}</label>
+                      <select
+                        value={productFilters[filterDef.key] || ''}
+                        onChange={e => handleFilterChange(filterDef.key, e.target.value)}
+                        className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
+                        disabled={isSubmitting}
+                      >
+                        <option value=''>— Selecionar —</option>
+                        {filterDef.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Preview dos filtros preenchidos */}
@@ -935,6 +985,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
                   {Object.entries(productFilters).map(([key, value]) => {
                     if (!value) return null;
                     const filterDef = groupFilterDefs.find(f => f.key === key);
+                    if (filterDef?.fieldPath) return null; // 🆕 Skip fieldPath filters
                     const option = filterDef?.options.find(o => o.value === value);
                     return (
                       <span 
@@ -1005,6 +1056,131 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               disabled={isSubmitting}
             />
             <p className='text-xs text-gray-500'>Defina 0 para produto esgotado</p>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* 🆕 TAGS TRANSVERSAIS + FRETE GRÁTIS                       */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          <div className='border border-green-200 bg-green-50/50 rounded-lg p-4 space-y-4'>
+            <div className='flex items-center gap-2 mb-1'>
+              <svg className='w-5 h-5 text-green-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' />
+              </svg>
+              <h3 className='text-base font-semibold text-green-800'>
+                Tags e Destaques
+              </h3>
+            </div>
+            <p className='text-xs text-green-600 -mt-2'>
+              Tags permitem que o produto apareça em coleções transversais (SUP, Bodyboard, Outlet)
+            </p>
+
+            {/* Frete Grátis — Toggle destacado */}
+            <div className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              freeShipping ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'
+            }`}>
+              <input
+                type='checkbox'
+                id='edit-freeShipping'
+                checked={freeShipping}
+                onChange={e => setFreeShipping(e.target.checked)}
+                className='w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer'
+                disabled={isSubmitting}
+              />
+              <div className='flex items-center gap-2'>
+                <svg className={`w-5 h-5 ${freeShipping ? 'text-green-600' : 'text-gray-400'}`} fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' />
+                </svg>
+                <label htmlFor='edit-freeShipping' className='cursor-pointer'>
+                  <span className={`text-base font-medium ${freeShipping ? 'text-green-700' : 'text-gray-700'}`}>
+                    Frete Grátis
+                  </span>
+                  <p className='text-xs text-gray-500'>
+                    Produto com frete grátis para todo o Brasil
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {/* Tags de Coleção */}
+            <div>
+              <p className='text-sm font-medium text-gray-700 mb-2'>Tags de Coleção:</p>
+              <div className='flex flex-wrap gap-2'>
+                {AVAILABLE_TAGS.map((tag) => {
+                  const isSelected = selectedTags.includes(tag.value);
+                  const isSuggested = suggestedTags.includes(tag.value);
+                  return (
+                    <button
+                      key={tag.value}
+                      type='button'
+                      onClick={() => !isSubmitting && toggleTag(tag.value)}
+                      disabled={isSubmitting}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-green-600 text-white shadow-sm'
+                          : isSuggested
+                            ? 'bg-green-100 text-green-700 border-2 border-green-400 border-dashed animate-pulse'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:border-green-400 hover:bg-green-50'
+                      } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={tag.description}
+                    >
+                      <span>{tag.icon}</span>
+                      <span>{tag.label}</span>
+                      {isSelected && <span className='ml-1'>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sugestão automática */}
+              {suggestedTags.length > 0 && (
+                <div className='mt-2 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg'>
+                  <span className='text-amber-600 text-xs'>💡</span>
+                  <p className='text-xs text-amber-700'>
+                    Sugestão baseada nos filtros: <strong>{suggestedTags.map(t => 
+                      AVAILABLE_TAGS.find(at => at.value === t)?.label
+                    ).join(', ')}</strong>
+                  </p>
+                  <button
+                    type='button'
+                    onClick={() => setSelectedTags(prev => [...new Set([...prev, ...suggestedTags])])}
+                    disabled={isSubmitting}
+                    className='ml-auto text-xs font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap'
+                  >
+                    Adicionar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Preview das tags selecionadas */}
+            {(selectedTags.length > 0 || freeShipping) && (
+              <div className='flex flex-wrap gap-2 pt-2 border-t border-green-200'>
+                {freeShipping && (
+                  <span className='inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium'>
+                    🚚 Frete Grátis
+                  </span>
+                )}
+                {selectedTags.map(tagValue => {
+                  const tag = AVAILABLE_TAGS.find(t => t.value === tagValue);
+                  return (
+                    <span 
+                      key={tagValue}
+                      className='inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium'
+                    >
+                      {tag?.icon} {tag?.label || tagValue}
+                      <button
+                        type='button'
+                        onClick={() => toggleTag(tagValue)}
+                        className='ml-0.5 hover:text-green-600'
+                        disabled={isSubmitting}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ═══════════════════════════════════════════════════════════ */}

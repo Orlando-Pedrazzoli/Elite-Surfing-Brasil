@@ -92,15 +92,21 @@ export const assets = {
 // 4. No GroupPage, os filtros aparecem como acordeões expansíveis
 //    e filtram os produtos em tempo real
 //
+// 🆕 FILTROS ESPECIAIS:
+//    - fieldPath: 'group' → filtra pelo campo product.group (não product.filters)
+//      Usado nos tag groups (bodyboard, sup, outlet) para filtrar por tipo de produto
+//
 // EXEMPLO DE PRODUTO NO MONGODB:
 // {
 //   name: "Leash Premium 6ft",
 //   group: "leashes",
 //   category: "Leash-6ft-6mm",
+//   tags: ["sup"],                          ← 🆕 tag transversal
+//   freeShipping: true,                     ← 🆕 frete grátis
 //   filters: {
-//     boardType: "shortboard",      ← vem de filterDefinitions.leashes[0]
-//     thickness: "6mm",             ← vem de filterDefinitions.leashes[1]
-//     length: "6-pes"               ← vem de filterDefinitions.leashes[2]
+//     boardType: "shortboard",
+//     thickness: "6mm",
+//     length: "6-pes"
 //   }
 // }
 // ═══════════════════════════════════════════════════════════════════
@@ -282,12 +288,14 @@ export const filterDefinitions = {
   ],
 
   // ═══════════════════════════════════════════════════════════════
-  // 🏊 BODYBOARD
+  // 🏊 BODYBOARD — 🆕 Tag Group (busca por tag, não por group)
+  //    O filtro sourceGroup filtra por product.group (de onde veio)
   // ═══════════════════════════════════════════════════════════════
   bodyboard: [
     {
-      key: 'tipo',
+      key: 'sourceGroup',
       label: 'Tipo de Produto',
+      fieldPath: 'group', // 🆕 filtra pelo campo product.group
       options: [
         { value: 'leashes', label: 'Leashes' },
         { value: 'capas', label: 'Capas' },
@@ -297,16 +305,18 @@ export const filterDefinitions = {
   ],
 
   // ═══════════════════════════════════════════════════════════════
-  // 🛶 STAND UP PADDLE
+  // 🛶 STAND UP PADDLE — 🆕 Tag Group
   // ═══════════════════════════════════════════════════════════════
   sup: [
     {
-      key: 'tipo',
+      key: 'sourceGroup',
       label: 'Tipo de Produto',
+      fieldPath: 'group', // 🆕 filtra pelo campo product.group
       options: [
         { value: 'leashes', label: 'Leashes' },
         { value: 'capas', label: 'Capas' },
         { value: 'decks', label: 'Decks' },
+        { value: 'acessorios', label: 'Acessórios' },
       ],
     },
   ],
@@ -346,21 +356,20 @@ export const filterDefinitions = {
   ],
 
   // ═══════════════════════════════════════════════════════════════
-  // 🏷️ OUTLET
+  // 🏷️ OUTLET — 🆕 Tag Group
   // ═══════════════════════════════════════════════════════════════
   outlet: [
     {
-      key: 'productType',
+      key: 'sourceGroup',
       label: 'Tipo de Produto',
+      fieldPath: 'group', // 🆕 filtra pelo campo product.group
       options: [
-        { value: 'deck', label: 'Decks' },
-        { value: 'leash', label: 'Leashes' },
-        { value: 'capa', label: 'Capas' },
-        { value: 'sarcofago', label: 'Sarcófagos' },
-        { value: 'quilha', label: 'Quilhas' },
-        { value: 'acessorio', label: 'Acessórios' },
-        { value: 'bodyboard', label: 'Bodyboard' },
-        { value: 'sup', label: 'Stand Up Paddle' },
+        { value: 'decks', label: 'Decks' },
+        { value: 'leashes', label: 'Leashes' },
+        { value: 'capas', label: 'Capas' },
+        { value: 'sarcofagos', label: 'Sarcófagos' },
+        { value: 'quilhas', label: 'Quilhas' },
+        { value: 'acessorios', label: 'Acessórios' },
       ],
     },
   ],
@@ -368,6 +377,13 @@ export const filterDefinitions = {
 
 // ═══════════════════════════════════════════════════════════════════
 // 🆕 GROUPS - Coleções principais (aparecem no CollectionsGrid)
+// ═══════════════════════════════════════════════════════════════════
+//
+// 🆕 isTagGroup: true  → Busca produtos por TAG em vez de por group
+//    tagKey: 'sup'      → Qual tag procurar nos produtos
+//
+//    Isto resolve o problema de SUP, Bodyboard e Outlet que agregam
+//    produtos de múltiplos grupos (leashes, decks, capas, etc.)
 // ═══════════════════════════════════════════════════════════════════
 export const groups = [
   {
@@ -412,10 +428,15 @@ export const groups = [
     description: 'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
     image: quilhas_card,
   },
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 TAG GROUPS — Buscam produtos por tag, não por group
+  // ═══════════════════════════════════════════════════════════════
   {
     id: 'bodyboard',
     name: 'Bodyboard',
     slug: 'bodyboard',
+    isTagGroup: true,
+    tagKey: 'bodyboard',
     description: 'Tudo para bodyboard: pranchas, leashes, pés de pato e acessórios. Qualidade premium para todas as ondas.',
     image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
@@ -423,6 +444,8 @@ export const groups = [
     id: 'sup',
     name: 'Stand Up Paddle',
     slug: 'sup',
+    isTagGroup: true,
+    tagKey: 'sup',
     description: 'Pranchas, remos, leashes e acessórios de Stand Up Paddle. Para passeio, race e surf.',
     image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
@@ -430,9 +453,27 @@ export const groups = [
     id: 'outlet',
     name: 'Outlet',
     slug: 'outlet',
+    isTagGroup: true,
+    tagKey: 'outlet',
     description: 'Produtos com desconto especial. Aproveite as melhores ofertas da Elite Surfing Brasil!',
     image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// 🆕 TAGS DISPONÍVEIS — Para o AddProduct e para referência geral
+// ═══════════════════════════════════════════════════════════════════
+export const AVAILABLE_TAGS = [
+  { value: 'sup', label: 'Stand Up Paddle', icon: '🛶',
+    description: 'Aparece na coleção Stand Up Paddle' },
+  { value: 'bodyboard', label: 'Bodyboard', icon: '🏊',
+    description: 'Aparece na coleção Bodyboard' },
+  { value: 'outlet', label: 'Outlet', icon: '🏷️',
+    description: 'Aparece na coleção Outlet (com desconto)' },
+  { value: 'lancamento', label: 'Lançamento', icon: '🆕',
+    description: 'Destaque como produto novo' },
+  { value: 'bestseller', label: 'Mais Vendido', icon: '⭐',
+    description: 'Destaque como mais vendido' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -457,7 +498,6 @@ export const categories = [
   
   // ═══ LEASHES ═══
   { text: 'Leash Shortboard / Híbridas', path: 'Leash-Shortboard-Hibridas', group: 'leashes' },
-
   { text: 'Leash Fun / Mini Long', path: 'Leash-Fun-MiniLong', group: 'leashes' },
   { text: 'Leash Longboard', path: 'Leash-Longboard', group: 'leashes' },
   { text: 'Leash Stand Up', path: 'Leash-StandUp', group: 'leashes' },
@@ -560,16 +600,21 @@ export const getFilterLabel = (groupSlug, filterKey, value) => {
 
 /**
  * 🆕 Filtrar produtos por filtros selecionados
+ *    Suporta fieldPath para filtros que mapeiam campos diretos do produto
  * @param {Array} products - Array de produtos
  * @param {Object} activeFilters - Ex: { boardType: ['shortboard'], thickness: ['6mm', '7mm'] }
+ * @param {string} groupSlug - Slug do grupo (para verificar fieldPath)
  * @returns {Array} Produtos filtrados
  */
-export const filterProductsByFilters = (products, activeFilters) => {
+export const filterProductsByFilters = (products, activeFilters, groupSlug) => {
   const activeKeys = Object.keys(activeFilters).filter(
     key => activeFilters[key].length > 0
   );
   
   if (activeKeys.length === 0) return products;
+
+  // Obter definições de filtros para verificar fieldPath
+  const defs = filterDefinitions[groupSlug] || [];
   
   return products.filter(product => {
     const productFilters = product.filters instanceof Map 
@@ -578,6 +623,15 @@ export const filterProductsByFilters = (products, activeFilters) => {
     
     return activeKeys.every(filterKey => {
       const selectedValues = activeFilters[filterKey];
+
+      // 🆕 Verificar se o filtro tem fieldPath (ex: sourceGroup → product.group)
+      const filterDef = defs.find(f => f.key === filterKey);
+      if (filterDef?.fieldPath) {
+        const fieldValue = product[filterDef.fieldPath];
+        return fieldValue && selectedValues.includes(fieldValue);
+      }
+
+      // Filtro normal: busca em product.filters
       const productValue = productFilters[filterKey];
       return productValue && selectedValues.includes(productValue);
     });
@@ -589,11 +643,21 @@ export const filterProductsByFilters = (products, activeFilters) => {
  * @param {Array} products - Produtos do grupo
  * @param {string} filterKey - Key do filtro
  * @param {string} filterValue - Valor a contar
+ * @param {string} groupSlug - Slug do grupo (para verificar fieldPath)
  * @returns {number}
  */
-export const countProductsByFilter = (products, filterKey, filterValue) => {
+export const countProductsByFilter = (products, filterKey, filterValue, groupSlug) => {
+  const defs = filterDefinitions[groupSlug] || [];
+  const filterDef = defs.find(f => f.key === filterKey);
+
   return products.filter(product => {
     if (product.isMainVariant === false) return false;
+
+    // 🆕 fieldPath: buscar campo direto do produto
+    if (filterDef?.fieldPath) {
+      return product[filterDef.fieldPath] === filterValue;
+    }
+
     const productFilters = product.filters instanceof Map 
       ? Object.fromEntries(product.filters) 
       : (product.filters || {});
