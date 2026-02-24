@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
-import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode, FileText, Clock } from 'lucide-react';
+import ShippingCalculator from '../components/ShippingCalculator';
+import { MapPin, Plus, Edit3, ChevronDown, ChevronUp, Truck, Shield, CreditCard, User, QrCode, FileText, Clock, Package } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
 const Cart = () => {
@@ -31,7 +32,7 @@ const Cart = () => {
   const [addresses, setAddresses] = useState([]);
   const [showAddressList, setShowAddressList] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('pix'); // ✅ PIX como default
+  const [paymentMethod, setPaymentMethod] = useState('pix');
   const [promoCode, setPromoCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,16 +41,14 @@ const Cart = () => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [guestAddress, setGuestAddress] = useState(null);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
-  
-  // Estado para endereço de guest guardado no servidor
   const [guestAddressId, setGuestAddressId] = useState(null);
-
-  // Estado para countdown de redirecionamento
   const [redirectCountdown, setRedirectCountdown] = useState(3);
-  
+
+  // ═══ FRETE — Melhor Envio ═══
+  const [selectedShipping, setSelectedShipping] = useState(null);
+
   const validPromoCode = 'BROTHER';
 
-  // Verificar se carrinho está vazio
   const isCartEmpty = !products.length || !cartItems || Object.keys(cartItems).length === 0;
 
   // Redirecionamento automático quando carrinho está vazio
@@ -69,7 +68,6 @@ const Cart = () => {
           return prev - 1;
         });
       }, 1000);
-
       return () => clearInterval(timer);
     } else {
       setRedirectCountdown(3);
@@ -93,6 +91,11 @@ const Cart = () => {
       loadUserAddresses();
     }
   }, [products, cartItems, user]);
+
+  // Resetar frete quando carrinho muda
+  useEffect(() => {
+    setSelectedShipping(null);
+  }, [cartItems]);
 
   const updateCartArray = () => {
     const tempArray = Object.keys(cartItems)
@@ -122,8 +125,8 @@ const Cart = () => {
           const savedGuestAddress = localStorage.getItem('guest_checkout_address');
           if (savedGuestAddress) {
             const guestAddr = JSON.parse(savedGuestAddress);
-            const existingMatch = data.addresses.find(a => 
-              a.street === guestAddr.street && 
+            const existingMatch = data.addresses.find(a =>
+              a.street === guestAddr.street &&
               a.zipcode === guestAddr.zipcode
             );
             if (existingMatch) {
@@ -159,7 +162,7 @@ const Cart = () => {
   };
 
   // ═══════════════════════════════════════════════
-  // CÁLCULOS DE TOTAL — com PIX 10% e cupom
+  // CÁLCULOS DE TOTAL — com PIX 10%, cupom e FRETE
   // ═══════════════════════════════════════════════
   const getSubtotal = () => parseFloat(getCartAmount());
 
@@ -174,11 +177,16 @@ const Cart = () => {
     return afterPromo * PIX_DISCOUNT;
   };
 
+  const getShippingCost = () => {
+    return selectedShipping ? Number(selectedShipping.price) : 0;
+  };
+
   const calculateTotal = () => {
     const subtotal = getSubtotal();
     const promoDisc = getPromoDiscount();
     const pixDisc = getPixDiscount();
-    return Math.max(0, subtotal - promoDisc - pixDisc).toFixed(2);
+    const shipping = getShippingCost();
+    return Math.max(0, subtotal - promoDisc - pixDisc + shipping).toFixed(2);
   };
 
   const handleQuantityChange = (productId, newQuantity) => {
@@ -200,17 +208,17 @@ const Cart = () => {
 
   const validateStockBeforeCheckout = () => {
     const errors = [];
-    
+
     for (const product of cartArray) {
       const availableStock = product.stock || 0;
-      
+
       if (availableStock === 0) {
         errors.push(`${product.name} está esgotado`);
       } else if (product.quantity > availableStock) {
         errors.push(`${product.name}: apenas ${availableStock} disponível(eis)`);
       }
     }
-    
+
     return errors;
   };
 
@@ -224,17 +232,25 @@ const Cart = () => {
     return !!(user ? selectedAddress : guestAddress);
   };
 
+  // Callback do ShippingCalculator
+  const handleShippingSelect = (option) => {
+    setSelectedShipping(option);
+  };
+
   // =============================================================================
-  // HANDLE PLACE ORDER - SUPORTA GUEST CHECKOUT + PIX/BOLETO/CARTÃO
+  // HANDLE PLACE ORDER
   // =============================================================================
   const handlePlaceOrder = async () => {
     const currentAddress = getCurrentAddress();
-    
+
     if (!currentAddress) {
       return toast.error('Por favor, adicione um endereço de entrega.');
     }
     if (cartArray.length === 0) {
       return toast.error('Seu carrinho está vazio.');
+    }
+    if (!selectedShipping) {
+      return toast.error('Por favor, calcule e selecione uma opção de frete.');
     }
 
     const stockErrors = validateStockBeforeCheckout();
@@ -244,12 +260,13 @@ const Cart = () => {
     }
 
     setIsProcessing(true);
-    
+
     try {
       const subtotal = getSubtotal();
       const promoDisc = getPromoDiscount();
       const pixDisc = getPixDiscount();
-      const finalAmount = Math.max(0, subtotal - promoDisc - pixDisc);
+      const shipping = getShippingCost();
+      const finalAmount = Math.max(0, subtotal - promoDisc - pixDisc + shipping);
 
       const orderData = {
         items: cartArray.map(item => ({
@@ -264,38 +281,40 @@ const Cart = () => {
         pixDiscountPercentage: paymentMethod === 'pix' ? PIX_DISCOUNT * 100 : 0,
         promoCode: discountApplied ? promoCode.toUpperCase() : '',
         paymentType: 'Online',
-        paymentMethod: paymentMethod, // 'pix', 'boleto', ou 'card'
+        paymentMethod: paymentMethod,
         isPaid: false,
+        // ═══ DADOS DE FRETE ═══
+        shippingCost: shipping,
+        shippingMethod: selectedShipping.name,
+        shippingCarrier: selectedShipping.carrier,
+        shippingDeliveryDays: selectedShipping.deliveryDays,
+        shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
       };
 
       let endpoint;
 
       if (user) {
-        // ═══ UTILIZADOR LOGADO ═══
         orderData.userId = user._id;
         orderData.address = selectedAddress._id;
         orderData.isGuestOrder = false;
         endpoint = '/api/order/stripe';
-        
       } else {
-        // ═══ GUEST CHECKOUT ═══
-        const addressResponse = await axios.post('/api/address/guest', { 
-          address: currentAddress 
+        const addressResponse = await axios.post('/api/address/guest', {
+          address: currentAddress
         });
-        
+
         if (!addressResponse.data.success) {
           throw new Error(addressResponse.data.message || 'Erro ao salvar endereço');
         }
-        
+
         const addressId = addressResponse.data.addressId;
-        
+
         orderData.isGuestOrder = true;
         orderData.guestEmail = currentAddress.email;
         orderData.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
         orderData.guestPhone = currentAddress.phone;
         orderData.address = addressId;
-        
-        // ✅ ROTA GUEST: Sem middleware de auth
+
         endpoint = '/api/order/guest/stripe';
       }
 
@@ -305,24 +324,23 @@ const Cart = () => {
         const emptyCart = {};
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
-        
+
         if (!user && currentAddress.email) {
           localStorage.setItem('guest_checkout_email', currentAddress.email);
         }
-        
+
         window.location.replace(response.data.url);
       } else {
         toast.error(response.data.message || 'Falha ao iniciar o pagamento.');
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
-      
+
       if (error.response?.status === 401 && user) {
         toast.error('Sessão expirada. Por favor, faça login novamente.');
         if (isMobile) localStorage.removeItem('mobile_auth_token');
         setShowUserLogin(true);
       } else if (error.response?.status === 404) {
-        // Rota não encontrada — provável problema de guest endpoint
         console.error('❌ Endpoint não encontrado:', error.response?.config?.url);
         toast.error('Erro no servidor. Tente novamente ou entre em contato.');
       } else {
@@ -348,7 +366,6 @@ const Cart = () => {
     toast('Cupom removido.');
   };
 
-  // ✅ ATUALIZADO: Texto do botão para PIX, Boleto e Cartão
   const getPaymentButtonText = () => {
     if (isProcessing) return 'Processando...';
     switch (paymentMethod) {
@@ -359,7 +376,6 @@ const Cart = () => {
     }
   };
 
-  // ✅ Ícone do botão baseado no método
   const getPaymentButtonIcon = () => {
     switch (paymentMethod) {
       case 'pix': return <QrCode className='w-5 h-5' />;
@@ -369,10 +385,9 @@ const Cart = () => {
     }
   };
 
-  // Handler para salvar endereço
   const handleSaveAddress = async (addressData) => {
     setIsAddressLoading(true);
-    
+
     try {
       if (user) {
         if (editingAddress) {
@@ -393,7 +408,7 @@ const Cart = () => {
         localStorage.setItem('guest_checkout_address', JSON.stringify(addressData));
         toast.success('Endereço adicionado!');
       }
-      
+
       setShowAddressModal(false);
       setEditingAddress(null);
     } catch (error) {
@@ -414,7 +429,6 @@ const Cart = () => {
     setShowAddressModal(true);
   };
 
-  // Helper: verificar se cor é clara
   const isLightColor = (color) => {
     if (!color) return false;
     const hex = color.replace('#', '');
@@ -431,7 +445,7 @@ const Cart = () => {
     const isLight1 = isLightColor(code1);
     const isLight2 = isLightColor(code2);
     const needsBorder = isLight1 || (isDual && isLight2);
-    
+
     return (
       <div
         className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white shadow-sm ${
@@ -441,14 +455,14 @@ const Cart = () => {
         title={title}
       >
         {isDual ? (
-          <div 
+          <div
             className='w-full h-full rounded-full overflow-hidden'
             style={{
               background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
             }}
           />
         ) : (
-          <div 
+          <div
             className='w-full h-full rounded-full'
             style={{ backgroundColor: code1 || '#ccc' }}
           />
@@ -457,7 +471,7 @@ const Cart = () => {
     );
   };
 
-  // Carrinho vazio com redirecionamento automático
+  // Carrinho vazio
   if (isCartEmpty) {
     return (
       <>
@@ -466,7 +480,7 @@ const Cart = () => {
           <img src={assets.empty_cart} alt='Carrinho vazio' className='w-56 sm:w-64 md:w-72 mb-6 max-w-full' />
           <h3 className='text-xl sm:text-2xl font-semibold mb-3 text-gray-700'>Seu carrinho está vazio!</h3>
           <p className='text-gray-600 mb-4 max-w-md'>Você ainda não adicionou produtos ao carrinho.</p>
-          
+
           <div className='mb-6 flex items-center gap-2 text-gray-500'>
             <svg className='animate-spin h-4 w-4' viewBox='0 0 24 24'>
               <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' fill='none' />
@@ -485,7 +499,6 @@ const Cart = () => {
 
   const currentAddress = getCurrentAddress();
 
-  // Formatar endereço brasileiro
   const formatBrazilianAddress = (addr) => {
     if (!addr) return null;
     return (
@@ -513,7 +526,6 @@ const Cart = () => {
     <>
       <SEO title={seoConfig.cart.title} description={seoConfig.cart.description} url={seoConfig.cart.url} noindex={true} />
 
-      {/* Modal de Endereço */}
       <AddressFormModal
         isOpen={showAddressModal}
         onClose={() => {
@@ -531,32 +543,18 @@ const Cart = () => {
         <div className='max-w-2xl mx-auto mb-8'>
           <div className='flex items-center justify-center'>
             <div className='flex items-center'>
-              <div className='flex items-center justify-center w-8 h-8 bg-primary text-white rounded-full text-sm font-bold'>
-                1
-              </div>
+              <div className='flex items-center justify-center w-8 h-8 bg-primary text-white rounded-full text-sm font-bold'>1</div>
               <span className='ml-2 text-sm font-medium text-primary'>Carrinho</span>
             </div>
             <div className={`w-16 h-1 mx-3 rounded ${hasAddress() ? 'bg-primary' : 'bg-gray-300'}`}></div>
             <div className='flex items-center'>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                hasAddress() ? 'bg-primary text-white' : 'bg-gray-300 text-gray-500'
-              }`}>
-                2
-              </div>
-              <span className={`ml-2 text-sm font-medium ${hasAddress() ? 'text-primary' : 'text-gray-500'}`}>
-                Endereço
-              </span>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${hasAddress() ? 'bg-primary text-white' : 'bg-gray-300 text-gray-500'}`}>2</div>
+              <span className={`ml-2 text-sm font-medium ${hasAddress() ? 'text-primary' : 'text-gray-500'}`}>Endereço</span>
             </div>
-            <div className={`w-16 h-1 mx-3 rounded ${hasAddress() ? 'bg-primary' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 mx-3 rounded ${selectedShipping ? 'bg-primary' : 'bg-gray-300'}`}></div>
             <div className='flex items-center'>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                hasAddress() ? 'bg-primary text-white' : 'bg-gray-300 text-gray-500'
-              }`}>
-                3
-              </div>
-              <span className={`ml-2 text-sm font-medium ${hasAddress() ? 'text-primary' : 'text-gray-500'}`}>
-                Pagamento
-              </span>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${selectedShipping ? 'bg-primary text-white' : 'bg-gray-300 text-gray-500'}`}>3</div>
+              <span className={`ml-2 text-sm font-medium ${selectedShipping ? 'text-primary' : 'text-gray-500'}`}>Pagamento</span>
             </div>
           </div>
         </div>
@@ -599,26 +597,26 @@ const Cart = () => {
                           />
                         )}
                       </div>
-                      
+
                       <div className='ml-4 flex-grow'>
                         <h3 className='font-semibold text-lg text-gray-800'>{product.name}</h3>
-                        
+
                         {product.color && (
                           <p className='text-sm text-gray-500 mt-0.5'>Cor: {product.color}</p>
                         )}
-                        
-                        <p className='text-sm text-gray-500 mt-1'>Peso: {product.weight || 'N/A'}</p>
-                        
+
+                        <p className='text-sm text-gray-500 mt-1'>Peso: {product.weight || 'N/A'}g</p>
+
                         {isLowStock && !hasStockWarning && (
                           <p className='text-xs text-orange-600 font-medium mt-1'>Últimas {availableStock} unidades!</p>
                         )}
-                        
+
                         {hasStockWarning && (
                           <p className='text-xs text-red-600 font-medium mt-1 bg-red-100 px-2 py-1 rounded'>
                             {hasStockWarning}
                           </p>
                         )}
-                        
+
                         <p className='font-medium text-gray-700 mt-2 text-base sm:hidden'>
                           {formatBRL(product.offerPrice * product.quantity)}
                         </p>
@@ -636,8 +634,8 @@ const Cart = () => {
                           }`}
                         >
                           {[...Array(Math.max(availableStock, product.quantity, 1)).keys()].map(num => (
-                            <option 
-                              key={num + 1} 
+                            <option
+                              key={num + 1}
                               value={num + 1}
                               disabled={num + 1 > availableStock}
                             >
@@ -708,7 +706,6 @@ const Cart = () => {
                       </div>
                     </div>
 
-                    {/* Lista de endereços alternativos (apenas para users logados) */}
                     {user && addresses.length > 1 && (
                       <div>
                         <button
@@ -718,7 +715,7 @@ const Cart = () => {
                           <span>Escolher outro endereço ({addresses.length})</span>
                           {showAddressList ? <ChevronUp className='w-4 h-4' /> : <ChevronDown className='w-4 h-4' />}
                         </button>
-                        
+
                         {showAddressList && (
                           <div className='mt-2 border border-gray-200 rounded-lg overflow-hidden'>
                             {addresses.map(address => (
@@ -727,6 +724,7 @@ const Cart = () => {
                                 onClick={() => {
                                   setSelectedAddress(address);
                                   setShowAddressList(false);
+                                  setSelectedShipping(null);
                                 }}
                                 className={`p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
                                   selectedAddress?._id === address._id ? 'bg-primary/5' : ''
@@ -759,7 +757,7 @@ const Cart = () => {
                       <MapPin className='w-8 h-8 text-gray-400' />
                     </div>
                     <p className='text-gray-600 mb-4'>
-                      {user 
+                      {user
                         ? 'Adicione um endereço para continuar'
                         : 'Adicione seus dados de entrega'
                       }
@@ -775,17 +773,53 @@ const Cart = () => {
                 )}
               </div>
 
+              {/* ═══════════════════════════════════════════════ */}
+              {/* FRETE — Melhor Envio                            */}
+              {/* ═══════════════════════════════════════════════ */}
+              {hasAddress() && (
+                <div className='mb-6 border-b pb-6 border-gray-200'>
+                  <div className='flex items-center gap-2 mb-4'>
+                    <Package className='w-5 h-5 text-primary' />
+                    <h3 className='font-semibold text-gray-700'>Frete</h3>
+                  </div>
+
+                  <ShippingCalculator
+                    cartProducts={cartArray}
+                    onShippingSelect={handleShippingSelect}
+                  />
+
+                  {selectedShipping && (
+                    <div className='mt-3 p-3 bg-green-50 border border-green-200 rounded-lg'>
+                      <div className='flex items-center justify-between'>
+                        <div className='flex items-center gap-2'>
+                          <span>{selectedShipping.icon}</span>
+                          <div>
+                            <p className='text-sm font-medium text-green-800'>
+                              {selectedShipping.carrier} — {selectedShipping.name}
+                            </p>
+                            <p className='text-xs text-green-600'>{selectedShipping.deliveryText}</p>
+                          </div>
+                        </div>
+                        <span className='text-sm font-bold text-green-800'>
+                          {formatBRL(selectedShipping.price)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Promo Code */}
               <div className='mb-6 border-b pb-6 border-gray-200'>
                 <h3 className='font-semibold text-gray-700 mb-3'>Cupom de Desconto</h3>
                 <div className='flex w-full'>
-                  <input 
-                    type='text' 
-                    value={promoCode} 
-                    onChange={e => setPromoCode(e.target.value)} 
-                    placeholder='Digite o cupom' 
-                    disabled={discountApplied} 
-                    className='flex-1 min-w-0 border border-gray-300 rounded-l-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 disabled:bg-gray-100' 
+                  <input
+                    type='text'
+                    value={promoCode}
+                    onChange={e => setPromoCode(e.target.value)}
+                    placeholder='Digite o cupom'
+                    disabled={discountApplied}
+                    className='flex-1 min-w-0 border border-gray-300 rounded-l-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 disabled:bg-gray-100'
                   />
                   {discountApplied ? (
                     <button onClick={handleRemovePromo} className='bg-red-500 text-white px-5 py-2.5 rounded-r-lg hover:bg-red-600 transition-all duration-300 font-medium active:scale-95 flex-shrink-0'>
@@ -800,14 +834,14 @@ const Cart = () => {
               </div>
 
               {/* ═══════════════════════════════════════════════ */}
-              {/* FORMA DE PAGAMENTO — PIX + Boleto + Cartão     */}
+              {/* FORMA DE PAGAMENTO                              */}
               {/* ═══════════════════════════════════════════════ */}
-              {hasAddress() && (
+              {hasAddress() && selectedShipping && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <h3 className='font-semibold text-gray-700 mb-3'>Forma de Pagamento</h3>
                   <div className='space-y-3'>
 
-                    {/* ═══ PIX ═══ */}
+                    {/* PIX */}
                     <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='pix' checked={paymentMethod === 'pix'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
@@ -831,7 +865,7 @@ const Cart = () => {
                       </div>
                     </label>
 
-                    {/* ═══ CARTÃO ═══ */}
+                    {/* CARTÃO */}
                     <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='card' checked={paymentMethod === 'card'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
@@ -857,7 +891,7 @@ const Cart = () => {
                       )}
                     </label>
 
-                    {/* ═══ BOLETO ═══ */}
+                    {/* BOLETO */}
                     <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${paymentMethod === 'boleto' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                       <input type='radio' name='paymentMethod' value='boleto' checked={paymentMethod === 'boleto'} onChange={e => setPaymentMethod(e.target.value)} className='sr-only' />
                       <div className='flex items-center flex-1'>
@@ -878,7 +912,6 @@ const Cart = () => {
                       )}
                     </label>
 
-                    {/* Info extra para Boleto */}
                     {paymentMethod === 'boleto' && (
                       <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800'>
                         <Clock className='w-4 h-4 mt-0.5 flex-shrink-0' />
@@ -924,6 +957,18 @@ const Cart = () => {
                   </div>
                 )}
 
+                {selectedShipping && (
+                  <div className='flex justify-between items-center text-gray-700 mb-3'>
+                    <span className='flex items-center gap-1'>
+                      <Truck className='w-4 h-4' />
+                      Frete ({selectedShipping.carrier}):
+                    </span>
+                    <span className='font-medium text-lg'>
+                      {formatBRL(getShippingCost())}
+                    </span>
+                  </div>
+                )}
+
                 <div className='flex justify-between font-bold text-xl mt-5 pt-3 border-t border-gray-200'>
                   <span>Total:</span>
                   <span className='text-primary-dark'>
@@ -931,21 +976,18 @@ const Cart = () => {
                   </span>
                 </div>
 
-                {/* Info parcelamento cartão */}
                 {paymentMethod === 'card' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
                     ou até 10x de {formatBRL(parseFloat(calculateTotal()) / 10)} sem juros
                   </p>
                 )}
 
-                {/* Info economia PIX */}
                 {paymentMethod === 'pix' && (
                   <p className='text-xs text-green-600 mt-1 text-right font-medium'>
                     Você economiza {formatBRL(getPixDiscount())} com PIX!
                   </p>
                 )}
 
-                {/* Info boleto */}
                 {paymentMethod === 'boleto' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
                     Pagamento via boleto bancário • Vence em 3 dias
@@ -956,9 +998,9 @@ const Cart = () => {
               {/* Checkout Button */}
               <button
                 onClick={handlePlaceOrder}
-                disabled={isProcessing || !hasAddress() || cartArray.length === 0 || Object.keys(stockWarnings).length > 0}
+                disabled={isProcessing || !hasAddress() || !selectedShipping || cartArray.length === 0 || Object.keys(stockWarnings).length > 0}
                 className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white text-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2
-                  ${isProcessing || !hasAddress() || cartArray.length === 0 || Object.keys(stockWarnings).length > 0
+                  ${isProcessing || !hasAddress() || !selectedShipping || cartArray.length === 0 || Object.keys(stockWarnings).length > 0
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-primary hover:bg-primary-dull active:scale-[0.98]'
                   }`}
@@ -973,6 +1015,8 @@ const Cart = () => {
                   </>
                 ) : !hasAddress() ? (
                   <span>Adicione um endereço</span>
+                ) : !selectedShipping ? (
+                  <span>Calcule o frete acima</span>
                 ) : (
                   <>
                     {getPaymentButtonIcon()}

@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
-import { calculateShipping, formatCep, isValidCep } from '../utils/shippingUtils';
+import { useAppContext } from '../context/AppContext';
 import { formatBRL } from '../utils/installmentUtils';
+import { formatCep, isValidCep } from '../utils/shippingUtils';
 
-const ShippingCalculator = ({ product, orderTotal = 0 }) => {
+const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
+  const { axios } = useAppContext();
   const [cep, setCep] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedOption, setSelectedOption] = useState(null);
 
   const handleCepChange = (e) => {
     const formatted = formatCep(e.target.value);
@@ -16,7 +19,7 @@ const ShippingCalculator = ({ product, orderTotal = 0 }) => {
     }
   };
 
-  const handleCalculate = useCallback(() => {
+  const handleCalculate = useCallback(async () => {
     if (!isValidCep(cep)) {
       setError('Digite um CEP válido com 8 dígitos');
       return;
@@ -24,24 +27,55 @@ const ShippingCalculator = ({ product, orderTotal = 0 }) => {
 
     setLoading(true);
     setError('');
+    setResults(null);
+    setSelectedOption(null);
 
-    // Simular delay de API para UX
-    setTimeout(() => {
-      const result = calculateShipping(cep, product, orderTotal);
-      
-      if (result.error) {
-        setError(result.error);
-        setResults(null);
-      } else {
-        setResults(result);
+    try {
+      // Montar body da requisição
+      let body = { cep };
+
+      if (cartProducts && cartProducts.length > 0) {
+        // Modo carrinho — envia IDs + quantidades
+        body.products = cartProducts.map((p) => ({
+          productId: p._id,
+          quantity: p.quantity || 1,
+        }));
+      } else if (product) {
+        // Modo produto individual
+        body.product = {
+          _id: product._id,
+          weight: product.weight,
+          dimensions: product.dimensions,
+          offerPrice: product.offerPrice,
+          quantity: 1,
+        };
       }
+
+      const { data } = await axios.post('/api/shipping/calculate', body);
+
+      if (data.success) {
+        setResults(data);
+      } else {
+        setError(data.message || 'Erro ao calcular frete.');
+      }
+    } catch (err) {
+      console.error('Erro no cálculo de frete:', err);
+      setError('Erro ao calcular frete. Tente novamente.');
+    } finally {
       setLoading(false);
-    }, 600);
-  }, [cep, product, orderTotal]);
+    }
+  }, [cep, product, cartProducts, axios]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       handleCalculate();
+    }
+  };
+
+  const handleSelectOption = (option) => {
+    setSelectedOption(option);
+    if (onShippingSelect) {
+      onShippingSelect(option);
     }
   };
 
@@ -106,51 +140,49 @@ const ShippingCalculator = ({ product, orderTotal = 0 }) => {
       {/* Resultados */}
       {results && !error && (
         <div className='mt-3 space-y-2'>
-          {/* Destino */}
-          <p className='text-xs text-gray-500'>
-            Entrega para: <span className='font-medium text-gray-700'>{results.state} — Região {results.regionName}</span>
-          </p>
-
           {/* Opções de frete */}
-          {results.options.map((option) => (
-            <div
-              key={option.type}
-              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                option.isFree
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-gray-50 border-gray-200'
-              }`}
-            >
-              <div className='flex items-center gap-3'>
-                <span className='text-lg'>{option.icon}</span>
-                <div>
-                  <p className='text-sm font-medium text-gray-900'>{option.name}</p>
-                  <p className='text-xs text-gray-500'>{option.deadlineText}</p>
-                </div>
-              </div>
-              <div className='text-right'>
-                {option.isFree ? (
+          {results.options.map((option) => {
+            const isSelected = selectedOption?.id === option.id;
+
+            return (
+              <div
+                key={option.id}
+                onClick={() => handleSelectOption(option)}
+                className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className='flex items-center gap-3'>
+                  <span className='text-lg'>{option.icon}</span>
                   <div>
-                    <span className='text-sm font-bold text-green-600'>Grátis</span>
-                    <p className='text-xs text-gray-400 line-through'>
-                      {formatBRL(option.originalPrice)}
+                    <p className='text-sm font-medium text-gray-900'>
+                      {option.carrier} — {option.name}
                     </p>
+                    <p className='text-xs text-gray-500'>{option.deliveryText}</p>
                   </div>
-                ) : (
+                </div>
+                <div className='text-right flex items-center gap-2'>
                   <span className='text-sm font-bold text-gray-900'>
                     {formatBRL(option.price)}
                   </span>
-                )}
+                  {isSelected && (
+                    <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
+                      <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
+                        <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {/* Mensagem frete grátis */}
-          {results.freeShippingMessage && (
-            <p className='text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200'>
-              💡 {results.freeShippingMessage}
-            </p>
-          )}
+          {/* Powered by */}
+          <p className='text-xs text-gray-400 text-center mt-2'>
+            Cotação via Melhor Envio • Preços e prazos em tempo real
+          </p>
         </div>
       )}
     </div>
