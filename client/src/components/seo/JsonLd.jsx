@@ -1,7 +1,7 @@
 /**
  * JSON-LD Structured Data - Elite Surfing Brasil
- * Versão: 2.0.0
- * Última atualização: 2026-02-10
+ * Versão: 2.1.0
+ * Última atualização: 2026-02-24
  *
  * IMPORTANTE: Todas as URLs devem usar www.elitesurfing.com.br
  * Referência: https://schema.org/
@@ -36,20 +36,21 @@ export const OrganizationSchema = () => {
     foundingDate: '2023',
     address: {
       '@type': 'PostalAddress',
-      addressLocality: 'São Paulo',
-      addressRegion: 'SP',
-      postalCode: '00000-000',
+      streetAddress: 'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
+      addressLocality: 'Rio de Janeiro',
+      addressRegion: 'RJ',
+      postalCode: '22790-702',
       addressCountry: 'BR',
     },
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: -23.5505,
-      longitude: -46.6333,
+      latitude: -22.9994,
+      longitude: -43.3650,
     },
     contactPoint: [
       {
         '@type': 'ContactPoint',
-        telephone: '+55-11-99999-9999',
+        telephone: '+55-21-96435-8058',
         contactType: 'customer service',
         availableLanguage: ['Portuguese'],
         areaServed: 'BR',
@@ -57,7 +58,7 @@ export const OrganizationSchema = () => {
       },
       {
         '@type': 'ContactPoint',
-        telephone: '+55-11-99999-9999',
+        telephone: '+55-21-96435-8058',
         contactType: 'sales',
         availableLanguage: ['Portuguese'],
         areaServed: 'BR',
@@ -65,7 +66,7 @@ export const OrganizationSchema = () => {
     ],
     sameAs: [
       'https://www.instagram.com/elitesurfingbrasil',
-      'https://wa.me/5511999999999',
+      'https://wa.me/5521964358058',
       // Adicionar quando existirem:
       // "https://www.facebook.com/elitesurfingbrasil",
       // "https://www.tiktok.com/@elitesurfingbrasil"
@@ -360,20 +361,22 @@ export const LocalBusinessSchema = () => {
     name: SITE_NAME,
     image: OG_IMAGE,
     url: BASE_URL,
-    telephone: '+5511999999999',
-    email: 'contato@elitesurfing.com.br',
+    telephone: '+5521964358058',
+    email: 'atendimento@elitesurfing.com.br',
     description:
       'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, wax, quilhas e mais. PIX com 10% OFF, até 10x sem juros.',
     address: {
       '@type': 'PostalAddress',
-      addressLocality: 'São Paulo',
-      addressRegion: 'SP',
+      streetAddress: 'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
+      addressLocality: 'Rio de Janeiro',
+      addressRegion: 'RJ',
+      postalCode: '22790-702',
       addressCountry: 'BR',
     },
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: -23.5505,
-      longitude: -46.6333,
+      latitude: -22.9994,
+      longitude: -43.3650,
     },
     priceRange: 'R$',
     paymentAccepted: [
