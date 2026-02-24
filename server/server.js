@@ -13,7 +13,6 @@ import addressRouter from './routes/addressRoute.js';
 import orderRouter from './routes/orderRoute.js';
 import reviewRouter from './routes/reviewRoute.js';
 import { stripeWebhooks } from './controllers/orderController.js';
-import reviewRouter from './routes/reviewRoute.js';
 import shippingRouter from './routes/shippingRoute.js';
 
 const app = express();
