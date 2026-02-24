@@ -26,6 +26,13 @@ const orderSchema = new mongoose.Schema(
     discountAmount: { type: Number, default: 0 },
     discountPercentage: { type: Number, default: 0 },
     originalAmount: { type: Number, required: true },
+
+    // 📦 DADOS DE FRETE (Melhor Envio)
+    shippingCost: { type: Number, default: 0 },
+    shippingMethod: { type: String, default: '' },
+    shippingCarrier: { type: String, default: '' },
+    shippingDeliveryDays: { type: Number, default: 0 },
+    shippingServiceId: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -532,6 +532,11 @@ export const placeOrderStripe = async (req, res) => {
       guestEmail,
       guestName,
       guestPhone,
+      shippingCost,
+      shippingMethod,
+      shippingCarrier,
+      shippingDeliveryDays,
+      shippingServiceId,
     } = req.body;
 
     const { origin } = req.headers;
@@ -584,6 +589,11 @@ export const placeOrderStripe = async (req, res) => {
       discountAmount: discountAmount || 0,
       discountPercentage: discountPercentage || 0,
       originalAmount,
+      shippingCost: shippingCost || 0,
+      shippingMethod: shippingMethod || '',
+      shippingCarrier: shippingCarrier || '',
+      shippingDeliveryDays: shippingDeliveryDays || 0,
+      shippingServiceId: shippingServiceId || '',
     };
 
     if (isGuestOrder) {
@@ -619,6 +629,20 @@ export const placeOrderStripe = async (req, res) => {
         quantity: item.quantity,
       };
     });
+
+    // ═══ FRETE COMO LINE ITEM NO STRIPE ═══
+    if (shippingCost && shippingCost > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'brl',
+          product_data: {
+            name: `Frete — ${shippingCarrier || ''} ${shippingMethod || ''}`.trim(),
+          },
+          unit_amount: Math.round(shippingCost * 100),
+        },
+        quantity: 1,
+      });
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // MÉTODOS DE PAGAMENTO BRASIL
