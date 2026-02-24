@@ -1,4 +1,4 @@
-// ImageGalleryModal.jsx - E-commerce grade image gallery
+// ImageGalleryModal.jsx - E-commerce grade image gallery with professional zoom
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { assets } from '../assets/assets';
 import '../styles/ProductDetails.css';
@@ -26,9 +26,26 @@ const useIsTouchDevice = () => {
 };
 
 /**
+ * Clamp helper
+ */
+const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+/**
  * ImageGalleryModal — Layout premium e-commerce
- * Desktop: thumbnails verticais à esquerda + click-to-zoom com pan livre
- * Mobile: swipe horizontal (loop) + pinch-to-zoom + double-tap + pan
+ *
+ * DESKTOP ZOOM FEATURES:
+ *  - Scroll wheel progressive zoom (1x → 5x) com zoom-to-cursor real
+ *  - Click para zoom (2.5x) no ponto exato do clique
+ *  - Double-click para reset ao 1x
+ *  - Pan com drag (grab/grabbing cursor) com clamping de limites
+ *  - Transições suaves com interrupção instantânea no drag
+ *  - Indicador de nível de zoom em tempo real
+ *
+ * MOBILE FEATURES:
+ *  - Swipe horizontal (loop infinito)
+ *  - Pinch-to-zoom progressivo
+ *  - Double-tap zoom no ponto tocado
+ *  - Pan com clamping
  */
 const ImageGalleryModal = ({
   images = [],
@@ -46,20 +63,27 @@ const ImageGalleryModal = ({
   const modalRef = useRef(null);
   const imageContainerRef = useRef(null);
   const desktopImageRef = useRef(null);
+  const desktopWrapperRef = useRef(null);
   const thumbnailContainerRef = useRef(null);
 
-  // ─── Estados principais ───
+  // ─── Core state ───
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
-  // ─── Desktop zoom state ───
-  const [desktopZoomed, setDesktopZoomed] = useState(false);
-  const [desktopZoomOrigin, setDesktopZoomOrigin] = useState({ x: 50, y: 50 });
-  const [desktopPan, setDesktopPan] = useState({ x: 0, y: 0 });
-  const [isDesktopPanning, setIsDesktopPanning] = useState(false);
-  const desktopPanStart = useRef({ x: 0, y: 0 });
-  const desktopPanOffset = useRef({ x: 0, y: 0, moved: false });
-  const DESKTOP_ZOOM_SCALE = 2.8;
+  // ─── Desktop zoom state (unified transform: translate + scale from center) ───
+  const [dZoom, setDZoom] = useState(1);
+  const [dPan, setDPan] = useState({ x: 0, y: 0 });
+  const [isDPanning, setIsDPanning] = useState(false);
+  const dPanStartMouse = useRef({ x: 0, y: 0 });
+  const dPanStartOffset = useRef({ x: 0, y: 0 });
+  const dDragMoved = useRef(false);
+  const dLastClickTime = useRef(0);
+
+  const ZOOM_MIN = 1;
+  const ZOOM_MAX = 5;
+  const ZOOM_CLICK_LEVEL = 2.5;
+  const ZOOM_WHEEL_FACTOR = 1.15; // ~15% por scroll step
 
   // ─── Mobile zoom/pan state ───
   const [mobileZoomLevel, setMobileZoomLevel] = useState(1);
@@ -69,27 +93,104 @@ const ImageGalleryModal = ({
   const mobilePanOffset = useRef({ x: 0, y: 0 });
   const pinchStartDistance = useRef(0);
   const pinchStartZoom = useRef(1);
+  const pinchMidpoint = useRef({ x: 0, y: 0 });
   const lastTap = useRef(0);
-  const maxZoomLevel = 4;
+  const maxMobileZoom = 4;
 
   // ─── Touch swipe state ───
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchEndX, setTouchEndX] = useState(null);
   const minSwipeDistance = 50;
 
-  const isMobileZoomed = mobileZoomLevel > 1;
+  const isDesktopZoomed = dZoom > 1.05;
+  const isMobileZoomed = mobileZoomLevel > 1.05;
+
+  // ═══════════════════════════════════════════
+  // PAN BOUNDS — impede a imagem de sair da viewport
+  // ═══════════════════════════════════════════
+
+  const getDesktopPanBounds = useCallback(() => {
+    if (!desktopImageRef.current || !desktopWrapperRef.current) {
+      return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+    }
+
+    const img = desktopImageRef.current;
+    const wrapper = desktopWrapperRef.current;
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    // Dimensões reais da imagem renderizada (não do elemento)
+    const imgDisplayW = img.naturalWidth > 0
+      ? Math.min(img.naturalWidth, wrapperRect.width, img.clientWidth)
+      : img.clientWidth;
+    const imgDisplayH = img.naturalHeight > 0
+      ? Math.min(img.naturalHeight, wrapperRect.height, img.clientHeight)
+      : img.clientHeight;
+
+    const scaledW = imgDisplayW * dZoom;
+    const scaledH = imgDisplayH * dZoom;
+
+    // Quanto a imagem excede o container
+    const overflowX = Math.max(0, (scaledW - wrapperRect.width) / 2);
+    const overflowY = Math.max(0, (scaledH - wrapperRect.height) / 2);
+
+    return {
+      minX: -overflowX,
+      maxX: overflowX,
+      minY: -overflowY,
+      maxY: overflowY,
+    };
+  }, [dZoom]);
+
+  const clampDesktopPan = useCallback(
+    (x, y) => {
+      const bounds = getDesktopPanBounds();
+      return {
+        x: clamp(x, bounds.minX, bounds.maxX),
+        y: clamp(y, bounds.minY, bounds.maxY),
+      };
+    },
+    [getDesktopPanBounds]
+  );
+
+  const getMobilePanBounds = useCallback(() => {
+    if (!imageContainerRef.current) {
+      return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+    }
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const scaledW = rect.width * mobileZoomLevel;
+    const scaledH = rect.height * mobileZoomLevel;
+    const overflowX = Math.max(0, (scaledW - rect.width) / 2);
+    const overflowY = Math.max(0, (scaledH - rect.height) / 2);
+
+    return {
+      minX: -overflowX,
+      maxX: overflowX,
+      minY: -overflowY,
+      maxY: overflowY,
+    };
+  }, [mobileZoomLevel]);
+
+  const clampMobilePan = useCallback(
+    (x, y) => {
+      const bounds = getMobilePanBounds();
+      return {
+        x: clamp(x, bounds.minX, bounds.maxX),
+        y: clamp(y, bounds.minY, bounds.maxY),
+      };
+    },
+    [getMobilePanBounds]
+  );
 
   // ═══════════════════════════════════════════
   // RESET
   // ═══════════════════════════════════════════
 
   const resetAllZoom = useCallback(() => {
-    setDesktopZoomed(false);
-    setDesktopPan({ x: 0, y: 0 });
-    setDesktopZoomOrigin({ x: 50, y: 50 });
+    setDZoom(1);
+    setDPan({ x: 0, y: 0 });
+    setIsDPanning(false);
     setMobileZoomLevel(1);
     setMobilePan({ x: 0, y: 0 });
-    setIsDesktopPanning(false);
     setIsMobilePanning(false);
   }, []);
 
@@ -121,90 +222,180 @@ const ImageGalleryModal = ({
   );
 
   // ═══════════════════════════════════════════
-  // DESKTOP: Click-to-zoom + Pan livre
+  // DESKTOP: Zoom-to-point (unified math)
+  //
+  // Core concept: when zooming, we adjust pan so that
+  // the point under the cursor stays under the cursor.
+  //
+  // Formula:  newPan = cursor - (cursor - oldPan) * (newZoom / oldZoom)
   // ═══════════════════════════════════════════
 
-  const handleDesktopClick = useCallback(
-    (e) => {
-      if (!enableZoom || isTouchDevice) return;
+  /**
+   * Zoom desktop para um nível específico, mantendo o ponto (cx, cy) fixo.
+   * (cx, cy) = posição do cursor relativa ao centro do wrapper.
+   */
+  const zoomDesktopTo = useCallback(
+    (newZoomRaw, cx, cy) => {
+      const newZoom = clamp(newZoomRaw, ZOOM_MIN, ZOOM_MAX);
 
-      // Se fez pan real, ignora o click
-      if (desktopPanOffset.current.moved) {
-        desktopPanOffset.current.moved = false;
-        return;
-      }
-
-      if (desktopZoomed) {
-        // Zoom out
-        setDesktopZoomed(false);
-        setDesktopPan({ x: 0, y: 0 });
-      } else {
-        // Zoom in no ponto exato do clique
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setDesktopZoomOrigin({ x, y });
-        setDesktopPan({ x: 0, y: 0 });
-        setDesktopZoomed(true);
-      }
-    },
-    [enableZoom, isTouchDevice, desktopZoomed]
-  );
-
-  const handleDesktopMouseDown = useCallback(
-    (e) => {
-      if (!desktopZoomed || !enableZoom || isTouchDevice) return;
-      e.preventDefault();
-      setIsDesktopPanning(true);
-      desktopPanStart.current = { x: e.clientX, y: e.clientY };
-      desktopPanOffset.current = { x: desktopPan.x, y: desktopPan.y, moved: false };
-    },
-    [desktopZoomed, enableZoom, isTouchDevice, desktopPan]
-  );
-
-  const handleDesktopMouseMove = useCallback(
-    (e) => {
-      if (!isDesktopPanning || !desktopZoomed) return;
-
-      const dx = e.clientX - desktopPanStart.current.x;
-      const dy = e.clientY - desktopPanStart.current.y;
-
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        desktopPanOffset.current.moved = true;
-      }
-
-      setDesktopPan({
-        x: desktopPanOffset.current.x + dx,
-        y: desktopPanOffset.current.y + dy,
+      setDZoom((prevZoom) => {
+        const ratio = newZoom / prevZoom;
+        setDPan((prevPan) => {
+          const nx = cx - (cx - prevPan.x) * ratio;
+          const ny = cy - (cy - prevPan.y) * ratio;
+          // Clamp will be approximate here since bounds depend on new zoom;
+          // we'll clamp properly after state settles via effect
+          return { x: nx, y: ny };
+        });
+        return newZoom;
       });
     },
-    [isDesktopPanning, desktopZoomed]
+    []
   );
 
-  const handleDesktopMouseUp = useCallback(() => {
-    setIsDesktopPanning(false);
+  /**
+   * Extrai coordenadas do cursor relativas ao centro do wrapper
+   */
+  const getCursorRelativeToWrapper = useCallback((e) => {
+    if (!desktopWrapperRef.current) return { cx: 0, cy: 0 };
+    const rect = desktopWrapperRef.current.getBoundingClientRect();
+    return {
+      cx: e.clientX - rect.left - rect.width / 2,
+      cy: e.clientY - rect.top - rect.height / 2,
+    };
   }, []);
 
-  // Desktop scroll zoom
+  // ── Scroll wheel zoom (progressive, zoom-to-cursor) ──
   const handleDesktopWheel = useCallback(
     (e) => {
       if (!enableZoom || isTouchDevice) return;
       e.preventDefault();
 
-      if (e.deltaY < 0 && !desktopZoomed) {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        setDesktopZoomOrigin({ x, y });
-        setDesktopPan({ x: 0, y: 0 });
-        setDesktopZoomed(true);
-      } else if (e.deltaY > 0 && desktopZoomed) {
-        setDesktopZoomed(false);
-        setDesktopPan({ x: 0, y: 0 });
+      const { cx, cy } = getCursorRelativeToWrapper(e);
+      const direction = e.deltaY < 0 ? 1 : -1;
+      const factor = direction > 0 ? ZOOM_WHEEL_FACTOR : 1 / ZOOM_WHEEL_FACTOR;
+
+      setDZoom((prevZoom) => {
+        const newZoom = clamp(prevZoom * factor, ZOOM_MIN, ZOOM_MAX);
+        if (newZoom === prevZoom) return prevZoom;
+
+        const ratio = newZoom / prevZoom;
+        setDPan((prevPan) => {
+          const nx = cx - (cx - prevPan.x) * ratio;
+          const ny = cy - (cy - prevPan.y) * ratio;
+          return { x: nx, y: ny };
+        });
+        return newZoom;
+      });
+    },
+    [enableZoom, isTouchDevice, getCursorRelativeToWrapper]
+  );
+
+  // ── Click zoom (toggle entre 1x e ZOOM_CLICK_LEVEL) ──
+  // ── Double-click = reset to 1x ──
+  const handleDesktopClick = useCallback(
+    (e) => {
+      if (!enableZoom || isTouchDevice) return;
+
+      // Se arrastou, ignorar click
+      if (dDragMoved.current) {
+        dDragMoved.current = false;
+        return;
+      }
+
+      const now = Date.now();
+      const isDoubleClick = now - dLastClickTime.current < 350;
+      dLastClickTime.current = now;
+
+      const { cx, cy } = getCursorRelativeToWrapper(e);
+
+      if (isDoubleClick) {
+        // Double-click → reset
+        setDZoom(1);
+        setDPan({ x: 0, y: 0 });
+        return;
+      }
+
+      // Single click com delay para distinguir de double-click
+      // Usamos timeout curto — se não vier double-click, executa
+      const clickTimeout = setTimeout(() => {
+        if (dZoom > 1.05) {
+          // Está zoomed → reset
+          setDZoom(1);
+          setDPan({ x: 0, y: 0 });
+        } else {
+          // Zoom in no ponto do clique
+          zoomDesktopTo(ZOOM_CLICK_LEVEL, cx, cy);
+        }
+      }, 200);
+
+      // Guardar timeout para cancelar no double-click
+      if (handleDesktopClick._timeout) clearTimeout(handleDesktopClick._timeout);
+      handleDesktopClick._timeout = clickTimeout;
+
+      if (isDoubleClick && handleDesktopClick._timeout) {
+        clearTimeout(handleDesktopClick._timeout);
+        handleDesktopClick._timeout = null;
       }
     },
-    [enableZoom, isTouchDevice, desktopZoomed]
+    [enableZoom, isTouchDevice, dZoom, getCursorRelativeToWrapper, zoomDesktopTo]
   );
+
+  // ── Drag/Pan ──
+  const handleDesktopMouseDown = useCallback(
+    (e) => {
+      if (!enableZoom || isTouchDevice || dZoom <= 1.05) return;
+      e.preventDefault();
+      setIsDPanning(true);
+      dPanStartMouse.current = { x: e.clientX, y: e.clientY };
+      dPanStartOffset.current = { ...dPan };
+      dDragMoved.current = false;
+    },
+    [enableZoom, isTouchDevice, dZoom, dPan]
+  );
+
+  const handleDesktopMouseMove = useCallback(
+    (e) => {
+      if (!isDPanning) return;
+
+      const dx = e.clientX - dPanStartMouse.current.x;
+      const dy = e.clientY - dPanStartMouse.current.y;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dDragMoved.current = true;
+      }
+
+      const raw = {
+        x: dPanStartOffset.current.x + dx,
+        y: dPanStartOffset.current.y + dy,
+      };
+
+      const clamped = clampDesktopPan(raw.x, raw.y);
+      setDPan(clamped);
+    },
+    [isDPanning, clampDesktopPan]
+  );
+
+  const handleDesktopMouseUp = useCallback(() => {
+    if (isDPanning) {
+      setIsDPanning(false);
+      // Final clamp
+      setDPan((prev) => clampDesktopPan(prev.x, prev.y));
+    }
+  }, [isDPanning, clampDesktopPan]);
+
+  // ── Clamp pan after zoom changes (deferred) ──
+  useEffect(() => {
+    if (dZoom <= 1.05) {
+      setDPan({ x: 0, y: 0 });
+      return;
+    }
+    // Slight delay to let image dimensions settle
+    const t = requestAnimationFrame(() => {
+      setDPan((prev) => clampDesktopPan(prev.x, prev.y));
+    });
+    return () => cancelAnimationFrame(t);
+  }, [dZoom, clampDesktopPan, imageDimensions]);
 
   // ═══════════════════════════════════════════
   // MOBILE: Swipe + Pinch + Double-tap + Pan
@@ -220,6 +411,10 @@ const ImageGalleryModal = ({
           t2.clientY - t1.clientY
         );
         pinchStartZoom.current = mobileZoomLevel;
+        pinchMidpoint.current = {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2,
+        };
         return;
       }
 
@@ -252,12 +447,9 @@ const ImageGalleryModal = ({
 
         if (pinchStartDistance.current > 0) {
           const scale = distance / pinchStartDistance.current;
-          const newZoom = Math.min(
-            Math.max(1, pinchStartZoom.current * scale),
-            maxZoomLevel
-          );
+          const newZoom = clamp(pinchStartZoom.current * scale, 1, maxMobileZoom);
           setMobileZoomLevel(newZoom);
-          if (newZoom === 1) setMobilePan({ x: 0, y: 0 });
+          if (newZoom <= 1.05) setMobilePan({ x: 0, y: 0 });
         }
         return;
       }
@@ -266,16 +458,17 @@ const ImageGalleryModal = ({
         if (isMobileZoomed && isMobilePanning) {
           const dx = e.touches[0].clientX - mobilePanStart.current.x;
           const dy = e.touches[0].clientY - mobilePanStart.current.y;
-          setMobilePan({
-            x: mobilePanOffset.current.x + dx,
-            y: mobilePanOffset.current.y + dy,
-          });
+          const clamped = clampMobilePan(
+            mobilePanOffset.current.x + dx,
+            mobilePanOffset.current.y + dy
+          );
+          setMobilePan(clamped);
         } else if (!isMobileZoomed && enableSwipe) {
           setTouchEndX(e.touches[0].clientX);
         }
       }
     },
-    [isMobileZoomed, isMobilePanning, enableSwipe, enableZoom]
+    [isMobileZoomed, isMobilePanning, enableSwipe, enableZoom, clampMobilePan]
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -302,7 +495,7 @@ const ImageGalleryModal = ({
     setTouchEndX(null);
   }, [touchStartX, touchEndX, isMobileZoomed, mobileZoomLevel, enableSwipe, goToNext, goToPrevious]);
 
-  // Double tap zoom (mobile) — zoom no ponto tocado
+  // Double tap zoom (mobile)
   const handleMobileDoubleTap = useCallback(
     (e) => {
       if (!enableZoom || !isTouchDevice) return;
@@ -369,10 +562,30 @@ const ImageGalleryModal = ({
           goToNext();
           break;
         case 'Escape':
-          if (desktopZoomed || isMobileZoomed) {
+          if (isDesktopZoomed || isMobileZoomed) {
             resetAllZoom();
           } else {
             onClose?.();
+          }
+          break;
+        case '+':
+        case '=':
+          if (enableZoom && !isTouchDevice) {
+            e.preventDefault();
+            zoomDesktopTo(dZoom * ZOOM_WHEEL_FACTOR, 0, 0);
+          }
+          break;
+        case '-':
+        case '_':
+          if (enableZoom && !isTouchDevice) {
+            e.preventDefault();
+            zoomDesktopTo(dZoom / ZOOM_WHEEL_FACTOR, 0, 0);
+          }
+          break;
+        case '0':
+          if (enableZoom) {
+            e.preventDefault();
+            resetAllZoom();
           }
           break;
         default:
@@ -382,7 +595,7 @@ const ImageGalleryModal = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, goToNext, goToPrevious, resetAllZoom, desktopZoomed, isMobileZoomed, onClose]);
+  }, [isOpen, goToNext, goToPrevious, resetAllZoom, isDesktopZoomed, isMobileZoomed, onClose, enableZoom, isTouchDevice, dZoom, zoomDesktopTo]);
 
   // Init / Cleanup
   useEffect(() => {
@@ -406,7 +619,28 @@ const ImageGalleryModal = ({
     return () => document.removeEventListener('touchmove', preventScroll);
   }, [isOpen]);
 
-  const handleImageLoad = useCallback(() => setIsImageLoading(false), []);
+  // Global mouseup/mousemove para pan desktop (caso o cursor saia do wrapper)
+  useEffect(() => {
+    if (!isDPanning) return;
+
+    const onMove = (e) => handleDesktopMouseMove(e);
+    const onUp = () => handleDesktopMouseUp();
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDPanning, handleDesktopMouseMove, handleDesktopMouseUp]);
+
+  const handleImageLoad = useCallback((e) => {
+    setIsImageLoading(false);
+    setImageDimensions({
+      width: e.target.naturalWidth,
+      height: e.target.naturalHeight,
+    });
+  }, []);
 
   const handleImageError = useCallback((e) => {
     e.target.src = assets.placeholder_image || '/placeholder.jpg';
@@ -415,17 +649,35 @@ const ImageGalleryModal = ({
 
   const handleBackdropClick = useCallback(
     (e) => {
-      if (e.target === e.currentTarget && !desktopZoomed && !isMobileZoomed) {
+      if (e.target === e.currentTarget && !isDesktopZoomed && !isMobileZoomed) {
         onClose?.();
       }
     },
-    [desktopZoomed, isMobileZoomed, onClose]
+    [isDesktopZoomed, isMobileZoomed, onClose]
   );
 
   if (!isOpen || !images.length) return null;
 
   const currentImage = images[currentIndex] || '';
   const hasMultipleImages = images.length > 1;
+
+  // ─── Desktop cursor logic ───
+  const getDesktopCursor = () => {
+    if (!enableZoom) return 'default';
+    if (isDPanning) return 'grabbing';
+    if (isDesktopZoomed) return 'grab';
+    return 'zoom-in';
+  };
+
+  // ─── Desktop transform ───
+  const desktopTransform =
+    dZoom === 1 && dPan.x === 0 && dPan.y === 0
+      ? 'none'
+      : `scale(${dZoom}) translate(${dPan.x / dZoom}px, ${dPan.y / dZoom}px)`;
+
+  const desktopTransition = isDPanning
+    ? 'none'
+    : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
   return (
     <div
@@ -445,9 +697,9 @@ const ImageGalleryModal = ({
 
         {enableZoom && !isTouchDevice && (
           <span className='text-white/40 text-xs hidden md:block'>
-            {desktopZoomed
-              ? 'Arraste para explorar • Clique para sair do zoom'
-              : 'Clique na imagem para zoom • Scroll para zoom'}
+            {isDesktopZoomed
+              ? 'Arraste para explorar • Clique ou Esc para sair • Scroll para ajustar'
+              : 'Clique ou scroll para zoom • +/- para ajustar'}
           </span>
         )}
 
@@ -522,18 +774,12 @@ const ImageGalleryModal = ({
 
           {/* ═══ DESKTOP IMAGE ═══ */}
           <div
+            ref={desktopWrapperRef}
             className='hidden md:flex items-center justify-center w-full h-full relative overflow-hidden'
             onClick={handleDesktopClick}
             onMouseDown={handleDesktopMouseDown}
-            onMouseMove={handleDesktopMouseMove}
-            onMouseUp={handleDesktopMouseUp}
-            onMouseLeave={handleDesktopMouseUp}
             onWheel={handleDesktopWheel}
-            style={{
-              cursor: desktopZoomed
-                ? isDesktopPanning ? 'grabbing' : 'grab'
-                : enableZoom ? 'zoom-in' : 'default',
-            }}
+            style={{ cursor: getDesktopCursor() }}
           >
             <img
               ref={desktopImageRef}
@@ -544,13 +790,9 @@ const ImageGalleryModal = ({
                 ${isImageLoading ? 'opacity-0' : 'opacity-100'}
               `}
               style={{
-                transformOrigin: `${desktopZoomOrigin.x}% ${desktopZoomOrigin.y}%`,
-                transform: desktopZoomed
-                  ? `scale(${DESKTOP_ZOOM_SCALE}) translate(${desktopPan.x / DESKTOP_ZOOM_SCALE}px, ${desktopPan.y / DESKTOP_ZOOM_SCALE}px)`
-                  : 'scale(1)',
-                transition: isDesktopPanning
-                  ? 'none'
-                  : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                transform: desktopTransform,
+                transition: desktopTransition,
+                willChange: isDesktopZoomed ? 'transform' : 'auto',
               }}
               onLoad={handleImageLoad}
               onError={handleImageError}
@@ -585,8 +827,8 @@ const ImageGalleryModal = ({
             />
           </div>
 
-          {/* ═══ NAVIGATION ARROWS (sempre visíveis, loop) ═══ */}
-          {!desktopZoomed && !isMobileZoomed && hasMultipleImages && (
+          {/* ═══ NAVIGATION ARROWS ═══ */}
+          {!isDesktopZoomed && !isMobileZoomed && hasMultipleImages && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
@@ -683,10 +925,10 @@ const ImageGalleryModal = ({
         </div>
       )}
 
-      {desktopZoomed && !isTouchDevice && (
+      {isDesktopZoomed && !isTouchDevice && (
         <div className='hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 z-50
           text-white/50 text-xs bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm'>
-          {Math.round(DESKTOP_ZOOM_SCALE * 100)}% • Arraste para explorar • Clique para sair
+          {Math.round(dZoom * 100)}% • Arraste para explorar • Clique para sair • Scroll para ajustar
         </div>
       )}
     </div>
