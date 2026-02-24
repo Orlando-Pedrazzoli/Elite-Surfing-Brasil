@@ -1,16 +1,16 @@
-/* ProductDetails.css - Estilos adicionais para o carousel melhorado */
+/* ProductDetails.css - Estilos para a galeria de imagens premium */
 
-/* Hide scrollbar for all browsers */
+/* ═══ Scrollbar hide ═══ */
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
 }
 
-/* Smooth snap scrolling */
+/* ═══ Smooth snap scrolling ═══ */
 .snap-x {
   scroll-snap-type: x mandatory;
 }
@@ -23,11 +23,11 @@
   scroll-snap-stop: always;
 }
 
-/* Image loading animation */
+/* ═══ Image loading animation ═══ */
 @keyframes imageLoad {
   0% {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
   100% {
     opacity: 1;
@@ -39,56 +39,15 @@
   animation: imageLoad 0.3s ease-out;
 }
 
-/* Zoom cursor styles */
-.zoom-cursor {
-  cursor: zoom-in;
-}
-
-.zoom-cursor.zoomed {
-  cursor: zoom-out;
-}
-
-/* Pinch to zoom indicator */
-.pinch-indicator {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.pinch-indicator.show {
-  opacity: 1;
-}
-
-/* Swipe animation */
+/* ═══ Swipe animations ═══ */
 @keyframes swipeLeft {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 0; }
 }
 
 @keyframes swipeRight {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
 }
 
 .swipe-left {
@@ -99,30 +58,10 @@
   animation: swipeRight 0.3s ease-out;
 }
 
-/* Modal backdrop blur effect */
-.modal-backdrop {
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-}
-
-/* Thumbnail hover effect */
-.thumbnail-hover {
-  transition: all 0.2s ease;
-}
-
-.thumbnail-hover:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Loading skeleton */
+/* ═══ Loading skeleton ═══ */
 @keyframes skeleton {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .skeleton {
@@ -131,7 +70,16 @@
   animation: skeleton 1.5s infinite;
 }
 
-/* Touch feedback */
+/* ═══ Performance optimizations ═══ */
+.gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ═══ Touch feedback ═══ */
 .touch-feedback {
   position: absolute;
   width: 60px;
@@ -144,22 +92,11 @@
 }
 
 @keyframes touchRipple {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(2);
-    opacity: 0;
-  }
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
 }
 
-/* Image zoom transition */
-.zoom-transition {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Prevent text selection on drag */
+/* ═══ Prevent text selection on drag ═══ */
 .no-select {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -168,12 +105,12 @@
   -webkit-user-drag: none;
 }
 
-/* Mobile safe area padding */
+/* ═══ Mobile safe area ═══ */
 .safe-area-padding {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Improved button hover states */
+/* ═══ Nav button hover ═══ */
 .nav-button {
   transition: all 0.2s ease;
   transform-origin: center;
@@ -188,48 +125,12 @@
   transform: scale(0.95);
 }
 
-/* Dots indicator animation */
-@keyframes dotPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-}
-
-.dot-active {
-  animation: dotPulse 1s ease-in-out;
-}
-
-/* Smooth image transitions */
+/* ═══ Image transitions ═══ */
 .image-fade {
   transition: opacity 0.3s ease-in-out;
 }
 
-.image-fade-enter {
-  opacity: 0;
-}
-
-.image-fade-enter-active {
-  opacity: 1;
-}
-
-/* Performance optimizations */
-.gpu-accelerated {
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  perspective: 1000px;
-  -webkit-perspective: 1000px;
-}
-
-/* Responsive touch targets */
+/* ═══ Responsive touch targets ═══ */
 @media (pointer: coarse) {
   .touch-target {
     min-height: 44px;
@@ -237,7 +138,7 @@
   }
 }
 
-/* Accessibility improvements */
+/* ═══ Accessibility ═══ */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -250,13 +151,13 @@
   border-width: 0;
 }
 
-/* Focus styles - ATUALIZADO PARA NOVA COR */
+/* Focus — cor da marca */
 .focus-visible:focus {
   outline: 2px solid #f85032;
   outline-offset: 2px;
 }
 
-/* Reduced motion support */
+/* ═══ Reduced motion ═══ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -264,16 +165,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* Dark mode support (optional) */
-@media (prefers-color-scheme: dark) {
-  .modal-dark-mode {
-    background-color: #1a1a1a;
-  }
-
-  .modal-dark-mode .text-dark {
-    color: #ffffff;
   }
 }

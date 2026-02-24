@@ -1,10 +1,10 @@
-// ImageGalleryModal.jsx - Componente de galeria de imagens reutilizável
+// ImageGalleryModal.jsx - E-commerce grade image gallery
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { assets } from '../assets/assets';
 import '../styles/ProductDetails.css';
 
 /**
- * Hook para detectar se é dispositivo touch
+ * Hook para detectar dispositivo touch
  */
 const useIsTouchDevice = () => {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
@@ -17,10 +17,8 @@ const useIsTouchDevice = () => {
           navigator.msMaxTouchPoints > 0
       );
     };
-
     checkTouch();
     window.addEventListener('resize', checkTouch);
-
     return () => window.removeEventListener('resize', checkTouch);
   }, []);
 
@@ -28,8 +26,9 @@ const useIsTouchDevice = () => {
 };
 
 /**
- * Componente de galeria de imagens com modal
- * Suporta swipe, zoom, navegação por teclado e touch gestures
+ * ImageGalleryModal — Layout premium e-commerce
+ * Desktop: thumbnails verticais à esquerda + hover zoom (lens)
+ * Mobile: swipe horizontal + pinch-to-zoom + dots
  */
 const ImageGalleryModal = ({
   images = [],
@@ -46,10 +45,12 @@ const ImageGalleryModal = ({
   const isTouchDevice = useIsTouchDevice();
   const modalRef = useRef(null);
   const imageContainerRef = useRef(null);
+  const mainImageRef = useRef(null);
   const lastTap = useRef(0);
   const pinchStartDistance = useRef(0);
+  const thumbnailContainerRef = useRef(null);
 
-  // Estados principais
+  // ─── Estados principais ───
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -57,33 +58,70 @@ const ImageGalleryModal = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isImageLoading, setIsImageLoading] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(true);
 
-  // Estados de touch
+  // ─── Desktop hover zoom ───
+  const [isHoverZooming, setIsHoverZooming] = useState(false);
+  const [hoverZoomPos, setHoverZoomPos] = useState({ x: 50, y: 50 });
+
+  // ─── Touch states ───
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
   const minSwipeDistance = 50;
   const maxZoomLevel = 3;
+  const DESKTOP_ZOOM_SCALE = 2.5;
 
-  // Reset zoom
+  // ─── Reset zoom ───
   const resetZoom = useCallback(() => {
     setIsZoomed(false);
     setZoomLevel(1);
     setImagePosition({ x: 0, y: 0 });
+    setIsHoverZooming(false);
   }, []);
 
-  // Handle touch start
+  // ═══════════════════════════════════════════
+  // DESKTOP: Hover Zoom (Lens Effect)
+  // ═══════════════════════════════════════════
+
+  const handleMouseEnterImage = useCallback(() => {
+    if (!enableZoom || isTouchDevice) return;
+    setIsHoverZooming(true);
+  }, [enableZoom, isTouchDevice]);
+
+  const handleMouseLeaveImage = useCallback(() => {
+    setIsHoverZooming(false);
+  }, []);
+
+  const handleMouseMoveImage = useCallback(
+    (e) => {
+      if (!enableZoom || isTouchDevice || !mainImageRef.current) return;
+
+      const rect = mainImageRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      setHoverZoomPos({
+        x: Math.max(0, Math.min(100, x)),
+        y: Math.max(0, Math.min(100, y)),
+      });
+    },
+    [enableZoom, isTouchDevice]
+  );
+
+  // ═══════════════════════════════════════════
+  // MOBILE: Touch / Swipe / Pinch
+  // ═══════════════════════════════════════════
+
   const handleTouchStart = useCallback(
-    e => {
+    (e) => {
       if (isZoomed) return;
 
       const touch = e.touches[0];
       setTouchEnd(null);
       setTouchStart(touch.clientX);
 
-      // Handle pinch start
-      if (e.touches.length === 2) {
+      // Pinch start
+      if (e.touches.length === 2 && enableZoom) {
         const touch2 = e.touches[1];
         const distance = Math.hypot(
           touch2.clientX - touch.clientX,
@@ -92,14 +130,12 @@ const ImageGalleryModal = ({
         pinchStartDistance.current = distance;
       }
     },
-    [isZoomed]
+    [isZoomed, enableZoom]
   );
 
-  // Handle touch move
   const handleTouchMove = useCallback(
-    e => {
+    (e) => {
       if (e.touches.length === 2 && enableZoom) {
-        // Handle pinch zoom
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const distance = Math.hypot(
@@ -109,27 +145,19 @@ const ImageGalleryModal = ({
 
         if (pinchStartDistance.current > 0) {
           const scale = distance / pinchStartDistance.current;
-          const newZoom = Math.min(
-            Math.max(1, zoomLevel * scale),
-            maxZoomLevel
-          );
-
+          const newZoom = Math.min(Math.max(1, zoomLevel * scale), maxZoomLevel);
           setZoomLevel(newZoom);
           setIsZoomed(newZoom > 1);
         }
       } else if (e.touches.length === 1) {
-        const touch = e.touches[0];
-
         if (!isZoomed && enableSwipe) {
-          // Handle swipe
-          setTouchEnd(touch.clientX);
+          setTouchEnd(e.touches[0].clientX);
         }
       }
     },
     [isZoomed, zoomLevel, enableZoom, enableSwipe]
   );
 
-  // Handle touch end
   const handleTouchEnd = useCallback(() => {
     pinchStartDistance.current = 0;
 
@@ -145,29 +173,20 @@ const ImageGalleryModal = ({
       goToPrevious();
     }
 
-    // Reset touch states
     setTouchStart(null);
     setTouchEnd(null);
-  }, [
-    touchStart,
-    touchEnd,
-    isZoomed,
-    currentIndex,
-    images.length,
-    enableSwipe,
-  ]);
+  }, [touchStart, touchEnd, isZoomed, currentIndex, images.length, enableSwipe]);
 
-  // Handle double tap for zoom
+  // Double tap zoom (mobile)
   const handleDoubleTap = useCallback(
-    e => {
-      if (!enableZoom) return;
+    (e) => {
+      if (!enableZoom || !isTouchDevice) return;
 
       const currentTime = Date.now();
       const tapLength = currentTime - lastTap.current;
 
       if (tapLength < 300 && tapLength > 0) {
         e.preventDefault();
-
         if (isZoomed) {
           resetZoom();
         } else {
@@ -178,37 +197,15 @@ const ImageGalleryModal = ({
 
       lastTap.current = currentTime;
     },
-    [isZoomed, enableZoom, resetZoom]
+    [isZoomed, enableZoom, isTouchDevice, resetZoom]
   );
 
-  // Handle wheel zoom
-  const handleWheel = useCallback(
-    e => {
-      if (!enableZoom) return;
-
-      e.preventDefault();
-
-      const delta = e.deltaY * -0.01;
-      const newZoom = Math.min(Math.max(1, zoomLevel + delta), maxZoomLevel);
-
-      setZoomLevel(newZoom);
-      setIsZoomed(newZoom > 1);
-
-      if (newZoom === 1) {
-        setImagePosition({ x: 0, y: 0 });
-      }
-    },
-    [zoomLevel, enableZoom]
-  );
-
-  // Handle drag start
+  // ─── Drag (zoomed state) ───
   const handleDragStart = useCallback(
-    e => {
+    (e) => {
       if (!isZoomed || !enableZoom) return;
-
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
       setIsDragging(true);
       setDragStart({
         x: clientX - imagePosition.x,
@@ -218,14 +215,11 @@ const ImageGalleryModal = ({
     [isZoomed, imagePosition, enableZoom]
   );
 
-  // Handle drag move
   const handleDragMove = useCallback(
-    e => {
+    (e) => {
       if (!isDragging || !isZoomed || !enableZoom) return;
-
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
       setImagePosition({
         x: clientX - dragStart.x,
         y: clientY - dragStart.y,
@@ -234,12 +228,28 @@ const ImageGalleryModal = ({
     [isDragging, isZoomed, dragStart, enableZoom]
   );
 
-  // Handle drag end
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
   }, []);
 
-  // Navigate to next image
+  // ─── Wheel zoom ───
+  const handleWheel = useCallback(
+    (e) => {
+      if (!enableZoom || !isTouchDevice) return;
+      e.preventDefault();
+      const delta = e.deltaY * -0.01;
+      const newZoom = Math.min(Math.max(1, zoomLevel + delta), maxZoomLevel);
+      setZoomLevel(newZoom);
+      setIsZoomed(newZoom > 1);
+      if (newZoom === 1) setImagePosition({ x: 0, y: 0 });
+    },
+    [zoomLevel, enableZoom, isTouchDevice]
+  );
+
+  // ═══════════════════════════════════════════
+  // NAVIGATION
+  // ═══════════════════════════════════════════
+
   const goToNext = useCallback(() => {
     if (currentIndex < images.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -248,7 +258,6 @@ const ImageGalleryModal = ({
     }
   }, [currentIndex, images.length, resetZoom]);
 
-  // Navigate to previous image
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
@@ -257,9 +266,8 @@ const ImageGalleryModal = ({
     }
   }, [currentIndex, resetZoom]);
 
-  // Go to specific image
   const goToImage = useCallback(
-    index => {
+    (index) => {
       if (index >= 0 && index < images.length) {
         setCurrentIndex(index);
         setIsImageLoading(true);
@@ -269,24 +277,38 @@ const ImageGalleryModal = ({
     [images.length, resetZoom]
   );
 
-  // Keyboard navigation
+  // ─── Auto-scroll thumbnail into view ───
+  useEffect(() => {
+    if (!thumbnailContainerRef.current) return;
+    const activeThumb = thumbnailContainerRef.current.children[currentIndex];
+    if (activeThumb) {
+      activeThumb.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [currentIndex]);
+
+  // ─── Keyboard ───
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyDown = e => {
+    const handleKeyDown = (e) => {
       switch (e.key) {
         case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
           goToPrevious();
           break;
         case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
           goToNext();
           break;
         case 'Escape':
-          if (isZoomed) {
-            resetZoom();
-          } else {
-            onClose?.();
-          }
+          if (isZoomed) resetZoom();
+          else onClose?.();
           break;
         default:
           break;
@@ -297,280 +319,325 @@ const ImageGalleryModal = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, goToNext, goToPrevious, resetZoom, isZoomed, onClose]);
 
-  // Initialize modal
+  // ─── Init / Cleanup ───
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex);
       document.body.style.overflow = 'hidden';
-
-      // Hide instructions after 3 seconds
-      const timer = setTimeout(() => {
-        setShowInstructions(false);
-      }, 3000);
-
-      return () => clearTimeout(timer);
     } else {
       document.body.style.overflow = 'auto';
       resetZoom();
     }
   }, [isOpen, initialIndex, resetZoom]);
 
-  // Handle image load
-  const handleImageLoad = useCallback(() => {
-    setIsImageLoading(false);
-  }, []);
-
-  // Handle image error
-  const handleImageError = useCallback(e => {
-    e.target.src = assets.placeholder_image || '/placeholder.jpg';
-    setIsImageLoading(false);
-  }, []);
-
-  // Handle backdrop click
-  const handleBackdropClick = useCallback(
-    e => {
-      if (e.target === e.currentTarget && !isZoomed) {
-        onClose?.();
-      }
-    },
-    [isZoomed, onClose]
-  );
-
-  // Prevent scroll on touch devices when modal is open
+  // Prevent scroll on touch when modal open
   useEffect(() => {
     if (!isOpen) return;
-
-    const preventScroll = e => {
-      if (modalRef.current?.contains(e.target)) {
-        e.preventDefault();
-      }
+    const preventScroll = (e) => {
+      if (modalRef.current?.contains(e.target)) e.preventDefault();
     };
-
     document.addEventListener('touchmove', preventScroll, { passive: false });
     return () => document.removeEventListener('touchmove', preventScroll);
   }, [isOpen]);
 
+  const handleImageLoad = useCallback(() => setIsImageLoading(false), []);
+
+  const handleImageError = useCallback((e) => {
+    e.target.src = assets.placeholder_image || '/placeholder.jpg';
+    setIsImageLoading(false);
+  }, []);
+
+  const handleBackdropClick = useCallback(
+    (e) => {
+      if (e.target === e.currentTarget && !isZoomed) onClose?.();
+    },
+    [isZoomed, onClose]
+  );
+
   if (!isOpen || !images.length) return null;
 
   const currentImage = images[currentIndex] || '';
+  const hasMultipleImages = images.length > 1;
 
   return (
     <div
       ref={modalRef}
-      className={`
-        fixed inset-0 z-[9999] bg-black flex items-center justify-center
-        ${customStyles.backdrop || ''}
-      `}
+      className='fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm'
       onClick={handleBackdropClick}
-      style={{
-        touchAction: isZoomed ? 'none' : 'pan-y',
-        ...customStyles.container,
-      }}
+      style={{ touchAction: isZoomed ? 'none' : 'pan-y' }}
     >
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className={`
-          absolute top-4 right-4 z-50 text-white text-4xl
-          bg-black/50 rounded-full w-12 h-12 flex items-center justify-center
-          hover:bg-black/70 transition-all duration-200 focus:outline-none
-          focus:ring-2 focus:ring-white focus:ring-opacity-50
-          ${customStyles.closeButton || ''}
-        `}
-        aria-label='Fechar galeria'
-      >
-        ×
-      </button>
+      {/* ═══ TOP BAR ═══ */}
+      <div className='absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 sm:px-6'>
+        {/* Counter */}
+        {showCounter && hasMultipleImages && (
+          <span className='text-white/70 text-sm font-medium tracking-wide'>
+            {currentIndex + 1} / {images.length}
+          </span>
+        )}
+        {!showCounter && <span />}
 
-      {/* Image counter */}
-      {showCounter && images.length > 1 && (
-        <div
-          className={`
-            absolute top-4 left-4 z-50 text-white bg-black/50 
-            px-3 py-1 rounded-full text-sm font-medium
-            ${customStyles.counter || ''}
-          `}
+        {/* Zoom hint — desktop only */}
+        {enableZoom && !isTouchDevice && (
+          <span className='text-white/40 text-xs hidden md:block'>
+            Passe o mouse para zoom
+          </span>
+        )}
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className='text-white/70 hover:text-white transition-colors duration-200
+            w-10 h-10 flex items-center justify-center rounded-full
+            hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30'
+          aria-label='Fechar galeria'
         >
-          {currentIndex + 1} / {images.length}
-        </div>
-      )}
+          <svg className='w-6 h-6' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={1.5}>
+            <path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+          </svg>
+        </button>
+      </div>
 
-      {/* Zoom indicator */}
-      {enableZoom && isZoomed && (
-        <div className='absolute bottom-24 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded-full text-sm z-50'>
-          Zoom: {Math.round(zoomLevel * 100)}%
-        </div>
-      )}
+      {/* ═══ MAIN LAYOUT ═══ */}
+      {/* Desktop: flex-row (thumbnails left + image right) */}
+      {/* Mobile: flex-col (image + dots bottom) */}
+      <div className='h-full flex flex-col md:flex-row items-center justify-center pt-14 pb-4 md:py-16 md:px-6 lg:px-12'>
 
-      {/* Instructions (mobile only) */}
-      {showInstructions && isTouchDevice && !isZoomed && (
-        <div className='absolute bottom-28 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-3 py-1 rounded-full opacity-75 z-50 sm:hidden animate-pulse'>
-          {enableSwipe && 'Deslize para navegar • '}
-          {enableZoom && 'Toque duplo para zoom'}
-        </div>
-      )}
-
-      {/* Main image container */}
-      <div
-        ref={imageContainerRef}
-        className='relative w-full h-full flex items-center justify-center'
-        onClick={e => e.stopPropagation()}
-        onTouchStart={enableSwipe ? handleTouchStart : undefined}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={enableSwipe ? handleTouchEnd : undefined}
-        onMouseDown={enableZoom ? handleDragStart : undefined}
-        onMouseMove={enableZoom ? handleDragMove : undefined}
-        onMouseUp={enableZoom ? handleDragEnd : undefined}
-        onMouseLeave={enableZoom ? handleDragEnd : undefined}
-        onWheel={enableZoom ? handleWheel : undefined}
-        style={{
-          cursor: isZoomed
-            ? isDragging
-              ? 'grabbing'
-              : 'grab'
-            : enableZoom
-            ? 'zoom-in'
-            : 'default',
-        }}
-      >
-        {/* Loading state */}
-        {isImageLoading && (
-          <div className='absolute inset-0 flex items-center justify-center bg-black/20 z-40'>
-            <div className='relative'>
-              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-white'></div>
-              <span className='sr-only'>Carregando imagem...</span>
+        {/* ─── DESKTOP VERTICAL THUMBNAILS (left side) ─── */}
+        {showThumbnails && hasMultipleImages && (
+          <div className='hidden md:flex flex-col items-center mr-4 lg:mr-6'>
+            <div
+              ref={thumbnailContainerRef}
+              className='flex flex-col gap-2.5 max-h-[70vh] overflow-y-auto scrollbar-hide py-1 px-1'
+              role='tablist'
+              aria-label='Miniaturas do produto'
+            >
+              {images.map((image, index) => (
+                <button
+                  key={`thumb-${index}`}
+                  role='tab'
+                  aria-selected={currentIndex === index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToImage(index);
+                  }}
+                  className={`
+                    flex-shrink-0 w-16 h-16 lg:w-[72px] lg:h-[72px] rounded-lg overflow-hidden
+                    border-2 transition-all duration-200 focus:outline-none
+                    focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black
+                    ${currentIndex === index
+                      ? 'border-white shadow-lg shadow-white/10 scale-105'
+                      : 'border-white/15 opacity-50 hover:opacity-90 hover:border-white/40'
+                    }
+                  `}
+                  aria-label={`Imagem ${index + 1}`}
+                >
+                  <img
+                    src={image}
+                    alt={`Miniatura ${index + 1}`}
+                    className='w-full h-full object-cover'
+                    loading='lazy'
+                    draggable={false}
+                  />
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Main image */}
-        <img
-          src={currentImage}
-          alt={`${productName} - Imagem ${currentIndex + 1} de ${
-            images.length
-          }`}
-          className={`
-            max-w-full max-h-full object-contain select-none
-            transition-transform duration-300
-            ${isImageLoading ? 'opacity-0' : 'opacity-100'}
-            ${customStyles.image || ''}
-          `}
-          style={{
-            transform: `scale(${zoomLevel}) translate(${
-              imagePosition.x / zoomLevel
-            }px, ${imagePosition.y / zoomLevel}px)`,
-            userSelect: 'none',
-            WebkitUserDrag: 'none',
-            touchAction: 'none',
-            willChange: isZoomed ? 'transform' : 'auto',
-          }}
-          onClick={enableZoom ? handleDoubleTap : undefined}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          draggable={false}
-        />
+        {/* ─── MAIN IMAGE AREA ─── */}
+        <div
+          ref={imageContainerRef}
+          className='relative flex-1 flex items-center justify-center w-full h-full max-w-5xl'
+          onTouchStart={enableSwipe ? handleTouchStart : undefined}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={enableSwipe ? handleTouchEnd : undefined}
+          onWheel={enableZoom ? handleWheel : undefined}
+        >
+          {/* Loading spinner */}
+          {isImageLoading && (
+            <div className='absolute inset-0 flex items-center justify-center z-40'>
+              <div className='animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white/80' />
+            </div>
+          )}
 
-        {/* Navigation arrows */}
-        {!isZoomed && images.length > 1 && (
-          <>
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                goToPrevious();
-              }}
+          {/* ═══ MAIN IMAGE — Desktop (hover zoom) ═══ */}
+          <div
+            className='hidden md:flex items-center justify-center w-full h-full relative overflow-hidden'
+            onMouseEnter={handleMouseEnterImage}
+            onMouseLeave={handleMouseLeaveImage}
+            onMouseMove={handleMouseMoveImage}
+            style={{ cursor: enableZoom ? 'crosshair' : 'default' }}
+          >
+            <img
+              ref={mainImageRef}
+              src={currentImage}
+              alt={`${productName} - Imagem ${currentIndex + 1}`}
               className={`
-                absolute left-2 sm:left-4 top-1/2 -translate-y-1/2
-                bg-white/90 rounded-full p-2 sm:p-3 shadow-lg
-                hover:bg-white transition-all duration-200
-                disabled:opacity-50 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-primary
-                ${currentIndex === 0 ? 'opacity-50' : ''}
-                ${customStyles.navButton || ''}
+                max-w-full max-h-[75vh] object-contain select-none
+                transition-opacity duration-300
+                ${isImageLoading ? 'opacity-0' : 'opacity-100'}
               `}
-              disabled={currentIndex === 0}
-              aria-label='Imagem anterior'
-            >
-              <img
-                src={assets.arrow_left}
-                alt=''
-                className='w-4 h-4 sm:w-5 sm:h-5'
-              />
-            </button>
-
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                goToNext();
+              style={{
+                transformOrigin: `${hoverZoomPos.x}% ${hoverZoomPos.y}%`,
+                transform: isHoverZooming
+                  ? `scale(${DESKTOP_ZOOM_SCALE})`
+                  : 'scale(1)',
+                transition: isHoverZooming
+                  ? 'transform 0.1s ease-out'
+                  : 'transform 0.3s ease-out',
               }}
-              className={`
-                absolute right-2 sm:right-4 top-1/2 -translate-y-1/2
-                bg-white/90 rounded-full p-2 sm:p-3 shadow-lg
-                hover:bg-white transition-all duration-200
-                disabled:opacity-50 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-primary
-                ${currentIndex === images.length - 1 ? 'opacity-50' : ''}
-                ${customStyles.navButton || ''}
-              `}
-              disabled={currentIndex === images.length - 1}
-              aria-label='Próxima imagem'
-            >
-              <img
-                src={assets.arrow_right}
-                alt=''
-                className='w-4 h-4 sm:w-5 sm:h-5'
-              />
-            </button>
-          </>
-        )}
-
-        {/* Keyboard hints (desktop only) */}
-        {!isTouchDevice && !isZoomed && (
-          <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-4 py-2 rounded-lg opacity-0 hover:opacity-75 transition-opacity duration-200'>
-            <span className='hidden sm:inline'>
-              Use ← → para navegar •{enableZoom && ' Duplo clique para zoom • '}
-              ESC para fechar
-            </span>
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              draggable={false}
+            />
           </div>
-        )}
+
+          {/* ═══ MAIN IMAGE — Mobile (pinch + swipe + double-tap) ═══ */}
+          <div
+            className='md:hidden flex items-center justify-center w-full h-full'
+            onMouseDown={enableZoom ? handleDragStart : undefined}
+            onMouseMove={enableZoom ? handleDragMove : undefined}
+            onMouseUp={enableZoom ? handleDragEnd : undefined}
+            onMouseLeave={enableZoom ? handleDragEnd : undefined}
+            style={{
+              cursor: isZoomed
+                ? isDragging ? 'grabbing' : 'grab'
+                : 'default',
+            }}
+          >
+            <img
+              src={currentImage}
+              alt={`${productName} - Imagem ${currentIndex + 1}`}
+              className={`
+                max-w-full max-h-[65vh] object-contain select-none
+                transition-opacity duration-300
+                ${isImageLoading ? 'opacity-0' : 'opacity-100'}
+              `}
+              style={{
+                transform: `scale(${zoomLevel}) translate(${imagePosition.x / zoomLevel}px, ${imagePosition.y / zoomLevel}px)`,
+                transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+                touchAction: 'none',
+                willChange: isZoomed ? 'transform' : 'auto',
+              }}
+              onClick={enableZoom ? handleDoubleTap : undefined}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              draggable={false}
+            />
+          </div>
+
+          {/* ═══ NAVIGATION ARROWS ═══ */}
+          {!isZoomed && hasMultipleImages && (
+            <>
+              {/* Previous */}
+              <button
+                onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
+                disabled={currentIndex === 0}
+                className={`
+                  absolute left-2 sm:left-3 md:left-[-52px] top-1/2 -translate-y-1/2
+                  w-10 h-10 md:w-11 md:h-11 rounded-full
+                  flex items-center justify-center transition-all duration-200
+                  focus:outline-none focus:ring-2 focus:ring-white/40
+                  ${currentIndex === 0
+                    ? 'opacity-0 pointer-events-none'
+                    : 'bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
+                  }
+                `}
+                aria-label='Imagem anterior'
+              >
+                <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M15 19l-7-7 7-7' />
+                </svg>
+              </button>
+
+              {/* Next */}
+              <button
+                onClick={(e) => { e.stopPropagation(); goToNext(); }}
+                disabled={currentIndex === images.length - 1}
+                className={`
+                  absolute right-2 sm:right-3 md:right-[-52px] top-1/2 -translate-y-1/2
+                  w-10 h-10 md:w-11 md:h-11 rounded-full
+                  flex items-center justify-center transition-all duration-200
+                  focus:outline-none focus:ring-2 focus:ring-white/40
+                  ${currentIndex === images.length - 1
+                    ? 'opacity-0 pointer-events-none'
+                    : 'bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
+                  }
+                `}
+                aria-label='Próxima imagem'
+              >
+                <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M9 5l7 7-7 7' />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Thumbnail strip */}
-      {showThumbnails && !isZoomed && images.length > 1 && (
-        <div className='absolute bottom-0 left-0 right-0 bg-black/70 p-2 sm:p-4'>
-          <div className='flex gap-2 justify-center overflow-x-auto scrollbar-hide max-w-full px-4'>
-            {images.map((image, index) => (
+      {/* ═══ MOBILE BOTTOM: Dots + Thumbnails ═══ */}
+      {hasMultipleImages && !isZoomed && (
+        <div className='md:hidden absolute bottom-0 left-0 right-0 pb-5 safe-area-padding'>
+          {/* Dots */}
+          <div className='flex items-center justify-center gap-2 mb-3' role='tablist'>
+            {images.map((_, index) => (
               <button
-                key={`thumb-${index}`}
-                onClick={e => {
-                  e.stopPropagation();
-                  goToImage(index);
-                }}
+                key={`dot-${index}`}
+                role='tab'
+                aria-selected={currentIndex === index}
+                onClick={() => goToImage(index)}
                 className={`
-                  flex-shrink-0 border-2 transition-all duration-200
-                  overflow-hidden rounded-md focus:outline-none focus:ring-2 
-                  focus:ring-white focus:ring-opacity-50
-                  ${
-                    currentIndex === index
-                      ? 'border-white scale-110 shadow-lg'
-                      : 'border-transparent opacity-70 hover:opacity-100 hover:border-white/50'
+                  rounded-full transition-all duration-300
+                  focus:outline-none
+                  ${currentIndex === index
+                    ? 'w-6 h-1.5 bg-white'
+                    : 'w-1.5 h-1.5 bg-white/40'
                   }
-                  ${customStyles.thumbnail || ''}
                 `}
-                aria-label={`Ir para imagem ${index + 1}`}
-                style={{
-                  minWidth: isTouchDevice ? '48px' : '64px',
-                  minHeight: isTouchDevice ? '48px' : '64px',
-                }}
-              >
-                <img
-                  src={image}
-                  alt={`Miniatura ${index + 1}`}
-                  className='w-12 h-12 sm:w-16 sm:h-16 object-cover'
-                  loading='lazy'
-                />
-              </button>
+                aria-label={`Imagem ${index + 1}`}
+              />
             ))}
           </div>
+
+          {/* Mobile thumbnails — horizontal strip */}
+          {showThumbnails && (
+            <div className='flex gap-2 justify-center px-4 overflow-x-auto scrollbar-hide'>
+              {images.map((image, index) => (
+                <button
+                  key={`mobile-thumb-${index}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToImage(index);
+                  }}
+                  className={`
+                    flex-shrink-0 w-11 h-11 rounded-md overflow-hidden
+                    border-2 transition-all duration-200
+                    ${currentIndex === index
+                      ? 'border-white opacity-100'
+                      : 'border-transparent opacity-40'
+                    }
+                  `}
+                  aria-label={`Ir para imagem ${index + 1}`}
+                >
+                  <img
+                    src={image}
+                    alt={`Miniatura ${index + 1}`}
+                    className='w-full h-full object-cover'
+                    loading='lazy'
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ MOBILE ZOOM INDICATOR ═══ */}
+      {isZoomed && isTouchDevice && (
+        <div className='absolute bottom-8 left-1/2 -translate-x-1/2 z-50
+          text-white/70 text-xs bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm'>
+          {Math.round(zoomLevel * 100)}% • Toque duplo para sair
         </div>
       )}
     </div>
