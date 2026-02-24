@@ -27,8 +27,8 @@ const useIsTouchDevice = () => {
 
 /**
  * ImageGalleryModal — Layout premium e-commerce
- * Desktop: thumbnails verticais à esquerda + hover zoom (lens)
- * Mobile: swipe horizontal + pinch-to-zoom + dots
+ * Desktop: thumbnails verticais à esquerda + click-to-zoom com pan livre
+ * Mobile: swipe horizontal (loop) + pinch-to-zoom + double-tap + pan
  */
 const ImageGalleryModal = ({
   images = [],
@@ -45,239 +45,301 @@ const ImageGalleryModal = ({
   const isTouchDevice = useIsTouchDevice();
   const modalRef = useRef(null);
   const imageContainerRef = useRef(null);
-  const mainImageRef = useRef(null);
-  const lastTap = useRef(0);
-  const pinchStartDistance = useRef(0);
+  const desktopImageRef = useRef(null);
   const thumbnailContainerRef = useRef(null);
 
   // ─── Estados principais ───
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isImageLoading, setIsImageLoading] = useState(false);
 
-  // ─── Desktop hover zoom ───
-  const [isHoverZooming, setIsHoverZooming] = useState(false);
-  const [hoverZoomPos, setHoverZoomPos] = useState({ x: 50, y: 50 });
+  // ─── Desktop zoom state ───
+  const [desktopZoomed, setDesktopZoomed] = useState(false);
+  const [desktopZoomOrigin, setDesktopZoomOrigin] = useState({ x: 50, y: 50 });
+  const [desktopPan, setDesktopPan] = useState({ x: 0, y: 0 });
+  const [isDesktopPanning, setIsDesktopPanning] = useState(false);
+  const desktopPanStart = useRef({ x: 0, y: 0 });
+  const desktopPanOffset = useRef({ x: 0, y: 0, moved: false });
+  const DESKTOP_ZOOM_SCALE = 2.8;
 
-  // ─── Touch states ───
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
+  // ─── Mobile zoom/pan state ───
+  const [mobileZoomLevel, setMobileZoomLevel] = useState(1);
+  const [mobilePan, setMobilePan] = useState({ x: 0, y: 0 });
+  const [isMobilePanning, setIsMobilePanning] = useState(false);
+  const mobilePanStart = useRef({ x: 0, y: 0 });
+  const mobilePanOffset = useRef({ x: 0, y: 0 });
+  const pinchStartDistance = useRef(0);
+  const pinchStartZoom = useRef(1);
+  const lastTap = useRef(0);
+  const maxZoomLevel = 4;
 
+  // ─── Touch swipe state ───
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchEndX, setTouchEndX] = useState(null);
   const minSwipeDistance = 50;
-  const maxZoomLevel = 3;
-  const DESKTOP_ZOOM_SCALE = 2.5;
 
-  // ─── Reset zoom ───
-  const resetZoom = useCallback(() => {
-    setIsZoomed(false);
-    setZoomLevel(1);
-    setImagePosition({ x: 0, y: 0 });
-    setIsHoverZooming(false);
+  const isMobileZoomed = mobileZoomLevel > 1;
+
+  // ═══════════════════════════════════════════
+  // RESET
+  // ═══════════════════════════════════════════
+
+  const resetAllZoom = useCallback(() => {
+    setDesktopZoomed(false);
+    setDesktopPan({ x: 0, y: 0 });
+    setDesktopZoomOrigin({ x: 50, y: 50 });
+    setMobileZoomLevel(1);
+    setMobilePan({ x: 0, y: 0 });
+    setIsDesktopPanning(false);
+    setIsMobilePanning(false);
   }, []);
 
   // ═══════════════════════════════════════════
-  // DESKTOP: Hover Zoom (Lens Effect)
+  // NAVIGATION (loop infinito)
   // ═══════════════════════════════════════════
 
-  const handleMouseEnterImage = useCallback(() => {
-    if (!enableZoom || isTouchDevice) return;
-    setIsHoverZooming(true);
-  }, [enableZoom, isTouchDevice]);
+  const goToNext = useCallback(() => {
+    setIsImageLoading(true);
+    resetAllZoom();
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  }, [images.length, resetAllZoom]);
 
-  const handleMouseLeaveImage = useCallback(() => {
-    setIsHoverZooming(false);
-  }, []);
+  const goToPrevious = useCallback(() => {
+    setIsImageLoading(true);
+    resetAllZoom();
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  }, [images.length, resetAllZoom]);
 
-  const handleMouseMoveImage = useCallback(
-    (e) => {
-      if (!enableZoom || isTouchDevice || !mainImageRef.current) return;
-
-      const rect = mainImageRef.current.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-      setHoverZoomPos({
-        x: Math.max(0, Math.min(100, x)),
-        y: Math.max(0, Math.min(100, y)),
-      });
+  const goToImage = useCallback(
+    (index) => {
+      if (index >= 0 && index < images.length) {
+        setIsImageLoading(true);
+        resetAllZoom();
+        setCurrentIndex(index);
+      }
     },
-    [enableZoom, isTouchDevice]
+    [images.length, resetAllZoom]
   );
 
   // ═══════════════════════════════════════════
-  // MOBILE: Touch / Swipe / Pinch
+  // DESKTOP: Click-to-zoom + Pan livre
+  // ═══════════════════════════════════════════
+
+  const handleDesktopClick = useCallback(
+    (e) => {
+      if (!enableZoom || isTouchDevice) return;
+
+      // Se fez pan real, ignora o click
+      if (desktopPanOffset.current.moved) {
+        desktopPanOffset.current.moved = false;
+        return;
+      }
+
+      if (desktopZoomed) {
+        // Zoom out
+        setDesktopZoomed(false);
+        setDesktopPan({ x: 0, y: 0 });
+      } else {
+        // Zoom in no ponto exato do clique
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        setDesktopZoomOrigin({ x, y });
+        setDesktopPan({ x: 0, y: 0 });
+        setDesktopZoomed(true);
+      }
+    },
+    [enableZoom, isTouchDevice, desktopZoomed]
+  );
+
+  const handleDesktopMouseDown = useCallback(
+    (e) => {
+      if (!desktopZoomed || !enableZoom || isTouchDevice) return;
+      e.preventDefault();
+      setIsDesktopPanning(true);
+      desktopPanStart.current = { x: e.clientX, y: e.clientY };
+      desktopPanOffset.current = { x: desktopPan.x, y: desktopPan.y, moved: false };
+    },
+    [desktopZoomed, enableZoom, isTouchDevice, desktopPan]
+  );
+
+  const handleDesktopMouseMove = useCallback(
+    (e) => {
+      if (!isDesktopPanning || !desktopZoomed) return;
+
+      const dx = e.clientX - desktopPanStart.current.x;
+      const dy = e.clientY - desktopPanStart.current.y;
+
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        desktopPanOffset.current.moved = true;
+      }
+
+      setDesktopPan({
+        x: desktopPanOffset.current.x + dx,
+        y: desktopPanOffset.current.y + dy,
+      });
+    },
+    [isDesktopPanning, desktopZoomed]
+  );
+
+  const handleDesktopMouseUp = useCallback(() => {
+    setIsDesktopPanning(false);
+  }, []);
+
+  // Desktop scroll zoom
+  const handleDesktopWheel = useCallback(
+    (e) => {
+      if (!enableZoom || isTouchDevice) return;
+      e.preventDefault();
+
+      if (e.deltaY < 0 && !desktopZoomed) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        setDesktopZoomOrigin({ x, y });
+        setDesktopPan({ x: 0, y: 0 });
+        setDesktopZoomed(true);
+      } else if (e.deltaY > 0 && desktopZoomed) {
+        setDesktopZoomed(false);
+        setDesktopPan({ x: 0, y: 0 });
+      }
+    },
+    [enableZoom, isTouchDevice, desktopZoomed]
+  );
+
+  // ═══════════════════════════════════════════
+  // MOBILE: Swipe + Pinch + Double-tap + Pan
   // ═══════════════════════════════════════════
 
   const handleTouchStart = useCallback(
     (e) => {
-      if (isZoomed) return;
-
-      const touch = e.touches[0];
-      setTouchEnd(null);
-      setTouchStart(touch.clientX);
-
-      // Pinch start
       if (e.touches.length === 2 && enableZoom) {
-        const touch2 = e.touches[1];
-        const distance = Math.hypot(
-          touch2.clientX - touch.clientX,
-          touch2.clientY - touch.clientY
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        pinchStartDistance.current = Math.hypot(
+          t2.clientX - t1.clientX,
+          t2.clientY - t1.clientY
         );
-        pinchStartDistance.current = distance;
+        pinchStartZoom.current = mobileZoomLevel;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        if (isMobileZoomed) {
+          setIsMobilePanning(true);
+          mobilePanStart.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+          };
+          mobilePanOffset.current = { ...mobilePan };
+        } else if (enableSwipe) {
+          setTouchEndX(null);
+          setTouchStartX(e.touches[0].clientX);
+        }
       }
     },
-    [isZoomed, enableZoom]
+    [isMobileZoomed, mobileZoomLevel, mobilePan, enableSwipe, enableZoom]
   );
 
   const handleTouchMove = useCallback(
     (e) => {
       if (e.touches.length === 2 && enableZoom) {
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
         const distance = Math.hypot(
-          touch2.clientX - touch1.clientX,
-          touch2.clientY - touch1.clientY
+          t2.clientX - t1.clientX,
+          t2.clientY - t1.clientY
         );
 
         if (pinchStartDistance.current > 0) {
           const scale = distance / pinchStartDistance.current;
-          const newZoom = Math.min(Math.max(1, zoomLevel * scale), maxZoomLevel);
-          setZoomLevel(newZoom);
-          setIsZoomed(newZoom > 1);
+          const newZoom = Math.min(
+            Math.max(1, pinchStartZoom.current * scale),
+            maxZoomLevel
+          );
+          setMobileZoomLevel(newZoom);
+          if (newZoom === 1) setMobilePan({ x: 0, y: 0 });
         }
-      } else if (e.touches.length === 1) {
-        if (!isZoomed && enableSwipe) {
-          setTouchEnd(e.touches[0].clientX);
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        if (isMobileZoomed && isMobilePanning) {
+          const dx = e.touches[0].clientX - mobilePanStart.current.x;
+          const dy = e.touches[0].clientY - mobilePanStart.current.y;
+          setMobilePan({
+            x: mobilePanOffset.current.x + dx,
+            y: mobilePanOffset.current.y + dy,
+          });
+        } else if (!isMobileZoomed && enableSwipe) {
+          setTouchEndX(e.touches[0].clientX);
         }
       }
     },
-    [isZoomed, zoomLevel, enableZoom, enableSwipe]
+    [isMobileZoomed, isMobilePanning, enableSwipe, enableZoom]
   );
 
   const handleTouchEnd = useCallback(() => {
     pinchStartDistance.current = 0;
+    setIsMobilePanning(false);
 
-    if (!touchStart || !touchEnd || isZoomed || !enableSwipe) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe && currentIndex < images.length - 1) {
-      goToNext();
-    } else if (isRightSwipe && currentIndex > 0) {
-      goToPrevious();
+    // Snap to 1 if near
+    if (mobileZoomLevel > 0.9 && mobileZoomLevel < 1.1) {
+      setMobileZoomLevel(1);
+      setMobilePan({ x: 0, y: 0 });
     }
 
-    setTouchStart(null);
-    setTouchEnd(null);
-  }, [touchStart, touchEnd, isZoomed, currentIndex, images.length, enableSwipe]);
+    // Handle swipe (loop)
+    if (!isMobileZoomed && touchStartX !== null && touchEndX !== null && enableSwipe) {
+      const distance = touchStartX - touchEndX;
+      if (distance > minSwipeDistance) {
+        goToNext();
+      } else if (distance < -minSwipeDistance) {
+        goToPrevious();
+      }
+    }
 
-  // Double tap zoom (mobile)
-  const handleDoubleTap = useCallback(
+    setTouchStartX(null);
+    setTouchEndX(null);
+  }, [touchStartX, touchEndX, isMobileZoomed, mobileZoomLevel, enableSwipe, goToNext, goToPrevious]);
+
+  // Double tap zoom (mobile) — zoom no ponto tocado
+  const handleMobileDoubleTap = useCallback(
     (e) => {
       if (!enableZoom || !isTouchDevice) return;
 
-      const currentTime = Date.now();
-      const tapLength = currentTime - lastTap.current;
+      const now = Date.now();
+      const tapGap = now - lastTap.current;
 
-      if (tapLength < 300 && tapLength > 0) {
+      if (tapGap < 300 && tapGap > 0) {
         e.preventDefault();
-        if (isZoomed) {
-          resetZoom();
+        if (isMobileZoomed) {
+          setMobileZoomLevel(1);
+          setMobilePan({ x: 0, y: 0 });
         } else {
-          setIsZoomed(true);
-          setZoomLevel(2);
+          setMobileZoomLevel(2.5);
+          const rect = e.currentTarget.getBoundingClientRect();
+          const touch = e.changedTouches?.[0] || e;
+          const touchX = (touch.clientX || 0) - rect.left;
+          const touchY = (touch.clientY || 0) - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          setMobilePan({
+            x: (centerX - touchX) * 1.5,
+            y: (centerY - touchY) * 1.5,
+          });
         }
       }
 
-      lastTap.current = currentTime;
+      lastTap.current = now;
     },
-    [isZoomed, enableZoom, isTouchDevice, resetZoom]
-  );
-
-  // ─── Drag (zoomed state) ───
-  const handleDragStart = useCallback(
-    (e) => {
-      if (!isZoomed || !enableZoom) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      setIsDragging(true);
-      setDragStart({
-        x: clientX - imagePosition.x,
-        y: clientY - imagePosition.y,
-      });
-    },
-    [isZoomed, imagePosition, enableZoom]
-  );
-
-  const handleDragMove = useCallback(
-    (e) => {
-      if (!isDragging || !isZoomed || !enableZoom) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      setImagePosition({
-        x: clientX - dragStart.x,
-        y: clientY - dragStart.y,
-      });
-    },
-    [isDragging, isZoomed, dragStart, enableZoom]
-  );
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // ─── Wheel zoom ───
-  const handleWheel = useCallback(
-    (e) => {
-      if (!enableZoom || !isTouchDevice) return;
-      e.preventDefault();
-      const delta = e.deltaY * -0.01;
-      const newZoom = Math.min(Math.max(1, zoomLevel + delta), maxZoomLevel);
-      setZoomLevel(newZoom);
-      setIsZoomed(newZoom > 1);
-      if (newZoom === 1) setImagePosition({ x: 0, y: 0 });
-    },
-    [zoomLevel, enableZoom, isTouchDevice]
+    [enableZoom, isTouchDevice, isMobileZoomed]
   );
 
   // ═══════════════════════════════════════════
-  // NAVIGATION
+  // EFFECTS
   // ═══════════════════════════════════════════
 
-  const goToNext = useCallback(() => {
-    if (currentIndex < images.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setIsImageLoading(true);
-      resetZoom();
-    }
-  }, [currentIndex, images.length, resetZoom]);
-
-  const goToPrevious = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setIsImageLoading(true);
-      resetZoom();
-    }
-  }, [currentIndex, resetZoom]);
-
-  const goToImage = useCallback(
-    (index) => {
-      if (index >= 0 && index < images.length) {
-        setCurrentIndex(index);
-        setIsImageLoading(true);
-        resetZoom();
-      }
-    },
-    [images.length, resetZoom]
-  );
-
-  // ─── Auto-scroll thumbnail into view ───
+  // Auto-scroll thumbnail
   useEffect(() => {
     if (!thumbnailContainerRef.current) return;
     const activeThumb = thumbnailContainerRef.current.children[currentIndex];
@@ -290,7 +352,7 @@ const ImageGalleryModal = ({
     }
   }, [currentIndex]);
 
-  // ─── Keyboard ───
+  // Keyboard
   useEffect(() => {
     if (!isOpen) return;
 
@@ -307,8 +369,11 @@ const ImageGalleryModal = ({
           goToNext();
           break;
         case 'Escape':
-          if (isZoomed) resetZoom();
-          else onClose?.();
+          if (desktopZoomed || isMobileZoomed) {
+            resetAllZoom();
+          } else {
+            onClose?.();
+          }
           break;
         default:
           break;
@@ -317,20 +382,21 @@ const ImageGalleryModal = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, goToNext, goToPrevious, resetZoom, isZoomed, onClose]);
+  }, [isOpen, goToNext, goToPrevious, resetAllZoom, desktopZoomed, isMobileZoomed, onClose]);
 
-  // ─── Init / Cleanup ───
+  // Init / Cleanup
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex);
       document.body.style.overflow = 'hidden';
+      resetAllZoom();
     } else {
       document.body.style.overflow = 'auto';
-      resetZoom();
+      resetAllZoom();
     }
-  }, [isOpen, initialIndex, resetZoom]);
+  }, [isOpen, initialIndex, resetAllZoom]);
 
-  // Prevent scroll on touch when modal open
+  // Prevent scroll on touch
   useEffect(() => {
     if (!isOpen) return;
     const preventScroll = (e) => {
@@ -349,9 +415,11 @@ const ImageGalleryModal = ({
 
   const handleBackdropClick = useCallback(
     (e) => {
-      if (e.target === e.currentTarget && !isZoomed) onClose?.();
+      if (e.target === e.currentTarget && !desktopZoomed && !isMobileZoomed) {
+        onClose?.();
+      }
     },
-    [isZoomed, onClose]
+    [desktopZoomed, isMobileZoomed, onClose]
   );
 
   if (!isOpen || !images.length) return null;
@@ -364,11 +432,10 @@ const ImageGalleryModal = ({
       ref={modalRef}
       className='fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm'
       onClick={handleBackdropClick}
-      style={{ touchAction: isZoomed ? 'none' : 'pan-y' }}
+      style={{ touchAction: isMobileZoomed ? 'none' : 'pan-y' }}
     >
       {/* ═══ TOP BAR ═══ */}
       <div className='absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 sm:px-6'>
-        {/* Counter */}
         {showCounter && hasMultipleImages && (
           <span className='text-white/70 text-sm font-medium tracking-wide'>
             {currentIndex + 1} / {images.length}
@@ -376,14 +443,14 @@ const ImageGalleryModal = ({
         )}
         {!showCounter && <span />}
 
-        {/* Zoom hint — desktop only */}
         {enableZoom && !isTouchDevice && (
           <span className='text-white/40 text-xs hidden md:block'>
-            Passe o mouse para zoom
+            {desktopZoomed
+              ? 'Arraste para explorar • Clique para sair do zoom'
+              : 'Clique na imagem para zoom • Scroll para zoom'}
           </span>
         )}
 
-        {/* Close */}
         <button
           onClick={onClose}
           className='text-white/70 hover:text-white transition-colors duration-200
@@ -398,11 +465,9 @@ const ImageGalleryModal = ({
       </div>
 
       {/* ═══ MAIN LAYOUT ═══ */}
-      {/* Desktop: flex-row (thumbnails left + image right) */}
-      {/* Mobile: flex-col (image + dots bottom) */}
       <div className='h-full flex flex-col md:flex-row items-center justify-center pt-14 pb-4 md:py-16 md:px-6 lg:px-12'>
 
-        {/* ─── DESKTOP VERTICAL THUMBNAILS (left side) ─── */}
+        {/* ─── DESKTOP VERTICAL THUMBNAILS ─── */}
         {showThumbnails && hasMultipleImages && (
           <div className='hidden md:flex flex-col items-center mr-4 lg:mr-6'>
             <div
@@ -448,43 +513,44 @@ const ImageGalleryModal = ({
         <div
           ref={imageContainerRef}
           className='relative flex-1 flex items-center justify-center w-full h-full max-w-5xl'
-          onTouchStart={enableSwipe ? handleTouchStart : undefined}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={enableSwipe ? handleTouchEnd : undefined}
-          onWheel={enableZoom ? handleWheel : undefined}
         >
-          {/* Loading spinner */}
           {isImageLoading && (
             <div className='absolute inset-0 flex items-center justify-center z-40'>
               <div className='animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white/80' />
             </div>
           )}
 
-          {/* ═══ MAIN IMAGE — Desktop (hover zoom) ═══ */}
+          {/* ═══ DESKTOP IMAGE ═══ */}
           <div
             className='hidden md:flex items-center justify-center w-full h-full relative overflow-hidden'
-            onMouseEnter={handleMouseEnterImage}
-            onMouseLeave={handleMouseLeaveImage}
-            onMouseMove={handleMouseMoveImage}
-            style={{ cursor: enableZoom ? 'crosshair' : 'default' }}
+            onClick={handleDesktopClick}
+            onMouseDown={handleDesktopMouseDown}
+            onMouseMove={handleDesktopMouseMove}
+            onMouseUp={handleDesktopMouseUp}
+            onMouseLeave={handleDesktopMouseUp}
+            onWheel={handleDesktopWheel}
+            style={{
+              cursor: desktopZoomed
+                ? isDesktopPanning ? 'grabbing' : 'grab'
+                : enableZoom ? 'zoom-in' : 'default',
+            }}
           >
             <img
-              ref={mainImageRef}
+              ref={desktopImageRef}
               src={currentImage}
               alt={`${productName} - Imagem ${currentIndex + 1}`}
               className={`
                 max-w-full max-h-[75vh] object-contain select-none
-                transition-opacity duration-300
                 ${isImageLoading ? 'opacity-0' : 'opacity-100'}
               `}
               style={{
-                transformOrigin: `${hoverZoomPos.x}% ${hoverZoomPos.y}%`,
-                transform: isHoverZooming
-                  ? `scale(${DESKTOP_ZOOM_SCALE})`
+                transformOrigin: `${desktopZoomOrigin.x}% ${desktopZoomOrigin.y}%`,
+                transform: desktopZoomed
+                  ? `scale(${DESKTOP_ZOOM_SCALE}) translate(${desktopPan.x / DESKTOP_ZOOM_SCALE}px, ${desktopPan.y / DESKTOP_ZOOM_SCALE}px)`
                   : 'scale(1)',
-                transition: isHoverZooming
-                  ? 'transform 0.1s ease-out'
-                  : 'transform 0.3s ease-out',
+                transition: isDesktopPanning
+                  ? 'none'
+                  : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
               }}
               onLoad={handleImageLoad}
               onError={handleImageError}
@@ -492,57 +558,43 @@ const ImageGalleryModal = ({
             />
           </div>
 
-          {/* ═══ MAIN IMAGE — Mobile (pinch + swipe + double-tap) ═══ */}
+          {/* ═══ MOBILE IMAGE ═══ */}
           <div
-            className='md:hidden flex items-center justify-center w-full h-full'
-            onMouseDown={enableZoom ? handleDragStart : undefined}
-            onMouseMove={enableZoom ? handleDragMove : undefined}
-            onMouseUp={enableZoom ? handleDragEnd : undefined}
-            onMouseLeave={enableZoom ? handleDragEnd : undefined}
-            style={{
-              cursor: isZoomed
-                ? isDragging ? 'grabbing' : 'grab'
-                : 'default',
-            }}
+            className='md:hidden flex items-center justify-center w-full h-full overflow-hidden'
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={handleMobileDoubleTap}
           >
             <img
               src={currentImage}
               alt={`${productName} - Imagem ${currentIndex + 1}`}
               className={`
                 max-w-full max-h-[65vh] object-contain select-none
-                transition-opacity duration-300
                 ${isImageLoading ? 'opacity-0' : 'opacity-100'}
               `}
               style={{
-                transform: `scale(${zoomLevel}) translate(${imagePosition.x / zoomLevel}px, ${imagePosition.y / zoomLevel}px)`,
-                transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+                transform: `scale(${mobileZoomLevel}) translate(${mobilePan.x / mobileZoomLevel}px, ${mobilePan.y / mobileZoomLevel}px)`,
+                transition: isMobilePanning ? 'none' : 'transform 0.3s ease-out',
                 touchAction: 'none',
-                willChange: isZoomed ? 'transform' : 'auto',
+                willChange: isMobileZoomed ? 'transform' : 'auto',
               }}
-              onClick={enableZoom ? handleDoubleTap : undefined}
               onLoad={handleImageLoad}
               onError={handleImageError}
               draggable={false}
             />
           </div>
 
-          {/* ═══ NAVIGATION ARROWS ═══ */}
-          {!isZoomed && hasMultipleImages && (
+          {/* ═══ NAVIGATION ARROWS (sempre visíveis, loop) ═══ */}
+          {!desktopZoomed && !isMobileZoomed && hasMultipleImages && (
             <>
-              {/* Previous */}
               <button
                 onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
-                disabled={currentIndex === 0}
-                className={`
-                  absolute left-2 sm:left-3 md:left-[-52px] top-1/2 -translate-y-1/2
+                className='absolute left-2 sm:left-3 md:left-[-52px] top-1/2 -translate-y-1/2
                   w-10 h-10 md:w-11 md:h-11 rounded-full
                   flex items-center justify-center transition-all duration-200
                   focus:outline-none focus:ring-2 focus:ring-white/40
-                  ${currentIndex === 0
-                    ? 'opacity-0 pointer-events-none'
-                    : 'bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
-                  }
-                `}
+                  bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
                 aria-label='Imagem anterior'
               >
                 <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
@@ -550,20 +602,13 @@ const ImageGalleryModal = ({
                 </svg>
               </button>
 
-              {/* Next */}
               <button
                 onClick={(e) => { e.stopPropagation(); goToNext(); }}
-                disabled={currentIndex === images.length - 1}
-                className={`
-                  absolute right-2 sm:right-3 md:right-[-52px] top-1/2 -translate-y-1/2
+                className='absolute right-2 sm:right-3 md:right-[-52px] top-1/2 -translate-y-1/2
                   w-10 h-10 md:w-11 md:h-11 rounded-full
                   flex items-center justify-center transition-all duration-200
                   focus:outline-none focus:ring-2 focus:ring-white/40
-                  ${currentIndex === images.length - 1
-                    ? 'opacity-0 pointer-events-none'
-                    : 'bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
-                  }
-                `}
+                  bg-white/10 md:bg-white/5 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm'
                 aria-label='Próxima imagem'
               >
                 <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
@@ -575,10 +620,9 @@ const ImageGalleryModal = ({
         </div>
       </div>
 
-      {/* ═══ MOBILE BOTTOM: Dots + Thumbnails ═══ */}
-      {hasMultipleImages && !isZoomed && (
+      {/* ═══ MOBILE BOTTOM ═══ */}
+      {hasMultipleImages && !isMobileZoomed && (
         <div className='md:hidden absolute bottom-0 left-0 right-0 pb-5 safe-area-padding'>
-          {/* Dots */}
           <div className='flex items-center justify-center gap-2 mb-3' role='tablist'>
             {images.map((_, index) => (
               <button
@@ -587,8 +631,7 @@ const ImageGalleryModal = ({
                 aria-selected={currentIndex === index}
                 onClick={() => goToImage(index)}
                 className={`
-                  rounded-full transition-all duration-300
-                  focus:outline-none
+                  rounded-full transition-all duration-300 focus:outline-none
                   ${currentIndex === index
                     ? 'w-6 h-1.5 bg-white'
                     : 'w-1.5 h-1.5 bg-white/40'
@@ -599,7 +642,6 @@ const ImageGalleryModal = ({
             ))}
           </div>
 
-          {/* Mobile thumbnails — horizontal strip */}
           {showThumbnails && (
             <div className='flex gap-2 justify-center px-4 overflow-x-auto scrollbar-hide'>
               {images.map((image, index) => (
@@ -633,11 +675,18 @@ const ImageGalleryModal = ({
         </div>
       )}
 
-      {/* ═══ MOBILE ZOOM INDICATOR ═══ */}
-      {isZoomed && isTouchDevice && (
+      {/* ═══ ZOOM INDICATORS ═══ */}
+      {isMobileZoomed && isTouchDevice && (
         <div className='absolute bottom-8 left-1/2 -translate-x-1/2 z-50
           text-white/70 text-xs bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm'>
-          {Math.round(zoomLevel * 100)}% • Toque duplo para sair
+          {Math.round(mobileZoomLevel * 100)}% • Toque duplo para sair
+        </div>
+      )}
+
+      {desktopZoomed && !isTouchDevice && (
+        <div className='hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 z-50
+          text-white/50 text-xs bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm'>
+          {Math.round(DESKTOP_ZOOM_SCALE * 100)}% • Arraste para explorar • Clique para sair
         </div>
       )}
     </div>

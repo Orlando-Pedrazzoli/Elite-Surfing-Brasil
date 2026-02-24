@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import ProductPriceDisplay from '../components/ProductPriceDisplay';
 import ProductInfoTabs from '../components/ProductInfoTabs';
 import ShippingCalculator from '../components/ShippingCalculator';
+import ImageGalleryModal from '../components/ImageGalleryModal';
 
 const ProductDetails = () => {
   const {
@@ -44,21 +45,7 @@ const ProductDetails = () => {
   const [isColorTransitioning, setIsColorTransitioning] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
-  // Estados para o modal
-  const [modalImageIndex, setModalImageIndex] = useState(0);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isImageLoading, setIsImageLoading] = useState(false);
-
   const imageScrollRef = useRef(null);
-  const modalRef = useRef(null);
-  const modalImageRef = useRef(null);
-  const pinchStartDistance = useRef(0);
 
   // Estado para produto carregado via API (quando não está no products)
   const [apiProduct, setApiProduct] = useState(null);
@@ -234,165 +221,24 @@ const ProductDetails = () => {
     }, 200);
   };
 
-  // Modal handlers
+  // ═══════════════════════════════════════════════
+  // MODAL — agora usa ImageGalleryModal
+  // ═══════════════════════════════════════════════
   const openModal = useCallback(
-    index => {
-      setModalImageIndex(index || currentImageIndex);
+    (index) => {
+      setCurrentImageIndex(index);
       setIsModalOpen(true);
-      setIsZoomed(false);
-      setZoomLevel(1);
-      setImagePosition({ x: 0, y: 0 });
-      document.body.style.overflow = 'hidden';
     },
-    [currentImageIndex]
+    []
   );
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
-    setIsZoomed(false);
-    setZoomLevel(1);
-    setImagePosition({ x: 0, y: 0 });
-    document.body.style.overflow = 'auto';
   }, []);
 
-  // Touch handlers para swipe
-  const minSwipeDistance = 50;
-
-  const onTouchStart = useCallback(e => {
-    if (isZoomed) return;
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  }, [isZoomed]);
-
-  const onTouchMove = useCallback(e => {
-    if (isZoomed) return;
-    setTouchEnd(e.targetTouches[0].clientX);
-  }, [isZoomed]);
-
-  const onTouchEnd = useCallback(() => {
-    if (!touchStart || !touchEnd || isZoomed || !displayProduct) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      const nextIndex = modalImageIndex < displayProduct.image.length - 1 ? modalImageIndex + 1 : 0;
-      setModalImageIndex(nextIndex);
-      setCurrentImageIndex(nextIndex);
-    }
-
-    if (isRightSwipe) {
-      const prevIndex = modalImageIndex > 0 ? modalImageIndex - 1 : displayProduct.image.length - 1;
-      setModalImageIndex(prevIndex);
-      setCurrentImageIndex(prevIndex);
-    }
-  }, [touchStart, touchEnd, modalImageIndex, displayProduct, isZoomed]);
-
-  // Double tap para zoom
-  const lastTap = useRef(0);
-  const handleDoubleTap = useCallback(e => {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap.current;
-
-    if (tapLength < 300 && tapLength > 0) {
-      e.preventDefault();
-      if (isZoomed) {
-        setIsZoomed(false);
-        setZoomLevel(1);
-        setImagePosition({ x: 0, y: 0 });
-      } else {
-        setIsZoomed(true);
-        setZoomLevel(2);
-      }
-    }
-    lastTap.current = currentTime;
-  }, [isZoomed]);
-
-  // Pinch to zoom
-  const handlePinch = useCallback(e => {
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.sqrt(
-        Math.pow(touch2.clientX - touch1.clientX, 2) +
-        Math.pow(touch2.clientY - touch1.clientY, 2)
-      );
-
-      if (pinchStartDistance.current === 0) {
-        pinchStartDistance.current = distance;
-      } else {
-        const scale = distance / pinchStartDistance.current;
-        const newZoomLevel = Math.min(Math.max(1, zoomLevel * scale), 3);
-        setZoomLevel(newZoomLevel);
-        setIsZoomed(newZoomLevel > 1);
-      }
-    }
-  }, [zoomLevel]);
-
-  const handlePinchEnd = useCallback(() => {
-    pinchStartDistance.current = 0;
-  }, []);
-
-  // Arrastar imagem com zoom
-  const handleMouseDown = useCallback(e => {
-    if (!isZoomed) return;
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - imagePosition.x,
-      y: e.clientY - imagePosition.y,
-    });
-  }, [isZoomed, imagePosition]);
-
-  const handleMouseMove = useCallback(e => {
-    if (!isDragging || !isZoomed) return;
-    setImagePosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
-  }, [isDragging, isZoomed, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Navegação do modal
-  const nextModalImage = useCallback(() => {
-    if (!displayProduct) return;
-    setIsImageLoading(true);
-    const newIndex = modalImageIndex < displayProduct.image.length - 1 ? modalImageIndex + 1 : 0;
-    setModalImageIndex(newIndex);
-    setCurrentImageIndex(newIndex);
-    setIsZoomed(false);
-    setZoomLevel(1);
-    setImagePosition({ x: 0, y: 0 });
-  }, [modalImageIndex, displayProduct]);
-
-  const prevModalImage = useCallback(() => {
-    if (!displayProduct) return;
-    setIsImageLoading(true);
-    const newIndex = modalImageIndex > 0 ? modalImageIndex - 1 : displayProduct.image.length - 1;
-    setModalImageIndex(newIndex);
-    setCurrentImageIndex(newIndex);
-    setIsZoomed(false);
-    setZoomLevel(1);
-    setImagePosition({ x: 0, y: 0 });
-  }, [modalImageIndex, displayProduct]);
-
-  // Navegação com teclado
-  useEffect(() => {
-    const handleKeyDown = e => {
-      if (!isModalOpen) return;
-      if (e.key === 'ArrowLeft') prevModalImage();
-      else if (e.key === 'ArrowRight') nextModalImage();
-      else if (e.key === 'Escape') closeModal();
-    };
-
-    if (isModalOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isModalOpen, nextModalImage, prevModalImage, closeModal]);
+  // ═══════════════════════════════════════════════
+  // IMAGE NAVIGATION (page-level, fora do modal)
+  // ═══════════════════════════════════════════════
 
   // Scroll mobile
   useEffect(() => {
@@ -449,7 +295,7 @@ const ProductDetails = () => {
     navigate('/cart');
   };
 
-  const changeImage = newIndex => {
+  const changeImage = (newIndex) => {
     setIsTransitioning(true);
     setCurrentImageIndex(newIndex);
 
@@ -488,11 +334,11 @@ const ProductDetails = () => {
     setThumbStartIndex(newIndex > displayProduct.image.length - 5 ? 0 : newIndex);
   };
 
-  const selectThumbnail = index => {
+  const selectThumbnail = (index) => {
     changeImage(index);
   };
 
-  const handleImageScroll = ref => {
+  const handleImageScroll = (ref) => {
     if (ref.current) {
       const scrollContainer = ref.current;
       const imageWidth = scrollContainer.offsetWidth;
@@ -643,113 +489,21 @@ const ProductDetails = () => {
       </SEO>
 
       <div className='mt-12 px-4 sm:px-6 md:px-16 lg:px-24 xl:px-32'>
-        {/* Modal de Imagem */}
-        {isModalOpen && (
-          <div
-            className='fixed inset-0 bg-black z-50 flex items-center justify-center'
-            onClick={closeModal}
-            style={{ touchAction: isZoomed ? 'none' : 'pan-y' }}
-          >
-            <button
-              className='absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition-all duration-300 z-50 bg-black/50 rounded-full w-12 h-12 flex items-center justify-center'
-              onClick={closeModal}
-            >
-              ×
-            </button>
 
-            <div className='absolute top-4 left-4 text-white bg-black/50 px-3 py-1 rounded-full text-sm z-50'>
-              {modalImageIndex + 1} / {displayProduct.image.length}
-            </div>
-
-            {isZoomed && (
-              <div className='absolute bottom-20 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded-full text-sm z-50'>
-                Zoom: {Math.round(zoomLevel * 100)}%
-              </div>
-            )}
-
-            <div
-              className='relative w-full h-full flex items-center justify-center'
-              onClick={e => e.stopPropagation()}
-              onTouchStart={onTouchStart}
-              onTouchMove={e => {
-                onTouchMove(e);
-                if (e.touches.length === 2) handlePinch(e);
-              }}
-              onTouchEnd={() => {
-                onTouchEnd();
-                handlePinchEnd();
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            >
-              {isImageLoading && (
-                <div className='absolute inset-0 flex items-center justify-center bg-black/50 z-40'>
-                  <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-white'></div>
-                </div>
-              )}
-
-              <img
-                ref={modalImageRef}
-                src={displayProduct.image[modalImageIndex]}
-                alt={`${displayProduct.name} - Imagem ${modalImageIndex + 1}`}
-                className='max-w-full max-h-full object-contain transition-transform duration-300'
-                style={{
-                  transform: `scale(${zoomLevel}) translate(${imagePosition.x / zoomLevel}px, ${imagePosition.y / zoomLevel}px)`,
-                  cursor: isZoomed ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
-                  userSelect: 'none',
-                  touchAction: 'none',
-                }}
-                onClick={handleDoubleTap}
-                onLoad={() => setIsImageLoading(false)}
-                draggable={false}
-              />
-
-              {!isZoomed && displayProduct.image.length > 1 && (
-                <>
-                  <button
-                    onClick={e => { e.stopPropagation(); prevModalImage(); }}
-                    className='absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 sm:p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
-                  >
-                   <ChevronLeft className='w-4 h-4 text-gray-700' />
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); nextModalImage(); }}
-                    className='absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 sm:p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
-                  >
-                    <ChevronRight className='w-4 h-4 text-gray-700' />
-                  </button>
-                </>
-              )}
-
-              {!isZoomed && displayProduct.image.length > 1 && (
-                <div className='absolute bottom-0 left-0 right-0 bg-black/70 p-2 sm:p-4'>
-                  <div className='flex gap-2 justify-center overflow-x-auto scrollbar-hide max-w-full'>
-                    {displayProduct.image.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={e => {
-                          e.stopPropagation();
-                          setModalImageIndex(index);
-                          setCurrentImageIndex(index);
-                          setIsImageLoading(true);
-                        }}
-                        className={`flex-shrink-0 border-2 transition-all duration-300 ${
-                          modalImageIndex === index
-                            ? 'border-white scale-110'
-                            : 'border-transparent opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={image} alt={`Miniatura ${index + 1}`} className='w-12 h-12 sm:w-16 sm:h-16 object-cover' />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* ═══════════════════════════════════════════════ */}
+        {/* IMAGE GALLERY MODAL (componente reutilizável)  */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ImageGalleryModal
+          images={displayProduct.image}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          initialIndex={currentImageIndex}
+          productName={displayProduct.name}
+          showThumbnails={true}
+          showCounter={true}
+          enableZoom={true}
+          enableSwipe={true}
+        />
 
         {/* ═══════════════════════════════════════════════ */}
         {/* BREADCRUMBS                                     */}
@@ -822,8 +576,6 @@ const ProductDetails = () => {
                     onClick={() => openModal(currentImageIndex)}
                   />
                 )}
-
-               
 
                 {/* 🆕 Badge Frete Grátis — canto superior direito */}
                 {hasFreeShipping && !isInactive && (
