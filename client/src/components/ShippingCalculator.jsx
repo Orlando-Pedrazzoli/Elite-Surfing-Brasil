@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatBRL } from '../utils/installmentUtils';
 import { formatCep, isValidCep } from '../utils/shippingUtils';
@@ -31,17 +31,14 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
     setSelectedOption(null);
 
     try {
-      // Montar body da requisição
       let body = { cep };
 
       if (cartProducts && cartProducts.length > 0) {
-        // Modo carrinho — envia IDs + quantidades
         body.products = cartProducts.map((p) => ({
           productId: p._id,
           quantity: p.quantity || 1,
         }));
       } else if (product) {
-        // Modo produto individual
         body.product = {
           _id: product._id,
           weight: product.weight,
@@ -78,6 +75,43 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
       onShippingSelect(option);
     }
   };
+
+  // ═══════════════════════════════════════════════════════════════
+  // FILTRAR TOP 5 + IDENTIFICAR MAIS BARATA E MAIS RÁPIDA
+  // ═══════════════════════════════════════════════════════════════
+  const { filteredOptions, cheapestId, fastestId } = useMemo(() => {
+    if (!results?.options || results.options.length === 0) {
+      return { filteredOptions: [], cheapestId: null, fastestId: null };
+    }
+
+    const options = [...results.options];
+
+    // Remover duplicatas por transportadora (manter a mais barata de cada)
+    const uniqueByCarrier = new Map();
+    for (const opt of options) {
+      const key = opt.carrier;
+      if (!uniqueByCarrier.has(key) || opt.price < uniqueByCarrier.get(key).price) {
+        uniqueByCarrier.set(key, opt);
+      }
+    }
+    let unique = Array.from(uniqueByCarrier.values());
+
+    // Ordenar por preço (mais barata primeiro)
+    unique.sort((a, b) => a.price - b.price);
+
+    // Pegar top 5
+    const top5 = unique.slice(0, 5);
+
+    // Identificar mais barata e mais rápida
+    const cheapest = top5.reduce((min, opt) => (opt.price < min.price ? opt : min), top5[0]);
+    const fastest = top5.reduce((min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min), top5[0]);
+
+    return {
+      filteredOptions: top5,
+      cheapestId: cheapest?.id,
+      fastestId: fastest?.id,
+    };
+  }, [results]);
 
   return (
     <div className='bg-white border border-gray-200 rounded-lg p-4'>
@@ -138,33 +172,50 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
       )}
 
       {/* Resultados */}
-      {results && !error && (
+      {results && !error && filteredOptions.length > 0 && (
         <div className='mt-3 space-y-2'>
-          {/* Opções de frete */}
-          {results.options.map((option) => {
+          {filteredOptions.map((option) => {
             const isSelected = selectedOption?.id === option.id;
+            const isCheapest = option.id === cheapestId;
+            const isFastest = option.id === fastestId && fastestId !== cheapestId;
 
             return (
               <div
                 key={option.id}
                 onClick={() => handleSelectOption(option)}
-                className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                className={`relative flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                    : isCheapest
+                    ? 'bg-green-50/50 border-green-200 hover:border-green-300'
+                    : isFastest
+                    ? 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className='flex items-center gap-3'>
                   <span className='text-lg'>{option.icon}</span>
                   <div>
-                    <p className='text-sm font-medium text-gray-900'>
-                      {option.carrier} — {option.name}
-                    </p>
+                    <div className='flex items-center gap-2'>
+                      <p className='text-sm font-medium text-gray-900'>
+                        {option.carrier} — {option.name}
+                      </p>
+                      {isCheapest && (
+                        <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200'>
+                          💰 Mais barata
+                        </span>
+                      )}
+                      {isFastest && (
+                        <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200'>
+                          ⚡ Mais rápida
+                        </span>
+                      )}
+                    </div>
                     <p className='text-xs text-gray-500'>{option.deliveryText}</p>
                   </div>
                 </div>
                 <div className='text-right flex items-center gap-2'>
-                  <span className='text-sm font-bold text-gray-900'>
+                  <span className={`text-sm font-bold ${isCheapest && !isSelected ? 'text-green-700' : 'text-gray-900'}`}>
                     {formatBRL(option.price)}
                   </span>
                   {isSelected && (
