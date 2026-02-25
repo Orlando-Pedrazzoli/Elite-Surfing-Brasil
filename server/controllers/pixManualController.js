@@ -8,7 +8,36 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
-import { sendEmail } from '../config/email.js'; // ajuste path se necessário
+import nodemailer from 'nodemailer';
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER: ENVIAR EMAIL (mesmo padrão do orderController.js)
+// Usa GMAIL_USER + GMAIL_APP_PASSWORD (variáveis já existentes)
+// ═══════════════════════════════════════════════════════════════
+const sendPixEmail = async ({ to, subject, html }) => {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.log('⚠️ PIX Email: GMAIL_USER ou GMAIL_APP_PASSWORD não configurado, pulando envio');
+    return null;
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+
+  const result = await transporter.sendMail({
+    from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
+    to,
+    subject,
+    html,
+  });
+
+  console.log(`✅ PIX Email enviado para ${to} (${result.messageId})`);
+  return result;
+};
 
 // ═══════════════════════════════════════════════════════════════
 // POST /api/pix/create — Criar pedido PIX manual (user logado)
@@ -57,18 +86,11 @@ export const createPixOrder = async (req, res) => {
     }
 
     // ─── Calcular valores ───
-    // originalAmount = subtotal antes de qualquer desconto
     const originalAmount = subtotal;
-
-    // Desconto de cupom (se houver)
     const couponDiscount = discountAmount || 0;
     const afterCoupon = subtotal - couponDiscount;
-
-    // Desconto PIX (10% sobre valor após cupom)
     const pixDiscount = afterCoupon * 0.10;
     const afterPix = afterCoupon - pixDiscount;
-
-    // Total final = valor com descontos + frete
     const totalAmount = afterPix + Number(shippingCost);
 
     // ─── Criar pedido (NÃO PAGO) ───
@@ -95,10 +117,10 @@ export const createPixOrder = async (req, res) => {
     // ─── Notificar admin por email ───
     try {
       const user = await User.findById(userId);
-      const adminEmail = process.env.ADMIN_EMAIL || 'elitesurfingrj@yahoo.com.br';
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER;
       const shortId = order._id.toString().slice(-6).toUpperCase();
 
-      await sendEmail({
+      await sendPixEmail({
         to: adminEmail,
         subject: `🔔 Novo Pedido PIX #${shortId} - R$ ${totalAmount.toFixed(2)}`,
         html: `
@@ -224,10 +246,10 @@ export const createPixOrderGuest = async (req, res) => {
 
     // ─── Notificar admin ───
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || 'elitesurfingrj@yahoo.com.br';
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER;
       const shortId = order._id.toString().slice(-6).toUpperCase();
 
-      await sendEmail({
+      await sendPixEmail({
         to: adminEmail,
         subject: `🔔 Pedido PIX (Visitante) #${shortId} - R$ ${totalAmount.toFixed(2)}`,
         html: `
@@ -312,7 +334,7 @@ export const confirmPixPayment = async (req, res) => {
 
       if (customerEmail) {
         const shortId = order._id.toString().slice(-6).toUpperCase();
-        await sendEmail({
+        await sendPixEmail({
           to: customerEmail,
           subject: `✅ Pagamento Confirmado - Pedido #${shortId} - Elite Surfing`,
           html: `
