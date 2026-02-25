@@ -4,13 +4,13 @@ const orderSchema = new mongoose.Schema(
   {
     // ✅ userId agora é opcional para suportar guest checkout
     userId: { type: String, ref: 'user', default: null },
-    
+
     // 🆕 CAMPOS PARA GUEST CHECKOUT
     isGuestOrder: { type: Boolean, default: false },
     guestEmail: { type: String, default: null },
     guestName: { type: String, default: null },
     guestPhone: { type: String, default: null },
-    
+
     items: [
       {
         product: { type: String, required: true, ref: 'Product' },
@@ -33,6 +33,10 @@ const orderSchema = new mongoose.Schema(
     shippingCarrier: { type: String, default: '' },
     shippingDeliveryDays: { type: Number, default: 0 },
     shippingServiceId: { type: String, default: '' },
+
+    // 💰 CAMPOS PIX MANUAL
+    pixDiscount: { type: Number, default: 0 },
+    paidAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

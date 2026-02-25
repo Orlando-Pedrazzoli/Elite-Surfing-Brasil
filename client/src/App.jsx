@@ -33,6 +33,7 @@ import WhatsAppButton from './components/WhatsAppButton';
 import CartSidebar from './components/CartSidebar';
 import GroupPage from './pages/GroupPage';
 import InstitucionalPage from './pages/InstitucionalPage';
+import PixPayment from './pages/PixPayment';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
@@ -127,6 +128,7 @@ const App = () => {
           <Route path='/institucional' element={<InstitucionalPage />} />
           <Route path='/institucional/:section' element={<InstitucionalPage />} />
           <Route path='/loader' element={<Loading />} />
+          <Route path="/pix-payment/:orderId" element={<PixPayment />} />
 
           {/* ═══ SELLER ROUTES ═══ */}
           <Route

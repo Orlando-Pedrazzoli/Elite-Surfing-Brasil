@@ -240,9 +240,11 @@ const Cart = () => {
   // =============================================================================
   // HANDLE PLACE ORDER
   // =============================================================================
+  // ═══════════════════════════════════════════════════════════════
+  // handlePlaceOrder — ATUALIZADO COM PIX MANUAL
+  // ═══════════════════════════════════════════════════════════════
   const handlePlaceOrder = async () => {
     const currentAddress = getCurrentAddress();
-
     if (!currentAddress) {
       return toast.error('Por favor, adicione um endereço de entrega.');
     }
@@ -252,7 +254,6 @@ const Cart = () => {
     if (!selectedShipping) {
       return toast.error('Por favor, calcule e selecione uma opção de frete.');
     }
-
     const stockErrors = validateStockBeforeCheckout();
     if (stockErrors.length > 0) {
       toast.error('Estoque insuficiente:\n' + stockErrors.join('\n'));
@@ -268,6 +269,82 @@ const Cart = () => {
       const shipping = getShippingCost();
       const finalAmount = Math.max(0, subtotal - promoDisc - pixDisc + shipping);
 
+      // ═══════════════════════════════════════════════════════════
+      // 💰 FLUXO PIX MANUAL
+      // ═══════════════════════════════════════════════════════════
+      if (paymentMethod === 'pix') {
+
+        const pixPayload = {
+          items: cartArray.map(item => ({
+            product: item._id,
+            quantity: item.quantity,
+          })),
+          shippingCost: shipping,
+          shippingMethod: selectedShipping.name,
+          shippingCarrier: selectedShipping.carrier,
+          shippingDeliveryDays: selectedShipping.deliveryDays,
+          shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
+          promoCode: discountApplied ? promoCode.toUpperCase() : null,
+          discountAmount: promoDisc,
+          discountPercentage: discountApplied ? 30 : 0,
+        };
+
+        let pixEndpoint;
+
+        if (user) {
+          // ─── User logado ───
+          pixPayload.address = selectedAddress._id;
+          pixEndpoint = '/api/pix/create';
+        } else {
+          // ─── Guest checkout ───
+          const addressResponse = await axios.post('/api/address/guest', {
+            address: currentAddress,
+          });
+          if (!addressResponse.data.success) {
+            throw new Error(addressResponse.data.message || 'Erro ao salvar endereço');
+          }
+
+          pixPayload.address = addressResponse.data.addressId;
+          pixPayload.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
+          pixPayload.guestEmail = currentAddress.email;
+          pixPayload.guestPhone = currentAddress.phone || '';
+          pixEndpoint = '/api/pix/guest/create';
+        }
+
+        const { data } = await axios.post(pixEndpoint, pixPayload);
+
+        if (data.success) {
+          // Salvar dados para a página PixPayment.jsx ler
+          localStorage.setItem('pix_manual_data', JSON.stringify({
+            orderId: data.order.orderId,
+            amount: data.order.amount,
+            originalAmount: data.order.originalAmount,
+            pixDiscount: data.order.pixDiscount,
+            createdAt: data.order.createdAt,
+          }));
+
+          // Limpar carrinho
+          const emptyCart = {};
+          setCartItems(emptyCart);
+          saveCartToStorage(emptyCart);
+
+          // Guardar email guest (para tracking depois)
+          if (!user && currentAddress.email) {
+            localStorage.setItem('guest_checkout_email', currentAddress.email);
+          }
+
+          // Navegar para página de pagamento PIX
+          navigate(`/pix-payment/${data.order.orderId}`);
+        } else {
+          toast.error(data.message || 'Erro ao criar pedido PIX.');
+        }
+
+        return; // Sai da função — não continua para Stripe
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // 💳 FLUXO STRIPE (código existente, sem alterações)
+      // ═══════════════════════════════════════════════════════════
       const orderData = {
         items: cartArray.map(item => ({
           product: item._id,
@@ -300,21 +377,17 @@ const Cart = () => {
         endpoint = '/api/order/stripe';
       } else {
         const addressResponse = await axios.post('/api/address/guest', {
-          address: currentAddress
+          address: currentAddress,
         });
-
         if (!addressResponse.data.success) {
           throw new Error(addressResponse.data.message || 'Erro ao salvar endereço');
         }
-
         const addressId = addressResponse.data.addressId;
-
         orderData.isGuestOrder = true;
         orderData.guestEmail = currentAddress.email;
         orderData.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
         orderData.guestPhone = currentAddress.phone;
         orderData.address = addressId;
-
         endpoint = '/api/order/guest/stripe';
       }
 
@@ -324,18 +397,15 @@ const Cart = () => {
         const emptyCart = {};
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
-
         if (!user && currentAddress.email) {
           localStorage.setItem('guest_checkout_email', currentAddress.email);
         }
-
         window.location.replace(response.data.url);
       } else {
         toast.error(response.data.message || 'Falha ao iniciar o pagamento.');
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
-
       if (error.response?.status === 401 && user) {
         toast.error('Sessão expirada. Por favor, faça login novamente.');
         if (isMobile) localStorage.removeItem('mobile_auth_token');
