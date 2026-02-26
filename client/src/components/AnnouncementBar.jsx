@@ -93,7 +93,7 @@ const AnnouncementBar = () => {
   const current = announcements[currentIndex];
 
   return (
-    <div className='bg-gray-900 overflow-hidden'>
+    <div className='bg-gray-900 relative z-[60]'>
       <div className='max-w-7xl mx-auto px-4 py-2'>
         <div className='flex items-center justify-between'>
 
@@ -113,7 +113,7 @@ const AnnouncementBar = () => {
 
               {/* Dropdown */}
               {showRegionDropdown && (
-                <div className='absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50 min-w-[160px]'>
+                <div className='absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-[100] min-w-[160px]'>
                   {regions.map((region) => (
                     <button
                       key={region.value}
