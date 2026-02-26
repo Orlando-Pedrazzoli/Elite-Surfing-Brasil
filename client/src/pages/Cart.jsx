@@ -47,7 +47,8 @@ const Cart = () => {
   // ═══ FRETE — Melhor Envio ═══
   const [selectedShipping, setSelectedShipping] = useState(null);
 
-  const validPromoCode = 'BROTHER';
+  const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
+  const [appliedPromoCode, setAppliedPromoCode] = useState('');
 
   const isCartEmpty = !products.length || !cartItems || Object.keys(cartItems).length === 0;
 
@@ -96,6 +97,11 @@ const Cart = () => {
   useEffect(() => {
     setSelectedShipping(null);
   }, [cartItems]);
+
+  // Resetar frete quando cupom é aplicado/removido (threshold pode mudar)
+  useEffect(() => {
+    setSelectedShipping(null);
+  }, [discountApplied]);
 
   const updateCartArray = () => {
     const tempArray = Object.keys(cartItems)
@@ -149,7 +155,7 @@ const Cart = () => {
 
   const saveGuestAddressToServer = async (address) => {
     try {
-      const { data } = await axios.post('/api/address/add', { address });
+      const { data } = await axios.post('/api/address/add', { address: addressData });
       if (data.success) {
         localStorage.removeItem('guest_checkout_address');
         setGuestAddress(null);
@@ -168,7 +174,7 @@ const Cart = () => {
 
   const getPromoDiscount = () => {
     if (!discountApplied) return 0;
-    return getSubtotal() * 0.3;
+    return getSubtotal() * 0.1;
   };
 
   const getPixDiscount = () => {
@@ -284,9 +290,9 @@ const Cart = () => {
           shippingCarrier: selectedShipping.carrier,
           shippingDeliveryDays: selectedShipping.deliveryDays,
           shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
-          promoCode: discountApplied ? promoCode.toUpperCase() : null,
+          promoCode: discountApplied ? appliedPromoCode : null,
           discountAmount: promoDisc,
-          discountPercentage: discountApplied ? 30 : 0,
+          discountPercentage: discountApplied ? 10 : 0,
         };
 
         let pixEndpoint;
@@ -353,10 +359,10 @@ const Cart = () => {
         originalAmount: subtotal,
         amount: finalAmount,
         discountAmount: promoDisc + pixDisc,
-        discountPercentage: discountApplied ? 30 : 0,
+        discountPercentage: discountApplied ? 10 : 0,
         pixDiscountAmount: pixDisc,
         pixDiscountPercentage: paymentMethod === 'pix' ? PIX_DISCOUNT * 100 : 0,
-        promoCode: discountApplied ? promoCode.toUpperCase() : '',
+        promoCode: discountApplied ? appliedPromoCode : '',
         paymentType: 'Online',
         paymentMethod: paymentMethod,
         isPaid: false,
@@ -422,17 +428,20 @@ const Cart = () => {
   };
 
   const handlePromoCode = () => {
-    if (promoCode.trim().toUpperCase() === validPromoCode) {
+    const inputCode = promoCode.trim().toUpperCase();
+    if (validPromoCodes.includes(inputCode)) {
       setDiscountApplied(true);
-      toast.success('Desconto de 30% aplicado!');
+      setAppliedPromoCode(inputCode);
+      toast.success('Desconto de 10% aplicado!');
     } else {
-      toast.error('Cupom inválido. Tente "BROTHER".');
+      toast.error('Cupom inválido.');
     }
   };
 
   const handleRemovePromo = () => {
     setPromoCode('');
     setDiscountApplied(false);
+    setAppliedPromoCode('');
     toast('Cupom removido.');
   };
 
@@ -856,6 +865,7 @@ const Cart = () => {
                   <ShippingCalculator
                     cartProducts={cartArray}
                     onShippingSelect={handleShippingSelect}
+                    subtotal={getSubtotal()}
                   />
 
                   {selectedShipping && (
@@ -866,13 +876,27 @@ const Cart = () => {
                           <div>
                             <p className='text-sm font-medium text-green-800'>
                               {selectedShipping.carrier} — {selectedShipping.name}
+                              {selectedShipping.freeShipping && (
+                                <span className='ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800'>
+                                  🎉 FRETE GRÁTIS
+                                </span>
+                              )}
                             </p>
                             <p className='text-xs text-green-600'>{selectedShipping.deliveryText}</p>
                           </div>
                         </div>
-                        <span className='text-sm font-bold text-green-800'>
-                          {formatBRL(selectedShipping.price)}
-                        </span>
+                        {selectedShipping.freeShipping ? (
+                          <div className='flex flex-col items-end'>
+                            <span className='text-xs text-gray-400 line-through'>
+                              {formatBRL(selectedShipping.originalPrice)}
+                            </span>
+                            <span className='text-sm font-bold text-green-700'>GRÁTIS</span>
+                          </div>
+                        ) : (
+                          <span className='text-sm font-bold text-green-800'>
+                            {formatBRL(selectedShipping.price)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1008,7 +1032,7 @@ const Cart = () => {
 
                 {discountApplied && (
                   <div className='flex justify-between items-center text-green-600 mb-3'>
-                    <span>Cupom ({validPromoCode} -30%):</span>
+                    <span>Cupom ({appliedPromoCode} -10%):</span>
                     <span className='font-medium text-lg'>
                       -{formatBRL(getPromoDiscount())}
                     </span>
@@ -1028,14 +1052,23 @@ const Cart = () => {
                 )}
 
                 {selectedShipping && (
-                  <div className='flex justify-between items-center text-gray-700 mb-3'>
+                  <div className={`flex justify-between items-center mb-3 ${selectedShipping.freeShipping ? 'text-green-600' : 'text-gray-700'}`}>
                     <span className='flex items-center gap-1'>
                       <Truck className='w-4 h-4' />
                       Frete ({selectedShipping.carrier}):
                     </span>
-                    <span className='font-medium text-lg'>
-                      {formatBRL(getShippingCost())}
-                    </span>
+                    {selectedShipping.freeShipping ? (
+                      <div className='flex items-center gap-2'>
+                        <span className='text-sm text-gray-400 line-through'>
+                          {formatBRL(selectedShipping.originalPrice)}
+                        </span>
+                        <span className='font-bold text-lg text-green-600'>GRÁTIS</span>
+                      </div>
+                    ) : (
+                      <span className='font-medium text-lg'>
+                        {formatBRL(getShippingCost())}
+                      </span>
+                    )}
                   </div>
                 )}
 

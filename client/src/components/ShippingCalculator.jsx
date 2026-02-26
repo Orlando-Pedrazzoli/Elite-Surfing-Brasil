@@ -2,14 +2,63 @@ import { useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatBRL } from '../utils/installmentUtils';
 import { formatCep, isValidCep } from '../utils/shippingUtils';
+import { Truck, Gift, Zap, Package } from 'lucide-react';
 
-const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
+const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal = 0 }) => {
   const { axios } = useAppContext();
   const [cep, setCep] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FRETE GRÁTIS — thresholds e progresso (antes do cálculo)
+  // ═══════════════════════════════════════════════════════════════
+  const FREE_THRESHOLD_SUL_SUDESTE = 199;
+  const FREE_THRESHOLD_DEMAIS = 299;
+
+  // Info de frete grátis retornada pelo backend (após cálculo)
+  const freeShippingInfo = results?.freeShippingInfo || null;
+
+  // Progresso genérico (antes de saber o CEP/região)
+  const genericProgress = useMemo(() => {
+    if (subtotal >= FREE_THRESHOLD_DEMAIS) {
+      return { qualifies: true, message: 'Você tem frete grátis para todo o Brasil!' };
+    }
+    if (subtotal >= FREE_THRESHOLD_SUL_SUDESTE) {
+      const remaining = FREE_THRESHOLD_DEMAIS - subtotal;
+      return {
+        qualifies: 'partial',
+        message: `Frete grátis para Sul e Sudeste! Faltam ${formatBRL(remaining)} para frete grátis em todo o Brasil.`,
+      };
+    }
+    // Abaixo de 199 — mostrar o mais próximo
+    const remaining = FREE_THRESHOLD_SUL_SUDESTE - subtotal;
+    return {
+      qualifies: false,
+      remaining,
+      message: `Faltam ${formatBRL(remaining)} para frete grátis (Sul/Sudeste)`,
+      percentage: Math.min(100, (subtotal / FREE_THRESHOLD_SUL_SUDESTE) * 100),
+    };
+  }, [subtotal]);
+
+  // Progresso específico (após saber a região via backend)
+  const regionProgress = useMemo(() => {
+    if (!freeShippingInfo) return null;
+    const { qualifies, amountRemaining, threshold, region } = freeShippingInfo;
+    const regionLabel = region === 'sul_sudeste' ? 'Sul/Sudeste' : 'sua região';
+
+    if (qualifies) {
+      return { qualifies: true, message: `Frete grátis para ${regionLabel}!` };
+    }
+    return {
+      qualifies: false,
+      remaining: amountRemaining,
+      message: `Faltam ${formatBRL(amountRemaining)} para frete grátis para ${regionLabel}`,
+      percentage: Math.min(100, (subtotal / threshold) * 100),
+    };
+  }, [freeShippingInfo, subtotal]);
 
   const handleCepChange = (e) => {
     const formatted = formatCep(e.target.value);
@@ -29,6 +78,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
     setError('');
     setResults(null);
     setSelectedOption(null);
+    if (onShippingSelect) onShippingSelect(null);
 
     try {
       let body = { cep };
@@ -61,7 +111,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
     } finally {
       setLoading(false);
     }
-  }, [cep, product, cartProducts, axios]);
+  }, [cep, product, cartProducts, axios, onShippingSelect]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -86,9 +136,13 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
 
     const options = [...results.options];
 
+    // Separar opção "Mesmo Dia" (sempre fica no topo)
+    const sameDayOption = options.find((opt) => opt.isSameDay);
+    const regularOptions = options.filter((opt) => !opt.isSameDay);
+
     // Remover duplicatas por transportadora (manter a mais barata de cada)
     const uniqueByCarrier = new Map();
-    for (const opt of options) {
+    for (const opt of regularOptions) {
       const key = opt.carrier;
       if (!uniqueByCarrier.has(key) || opt.price < uniqueByCarrier.get(key).price) {
         uniqueByCarrier.set(key, opt);
@@ -102,16 +156,103 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
     // Pegar top 5
     const top5 = unique.slice(0, 5);
 
-    // Identificar mais barata e mais rápida
-    const cheapest = top5.reduce((min, opt) => (opt.price < min.price ? opt : min), top5[0]);
-    const fastest = top5.reduce((min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min), top5[0]);
+    // Identificar mais barata e mais rápida (entre as regulares)
+    const cheapest = top5.length > 0
+      ? top5.reduce((min, opt) => (opt.price < min.price ? opt : min), top5[0])
+      : null;
+    const fastest = top5.length > 0
+      ? top5.reduce((min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min), top5[0])
+      : null;
+
+    // Montar lista final: same day no topo + top 5
+    const finalOptions = sameDayOption ? [sameDayOption, ...top5] : top5;
 
     return {
-      filteredOptions: top5,
+      filteredOptions: finalOptions,
       cheapestId: cheapest?.id,
       fastestId: fastest?.id,
     };
   }, [results]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER — Progress Bar de Frete Grátis
+  // ═══════════════════════════════════════════════════════════════
+  const renderFreeShippingProgress = () => {
+    // Se já tem resultado do backend, usar info específica da região
+    const progress = regionProgress || genericProgress;
+    if (!progress) return null;
+
+    // Já qualifica para frete grátis completo
+    if (progress.qualifies === true) {
+      return (
+        <div className='mb-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
+          <div className='flex items-center gap-2'>
+            <div className='w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
+              <Gift className='w-4 h-4 text-green-600' />
+            </div>
+            <div className='flex-1'>
+              <p className='text-sm font-semibold text-green-800'>
+                🎉 {progress.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Qualifica parcial (Sul/Sudeste sim, demais não)
+    if (progress.qualifies === 'partial') {
+      return (
+        <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+          <div className='flex items-center gap-2'>
+            <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0'>
+              <Truck className='w-4 h-4 text-blue-600' />
+            </div>
+            <div className='flex-1'>
+              <p className='text-sm font-medium text-blue-800'>
+                ✅ {progress.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Não qualifica — mostrar barra de progresso
+    const percentage = progress.percentage || 0;
+    return (
+      <div className='mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg'>
+        <div className='flex items-center gap-2 mb-2'>
+          <div className='w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0'>
+            <Truck className='w-4 h-4 text-amber-600' />
+          </div>
+          <div className='flex-1'>
+            <p className='text-sm font-medium text-amber-800'>
+              {progress.message}
+            </p>
+          </div>
+        </div>
+        {/* Barra de Progresso */}
+        <div className='w-full bg-amber-200/60 rounded-full h-2.5 overflow-hidden'>
+          <div
+            className='h-full rounded-full transition-all duration-500 ease-out'
+            style={{
+              width: `${percentage}%`,
+              background: percentage >= 80
+                ? 'linear-gradient(90deg, #f59e0b, #22c55e)'
+                : 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+            }}
+          />
+        </div>
+        <div className='flex justify-between mt-1'>
+          <span className='text-[10px] text-amber-600'>{formatBRL(subtotal)}</span>
+          <span className='text-[10px] text-amber-600 font-semibold'>
+            {formatBRL(freeShippingInfo?.threshold || FREE_THRESHOLD_SUL_SUDESTE)}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className='bg-white border border-gray-200 rounded-lg p-4'>
@@ -122,6 +263,9 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
         </svg>
         Calcular Frete e Prazo
       </h3>
+
+      {/* ═══ BARRA DE PROGRESSO FRETE GRÁTIS ═══ */}
+      {subtotal > 0 && renderFreeShippingProgress()}
 
       {/* Input CEP */}
       <div className='flex gap-2'>
@@ -176,8 +320,10 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
         <div className='mt-3 space-y-2'>
           {filteredOptions.map((option) => {
             const isSelected = selectedOption?.id === option.id;
-            const isCheapest = option.id === cheapestId;
-            const isFastest = option.id === fastestId && fastestId !== cheapestId;
+            const isFree = option.freeShipping && option.price === 0;
+            const isSameDay = option.isSameDay;
+            const isCheapest = option.id === cheapestId && !isFree && !isSameDay;
+            const isFastest = option.id === fastestId && fastestId !== cheapestId && !isFree && !isSameDay;
 
             return (
               <div
@@ -186,6 +332,10 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
                 className={`relative flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-primary/5 border-primary ring-1 ring-primary'
+                    : isFree
+                    ? 'bg-green-50 border-green-300 hover:border-green-400'
+                    : isSameDay
+                    ? 'bg-yellow-50 border-yellow-300 hover:border-yellow-400'
                     : isCheapest
                     ? 'bg-green-50/50 border-green-200 hover:border-green-300'
                     : isFastest
@@ -196,16 +346,28 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
                 <div className='flex items-center gap-3'>
                   <span className='text-lg'>{option.icon}</span>
                   <div>
-                    <div className='flex items-center gap-2'>
+                    <div className='flex items-center gap-2 flex-wrap'>
                       <p className='text-sm font-medium text-gray-900'>
                         {option.carrier} — {option.name}
                       </p>
-                      {isCheapest && (
+                      {/* ═══ BADGE FRETE GRÁTIS ═══ */}
+                      {isFree && (
+                        <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800 border border-green-300 animate-pulse'>
+                          🎉 FRETE GRÁTIS
+                        </span>
+                      )}
+                      {/* ═══ BADGE MESMO DIA ═══ */}
+                      {isSameDay && (
+                        <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-200 text-yellow-800 border border-yellow-300'>
+                          ⚡ MESMO DIA
+                        </span>
+                      )}
+                      {isCheapest && !isFree && (
                         <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200'>
                           💰 Mais barata
                         </span>
                       )}
-                      {isFastest && (
+                      {isFastest && !isFree && (
                         <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200'>
                           ⚡ Mais rápida
                         </span>
@@ -215,9 +377,21 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect }) => {
                   </div>
                 </div>
                 <div className='text-right flex items-center gap-2'>
-                  <span className={`text-sm font-bold ${isCheapest && !isSelected ? 'text-green-700' : 'text-gray-900'}`}>
-                    {formatBRL(option.price)}
-                  </span>
+                  {/* Preço riscado + GRÁTIS */}
+                  {isFree ? (
+                    <div className='flex flex-col items-end'>
+                      <span className='text-[11px] text-gray-400 line-through'>
+                        {formatBRL(option.originalPrice)}
+                      </span>
+                      <span className='text-sm font-bold text-green-700'>GRÁTIS</span>
+                    </div>
+                  ) : (
+                    <span className={`text-sm font-bold ${
+                      isCheapest && !isSelected ? 'text-green-700' : 'text-gray-900'
+                    }`}>
+                      {formatBRL(option.price)}
+                    </span>
+                  )}
                   {isSelected && (
                     <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
                       <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>

@@ -4,36 +4,90 @@
 // ═══════════════════════════════════════════════════════════════════════
 // Recebe: CEP de destino + array de produtos (do carrinho)
 // Retorna: Opções de frete com preço e prazo (via Melhor Envio)
-//
-// Este endpoint é PÚBLICO (sem auth) — qualquer visitante pode
-// calcular frete, inclusive guest checkout.
+// ✅ Lógica de FRETE GRÁTIS integrada
+// ✅ Opção "Mesmo Dia" para Grande Rio de Janeiro
 // ═══════════════════════════════════════════════════════════════════════
 
 import { calculateShipping } from '../services/melhorEnvioService.js';
 import Product from '../models/Product.js';
 
 // =============================================================================
-// POST /api/shipping/calculate
+// HELPERS — REGIÃO, FRETE GRÁTIS, GRANDE RIO
 // =============================================================================
-// Body esperado:
-// {
-//   "cep": "01310-100",
-//   "products": [
-//     { "productId": "665abc...", "quantity": 2 },
-//     { "productId": "665def...", "quantity": 1 }
-//   ]
-// }
-//
-// OU (para cálculo rápido na página do produto, sem carrinho):
-// {
-//   "cep": "01310-100",
-//   "product": {
-//     "_id": "665abc...",
-//     "weight": 300,
-//     "dimensions": { "length": 30, "width": 20, "height": 2 },
-//     "offerPrice": 89.90
-//   }
-// }
+
+/**
+ * Determina a região a partir do CEP (2 primeiros dígitos)
+ * Sul/Sudeste: SP (01-19), RJ (20-28), ES (29), MG (30-39), PR (80-87), SC (88-89), RS (90-99)
+ * Demais: tudo entre 40-79
+ */
+const getRegionFromCep = (cep) => {
+  const prefix = parseInt(cep.substring(0, 2), 10);
+
+  // Sudeste: SP (01-19), RJ (20-28), ES (29), MG (30-39)
+  if (prefix >= 1 && prefix <= 39) return 'sul_sudeste';
+
+  // Sul: PR (80-87), SC (88-89), RS (90-99)
+  if (prefix >= 80 && prefix <= 99) return 'sul_sudeste';
+
+  // Demais regiões: Norte, Nordeste, Centro-Oeste (40-79)
+  return 'demais';
+};
+
+/**
+ * Retorna o estado estimado a partir do CEP (para exibição)
+ */
+const getStateFromCep = (cep) => {
+  const prefix = parseInt(cep.substring(0, 2), 10);
+  if (prefix >= 1 && prefix <= 19) return 'SP';
+  if (prefix >= 20 && prefix <= 28) return 'RJ';
+  if (prefix === 29) return 'ES';
+  if (prefix >= 30 && prefix <= 39) return 'MG';
+  if (prefix >= 40 && prefix <= 48) return 'BA';
+  if (prefix === 49) return 'SE';
+  if (prefix >= 50 && prefix <= 56) return 'PE';
+  if (prefix === 57) return 'AL';
+  if (prefix === 58) return 'PB';
+  if (prefix === 59) return 'RN';
+  if (prefix >= 60 && prefix <= 63) return 'CE';
+  if (prefix === 64) return 'PI';
+  if (prefix === 65) return 'MA';
+  if (prefix >= 66 && prefix <= 68) return 'PA';
+  if (prefix === 69) return 'AM';
+  if (prefix >= 70 && prefix <= 73) return 'DF';
+  if (prefix >= 74 && prefix <= 76) return 'GO';
+  if (prefix === 77) return 'TO';
+  if (prefix >= 78 && prefix <= 78) return 'MT';
+  if (prefix === 79) return 'MS';
+  if (prefix >= 80 && prefix <= 87) return 'PR';
+  if (prefix >= 88 && prefix <= 89) return 'SC';
+  if (prefix >= 90 && prefix <= 99) return 'RS';
+  return '';
+};
+
+/**
+ * Threshold de frete grátis por região
+ * Sul/Sudeste: R$ 199
+ * Demais: R$ 299
+ */
+const FREE_SHIPPING_THRESHOLDS = {
+  sul_sudeste: 199,
+  demais: 299,
+};
+
+/**
+ * Verifica se o CEP é da Grande Rio de Janeiro (elegível a entrega mesmo dia)
+ * Faixa aproximada: 20000-000 a 26600-999
+ */
+const isGrandeRio = (cep) => {
+  const num = parseInt(cep.substring(0, 5), 10);
+  return num >= 20000 && num <= 26600;
+};
+
+// Preço fixo da entrega mesmo dia
+const SAME_DAY_PRICE = 9.99;
+
+// =============================================================================
+// POST /api/shipping/calculate
 // =============================================================================
 
 export const calculateShippingQuote = async (req, res) => {
@@ -55,7 +109,6 @@ export const calculateShippingQuote = async (req, res) => {
 
     if (products && Array.isArray(products) && products.length > 0) {
       // ═══ MODO CARRINHO ═══
-      // Buscar dados completos dos produtos no banco
       const productIds = products.map((p) => p.productId || p._id || p.id);
       const dbProducts = await Product.find({ _id: { $in: productIds } });
 
@@ -63,7 +116,6 @@ export const calculateShippingQuote = async (req, res) => {
         return res.json({ success: false, message: 'Nenhum produto encontrado.' });
       }
 
-      // Mapear quantidade de cada produto
       productList = dbProducts.map((dbProduct) => {
         const cartItem = products.find(
           (p) => String(p.productId || p._id || p.id) === String(dbProduct._id)
@@ -79,10 +131,7 @@ export const calculateShippingQuote = async (req, res) => {
 
     } else if (product) {
       // ═══ MODO PRODUTO INDIVIDUAL ═══
-      // Pode vir já com dados completos (da página do produto)
-      // ou só com o ID (precisa buscar no banco)
       if (product._id && product.weight && product.dimensions) {
-        // Dados já vieram do frontend
         productList = [{
           _id: product._id,
           weight: product.weight,
@@ -91,7 +140,6 @@ export const calculateShippingQuote = async (req, res) => {
           quantity: product.quantity || 1,
         }];
       } else if (product._id || product.productId) {
-        // Buscar no banco
         const dbProduct = await Product.findById(product._id || product.productId);
         if (!dbProduct) {
           return res.json({ success: false, message: 'Produto não encontrado.' });
@@ -111,19 +159,74 @@ export const calculateShippingQuote = async (req, res) => {
       return res.json({ success: false, message: 'Informe os produtos para cálculo de frete.' });
     }
 
-    // 3. Chamar serviço do Melhor Envio
+    // 3. Calcular subtotal dos produtos
+    const subtotal = productList.reduce((sum, p) => sum + (p.offerPrice * p.quantity), 0);
+
+    // 4. Determinar região e threshold de frete grátis
+    const region = getRegionFromCep(cleanCep);
+    const state = getStateFromCep(cleanCep);
+    const threshold = FREE_SHIPPING_THRESHOLDS[region];
+    const qualifiesFreeShipping = subtotal >= threshold;
+    const amountToFreeShipping = Math.max(0, threshold - subtotal);
+
+    console.log(`📦 Frete — CEP: ${cleanCep} | Estado: ${state} | Região: ${region} | Subtotal: R$${subtotal.toFixed(2)} | Threshold: R$${threshold} | Free: ${qualifiesFreeShipping}`);
+
+    // 5. Chamar serviço do Melhor Envio
     const result = await calculateShipping(cleanCep, productList);
 
     if (!result.success) {
       return res.json({ success: false, message: result.error });
     }
 
-    // 4. Retornar opções de frete
+    // 6. Aplicar frete grátis nas opções (se qualificar)
+    let options = result.options.map((option) => {
+      if (qualifiesFreeShipping) {
+        return {
+          ...option,
+          originalPrice: option.price,
+          price: 0,
+          freeShipping: true,
+          freeShippingReason: `Frete grátis para compras acima de R$ ${threshold}`,
+        };
+      }
+      return {
+        ...option,
+        originalPrice: option.price,
+        freeShipping: false,
+      };
+    });
+
+    // 7. Adicionar opção "Mesmo Dia" para Grande Rio de Janeiro
+    if (isGrandeRio(cleanCep)) {
+      options.unshift({
+        id: 'same_day_rio',
+        name: 'MESMO DIA ÚTIL',
+        carrier: 'Elite Surfing',
+        icon: '⚡',
+        price: SAME_DAY_PRICE,
+        originalPrice: SAME_DAY_PRICE,
+        deliveryDays: 0,
+        deliveryText: 'Entrega no mesmo dia útil (pedidos até 11:30h)',
+        freeShipping: false,
+        isSameDay: true,
+      });
+    }
+
+    // 8. Retornar opções + metadata de frete grátis
     return res.json({
       success: true,
       origin: result.origin,
       destination: result.destination,
-      options: result.options,
+      options,
+      // ═══ METADATA FRETE GRÁTIS ═══
+      freeShippingInfo: {
+        region,
+        state,
+        threshold,
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        qualifies: qualifiesFreeShipping,
+        amountRemaining: parseFloat(amountToFreeShipping.toFixed(2)),
+      },
     });
 
   } catch (error) {
