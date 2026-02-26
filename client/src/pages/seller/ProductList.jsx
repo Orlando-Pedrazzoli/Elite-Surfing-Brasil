@@ -130,14 +130,30 @@ const ProductList = () => {
     setHasOrderChanges(false);
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // 🔧 FIX: getGroupStats agora suporta tag groups (bodyboard, sup, outlet)
+  // ═══════════════════════════════════════════════════════════════
   const getGroupStats = (groupSlug) => {
-    const groupCategoryPaths = getCategoriesByGroup(groupSlug).map(cat => cat.path.toLowerCase());
-    
-    const groupProducts = allProducts.filter(product => {
-      if (product.group === groupSlug) return true;
-      const productCategory = (product.category || '').toLowerCase();
-      return groupCategoryPaths.includes(productCategory);
-    });
+    const groupDef = groups.find(g => g.slug === groupSlug);
+
+    let groupProducts;
+
+    if (groupDef?.isTagGroup) {
+      // 🆕 Tag groups: filtrar por product.tags[]
+      const tagKey = groupDef.tagKey;
+      groupProducts = allProducts.filter(product => {
+        const tags = product.tags || [];
+        return tags.includes(tagKey);
+      });
+    } else {
+      // Grupos normais: filtrar por group + category
+      const groupCategoryPaths = getCategoriesByGroup(groupSlug).map(cat => cat.path.toLowerCase());
+      groupProducts = allProducts.filter(product => {
+        if (product.group === groupSlug) return true;
+        const productCategory = (product.category || '').toLowerCase();
+        return groupCategoryPaths.includes(productCategory);
+      });
+    }
 
     return {
       total: groupProducts.length,
@@ -150,14 +166,25 @@ const ProductList = () => {
 
   const uniqueFamilies = [...new Set(allProducts.filter(p => p.productFamily).map(p => p.productFamily))];
 
-  // Produtos filtrados
+  // ═══════════════════════════════════════════════════════════════
+  // 🔧 FIX: Produtos filtrados agora suporta tag groups
+  // ═══════════════════════════════════════════════════════════════
   const filteredProducts = (() => {
     let result = allProducts.filter(product => {
       if (selectedGroup) {
-        const groupCategoryPaths = getCategoriesByGroup(selectedGroup).map(cat => cat.path.toLowerCase());
-        const belongsToGroup = product.group === selectedGroup || 
-          groupCategoryPaths.includes((product.category || '').toLowerCase());
-        if (!belongsToGroup) return false;
+        const groupDef = groups.find(g => g.slug === selectedGroup);
+
+        if (groupDef?.isTagGroup) {
+          // 🆕 Tag group: verificar se produto tem a tag
+          const tags = product.tags || [];
+          if (!tags.includes(groupDef.tagKey)) return false;
+        } else {
+          // Grupo normal: verificar group + category
+          const groupCategoryPaths = getCategoriesByGroup(selectedGroup).map(cat => cat.path.toLowerCase());
+          const belongsToGroup = product.group === selectedGroup || 
+            groupCategoryPaths.includes((product.category || '').toLowerCase());
+          if (!belongsToGroup) return false;
+        }
       }
 
       if (filterCategory && (product.category || '').toLowerCase() !== filterCategory.toLowerCase()) {
