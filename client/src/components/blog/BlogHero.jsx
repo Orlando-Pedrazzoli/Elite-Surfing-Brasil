@@ -1,12 +1,6 @@
 import React from "react";
 import { blogMeta } from "../../data/wslData";
 
-// ⚠️ INSTRUÇÕES:
-// 1. Vai a: https://unsplash.com/pt-br/fotografias/um-homem-surfando-uma-onda-em-cima-de-uma-prancha-de-surf-vUg96ujmmVc
-// 2. Clica "Download free" (tamanho Large ou Original)
-// 3. Salva como: client/public/images/blog/hero-surf.jpg
-// 4. Pronto! A imagem vai aparecer automaticamente.
-
 const BlogHero = () => {
   return (
     <section className="blog-hero">
@@ -29,14 +23,14 @@ const BlogHero = () => {
         <span className="blog-hero__updated">
           Atualizado em {blogMeta.lastUpdated}
         </span>
-        <div className="blog-hero__wave">
-          <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-            <path
-              d="M0,64 C360,120 720,0 1080,64 C1260,96 1380,80 1440,64 L1440,120 L0,120 Z"
-              fill="#f8f9fa"
-            />
-          </svg>
-        </div>
+      </div>
+      <div className="blog-hero__wave">
+        <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+          <path
+            d="M0,60 C320,100 680,20 1040,60 C1200,80 1360,70 1440,60 L1440,100 L0,100 Z"
+            fill="#f8f9fa"
+          />
+        </svg>
       </div>
     </section>
   );

@@ -25,35 +25,34 @@
 
 .blog-hero {
   position: relative;
-  min-height: 420px;
-  background-color: #0c4a6e; /* fallback enquanto imagem carrega */
+  min-height: 460px;
+  background-color: #1a1a2e;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-/* Imagem de fundo via <img> — melhor SEO e carregamento */
 .blog-hero__image {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center center;
   z-index: 0;
 }
 
-/* Overlay escuro sobre a imagem para legibilidade do texto */
+/* Overlay mais leve — deixa a imagem brilhar */
 .blog-hero__overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
   background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(12, 74, 110, 0.6) 50%,
-    rgba(12, 74, 110, 0.75) 100%
+    180deg,
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0.35) 40%,
+    rgba(0, 0, 0, 0.55) 100%
   );
 }
 
@@ -61,62 +60,68 @@
   position: relative;
   z-index: 2;
   text-align: center;
-  padding: 70px 20px 90px;
+  padding: 80px 20px 100px;
   max-width: 700px;
 }
 
 .blog-hero__badge {
   display: inline-block;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--blog-accent-light);
-  padding: 6px 18px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 7px 20px;
   border-radius: 50px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
-  margin-bottom: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .blog-hero__title {
-  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-size: clamp(2.5rem, 6vw, 4rem);
   font-weight: 800;
   color: var(--blog-white);
-  margin: 0 0 12px;
-  line-height: 1.1;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.35);
+  margin: 0 0 14px;
+  line-height: 1.05;
+  text-shadow: 0 3px 30px rgba(0, 0, 0, 0.5);
 }
 
 .blog-hero__accent { color: var(--blog-accent); }
 
 .blog-hero__subtitle {
-  color: rgba(255,255,255,0.88);
-  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.05rem;
   line-height: 1.6;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   max-width: 520px;
   margin-inline: auto;
-  text-shadow: 0 1px 10px rgba(0,0,0,0.25);
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.4);
 }
 
 .blog-hero__updated {
   display: inline-block;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 0.75rem;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
 }
 
+/* Wave — fora do content, fixo no fundo */
 .blog-hero__wave {
   position: absolute;
-  bottom: -1px;
+  bottom: 0;
   left: 0;
   width: 100%;
   line-height: 0;
   z-index: 3;
 }
-.blog-hero__wave svg { width: 100%; height: 60px; }
+.blog-hero__wave svg {
+  display: block;
+  width: 100%;
+  height: 50px;
+}
 
 /* ============================================ CONTAINER & NAV */
 
@@ -422,8 +427,9 @@
 /* ============================================ RESPONSIVE */
 
 @media (max-width: 768px) {
-  .blog-hero { min-height: 300px; }
-  .blog-hero__content { padding: 50px 16px 75px; }
+  .blog-hero { min-height: 340px; }
+  .blog-hero__content { padding: 60px 16px 80px; }
+  .blog-hero__title { font-size: clamp(2rem, 8vw, 2.8rem); }
   .rankings-table__header, .rankings-table__row { grid-template-columns: 50px 1fr 80px 80px; padding: 10px 12px; }
   .champions-table__header, .champions-table__row { grid-template-columns: 60px 1fr 1fr; padding: 10px 12px; font-size: 0.82rem; }
   .schedule-card { flex-direction: column; gap: 10px; }
