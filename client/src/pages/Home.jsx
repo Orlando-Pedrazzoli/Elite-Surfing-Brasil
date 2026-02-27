@@ -8,8 +8,8 @@ import ReviewsCarousel from '../components/ReviewsCarousel';
 import { SEO, OrganizationSchema, WebSiteSchema, SiteNavigationSchema } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import Novidades from '../components/Novidades';
-
 import NovidadesCarousel from '../components/NovidadesCarousel';
+import BlogBanner from '../components/BlogBanner';
 
 const Home = () => {
   return (
@@ -30,6 +30,7 @@ const Home = () => {
         <CollectionsGrid />
         <FeatureBanners />
         <Novidades/>
+        <BlogBanner />
         <ReviewsCarousel />
         <NewsLetter />
       </div>
