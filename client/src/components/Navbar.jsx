@@ -8,13 +8,14 @@ import { useAppContext } from '../context/AppContext';
 // CONFIGURAÇÃO DOS LINKS DA NAVBAR
 // ═══════════════════════════════════════════════════════════════
 const NAV_DEPARTMENTS = [
-  { label: 'TODOS OS DEPARTAMENTOS', slug: null },
+  { label: 'DEPARTAMENTOS', slug: null, path: '/products' },
   { label: 'ACESSÓRIOS', slug: 'acessorios' },
   { label: 'LEASHES', slug: 'leashes' },
   { label: 'DECKS', slug: 'decks' },
   { label: 'CAPAS', slug: 'capas' },
   { label: 'SARCÓFAGOS', slug: 'sarcofagos' },
   { label: 'QUILHAS', slug: 'quilhas' },
+  { label: 'BLOG', slug: 'blog', path: '/blog', noDropdown: true },
 ];
 
 const sarcofagoSublinks = [
@@ -30,7 +31,7 @@ const sarcofagoSublinks = [
 const deckTypes = [
   {
     text: 'Deck Shortboard',
-    path: null, // não navega direto, abre flyout
+    path: null,
     filterPath: '/collections/decks?tipo=shortboard',
     children: [
       { text: 'Deck Maldivas', path: 'Deck-Maldivas' },
@@ -63,7 +64,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(null);
-  const [mobileSubExpanded, setMobileSubExpanded] = useState(null); // 🆕 Sub-accordion mobile
+  const [mobileSubExpanded, setMobileSubExpanded] = useState(null);
 
   const location = useLocation();
   const isHomepage = location.pathname === '/';
@@ -132,12 +133,11 @@ const Navbar = () => {
 
   const isTransparent = isHomepage && !scrolled;
 
-  // 🆕 Obter sublinks por slug (excluindo quilhas de acessórios)
+  // Obter sublinks por slug
   const getSublinks = (slug) => {
     if (slug === 'sarcofagos') return sarcofagoSublinks;
-    if (slug === 'decks') return null; // Decks usa deckTypes com flyout
+    if (slug === 'decks') return null;
     if (slug === 'quilhas') return quilhaSublinks;
-    // Acessórios: filtra removendo quilhas
     return categories.filter(cat => cat.group === slug);
   };
 
@@ -183,36 +183,26 @@ const Navbar = () => {
             {NAV_DEPARTMENTS.map((dept) => {
               const isAllDepts = dept.slug === null;
               const isDecks = dept.slug === 'decks';
-              const sublinks = isAllDepts ? null : getSublinks(dept.slug);
-              const collectionPath = dept.slug ? `/collections/${dept.slug}` : null;
-              const hasDropdown = isAllDepts || isDecks || (sublinks && sublinks.length > 0);
+              const isBlog = dept.noDropdown;
+              const sublinks = (isAllDepts || isBlog) ? null : getSublinks(dept.slug);
+              const collectionPath = dept.path || (dept.slug ? `/collections/${dept.slug}` : '/products');
+              const hasDropdown = !isBlog && (isAllDepts || isDecks || (sublinks && sublinks.length > 0));
 
               return (
                 <div key={dept.label} className='relative group'>
-                  {isAllDepts ? (
-                    <button
-                      className={`flex items-center gap-1 text-xs font-semibold tracking-wider uppercase py-1 transition-colors cursor-pointer whitespace-nowrap ${
-                        isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-primary'
-                      }`}
-                    >
-                      {dept.label}
+                  <Link
+                    to={collectionPath}
+                    className={`flex items-center gap-1 text-xs font-semibold tracking-wider uppercase py-1 transition-colors whitespace-nowrap ${
+                      isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-primary'
+                    }`}
+                  >
+                    {dept.label}
+                    {hasDropdown && (
                       <ChevronDown className='w-3.5 h-3.5 transition-transform group-hover:rotate-180' />
-                    </button>
-                  ) : (
-                    <Link
-                      to={collectionPath}
-                      className={`flex items-center gap-1 text-xs font-semibold tracking-wider uppercase py-1 transition-colors whitespace-nowrap ${
-                        isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-primary'
-                      }`}
-                    >
-                      {dept.label}
-                      {hasDropdown && (
-                        <ChevronDown className='w-3.5 h-3.5 transition-transform group-hover:rotate-180' />
-                      )}
-                    </Link>
-                  )}
+                    )}
+                  </Link>
 
-                  {/* Dropdown: TODOS OS DEPARTAMENTOS */}
+                  {/* Dropdown: DEPARTAMENTOS */}
                   {isAllDepts && (
                     <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
                       <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
@@ -243,7 +233,6 @@ const Navbar = () => {
                           Ver Todos
                         </Link>
                         {deckTypes.map((deckType) => {
-                          // Shortboard com flyout
                           if (deckType.children) {
                             return (
                               <div key={deckType.text} className='relative group/sub'>
@@ -254,7 +243,6 @@ const Navbar = () => {
                                   <span>{deckType.text}</span>
                                   <ChevronRight className='w-4 h-4 text-gray-400' />
                                 </Link>
-                                {/* Flyout lateral */}
                                 <div className='invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute top-0 left-full pl-1 transition-all duration-200 z-50'>
                                   <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[200px]'>
                                     <Link
@@ -277,7 +265,6 @@ const Navbar = () => {
                               </div>
                             );
                           }
-                          // Outros tipos (Longboard, Front, SUP) - link direto
                           return (
                             <Link
                               key={deckType.text}
@@ -293,7 +280,7 @@ const Navbar = () => {
                   )}
 
                   {/* Dropdown: Subcategorias normais (Leashes, Capas, Sarcófagos, Quilhas, Acessórios) */}
-                  {!isAllDepts && !isDecks && sublinks && sublinks.length > 0 && (
+                  {!isAllDepts && !isDecks && !isBlog && sublinks && sublinks.length > 0 && (
                     <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
                       <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
                         <Link
@@ -512,12 +499,31 @@ const Navbar = () => {
                   Home
                 </NavLink>
 
-                {/* Departamentos */}
+                {/* Departamentos + Blog */}
                 {NAV_DEPARTMENTS.map((dept) => {
                   const isAllDepts = dept.slug === null;
                   const isDecks = dept.slug === 'decks';
-                  const sublinks = isAllDepts ? null : getSublinks(dept.slug);
+                  const isBlog = dept.noDropdown;
+                  const sublinks = (isAllDepts || isBlog) ? null : getSublinks(dept.slug);
                   const isExpanded = mobileExpanded === dept.label;
+
+                  // BLOG: link direto sem accordion
+                  if (isBlog) {
+                    return (
+                      <NavLink
+                        key={dept.label}
+                        to={dept.path}
+                        className={({ isActive }) =>
+                          `block py-3 px-2 text-base font-medium border-b border-gray-100 transition-colors ${
+                            isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                          }`
+                        }
+                        onClick={() => handleNavLinkClick(dept.path)}
+                      >
+                        🏄 Blog Surf
+                      </NavLink>
+                    );
+                  }
 
                   return (
                     <div key={dept.label} className='border-b border-gray-100'>
@@ -536,20 +542,32 @@ const Navbar = () => {
 
                       <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
                         <div className='pl-4 pb-3 space-y-1'>
-                          {/* TODOS OS DEPARTAMENTOS */}
-                          {isAllDepts && groups.map((group) => (
-                            <Link
-                              key={group.id}
-                              to={`/collections/${group.slug}`}
-                              onClick={() => handleNavLinkClick(`/collections/${group.slug}`)}
-                              className='flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
-                            >
-                              <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
-                              <span>{group.name}</span>
-                            </Link>
-                          ))}
+                          {/* DEPARTAMENTOS */}
+                          {isAllDepts && (
+                            <>
+                              <Link
+                                to='/products'
+                                onClick={() => handleNavLinkClick('/products')}
+                                className='flex items-center gap-2 py-2 px-3 text-sm font-medium text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors border-b border-gray-100 mb-1'
+                              >
+                                <ChevronRight className='w-4 h-4' />
+                                <span>Ver Todos os Produtos</span>
+                              </Link>
+                              {groups.map((group) => (
+                                <Link
+                                  key={group.id}
+                                  to={`/collections/${group.slug}`}
+                                  onClick={() => handleNavLinkClick(`/collections/${group.slug}`)}
+                                  className='flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                >
+                                  <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
+                                  <span>{group.name}</span>
+                                </Link>
+                              ))}
+                            </>
+                          )}
 
-                          {/* 🆕 DECKS: 4 tipos + sub-accordion Shortboard */}
+                          {/* DECKS: 4 tipos + sub-accordion Shortboard */}
                           {isDecks && (
                             <>
                               <Link

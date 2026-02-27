@@ -35,6 +35,11 @@ import GroupPage from './pages/GroupPage';
 import InstitucionalPage from './pages/InstitucionalPage';
 import PixPayment from './pages/PixPayment';
 
+// ✅ Blog
+import Blog from './pages/Blog';
+import BlogPostDetail from './pages/BlogPostDetail';
+import BlogManager from './pages/seller/BlogManager';
+
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
 
@@ -44,6 +49,7 @@ const App = () => {
   const isHomepage = location.pathname === '/';
   const isCollectionPage = location.pathname.startsWith('/collections/');
   const isInstitucional = location.pathname.startsWith('/institucional');
+  const isBlogPage = location.pathname.startsWith('/blog');
   const { showUserLogin, isSeller, isSellerLoading } = useAppContext();
 
   // Loading APENAS na área de seller
@@ -99,12 +105,12 @@ const App = () => {
       />
       <ScrollToTop />
       
-      {/* Condicional: Homepage, Collections e Institucional sem padding lateral */}
+      {/* Condicional: Homepage, Collections, Institucional e Blog sem padding lateral */}
       <div
         className={`${
           isSellerPath 
             ? '' 
-            : (isHomepage || isCollectionPage || isInstitucional)
+            : (isHomepage || isCollectionPage || isInstitucional || isBlogPage)
               ? '' 
               : 'px-4 md:px-16 lg:px-24 xl:px-32'
         }`}
@@ -130,6 +136,10 @@ const App = () => {
           <Route path='/loader' element={<Loading />} />
           <Route path="/pix-payment/:orderId" element={<PixPayment />} />
 
+          {/* ═══ BLOG ROUTES ═══ */}
+          <Route path='/blog' element={<Blog />} />
+          <Route path='/blog/:slug' element={<BlogPostDetail />} />
+
           {/* ═══ SELLER ROUTES ═══ */}
           <Route
             path='/seller'
@@ -139,6 +149,7 @@ const App = () => {
             <Route path='add-product' element={<AddProduct />} />
             <Route path='product-list' element={<ProductList />} />
             <Route path='orders' element={<Orders />} />
+            <Route path='blog' element={<BlogManager />} />
           </Route>
         </Routes>
       </div>
