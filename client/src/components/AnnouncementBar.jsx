@@ -17,11 +17,6 @@ const announcements = [
     text: 'NO CARTÃO DE CRÉDITO',
     link: '/products',
   },
-  {
-    bold: 'ENTREGA NO MESMO DIA',
-    text: 'GRANDE RIO — R$ 9,99',
-    link: '/institucional/frete-gratis',
-  },
 ];
 
 const regions = [

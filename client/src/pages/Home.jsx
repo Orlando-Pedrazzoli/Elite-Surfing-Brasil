@@ -9,7 +9,7 @@ import { SEO, OrganizationSchema, WebSiteSchema, SiteNavigationSchema } from '..
 import seoConfig from '../components/seo/seoConfig';
 import Novidades from '../components/Novidades';
 import NovidadesCarousel from '../components/NovidadesCarousel';
-import BlogBanner from '../components/BlogBanner';
+import BlogPromo from '../components/BlogPromo';
 
 const Home = () => {
   return (
@@ -30,8 +30,9 @@ const Home = () => {
         <CollectionsGrid />
         <FeatureBanners />
         <Novidades/>
-        <BlogBanner />
+       
         <ReviewsCarousel />
+         <BlogPromo />
         <NewsLetter />
       </div>
     </>

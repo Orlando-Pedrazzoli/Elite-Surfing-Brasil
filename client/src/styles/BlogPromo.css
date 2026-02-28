@@ -1,0 +1,323 @@
+/* ============================================================
+   BLOG PROMO — Homepage Section
+   Positioned between <Novidades /> and <ReviewsCarousel />
+   ============================================================ */
+
+.blog-promo {
+  position: relative;
+  padding: 80px 0 90px;
+  background: linear-gradient(175deg, #0a1628 0%, #0d2137 35%, #0f3460 65%, #1a1a2e 100%);
+  overflow: hidden;
+}
+
+/* Animated grain texture overlay */
+.blog-promo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ambient glow */
+.blog-promo::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 180, 216, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Wave decorations */
+.blog-promo__wave-top,
+.blog-promo__wave-bottom {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  z-index: 1;
+}
+
+.blog-promo__wave-top {
+  top: -1px;
+  background: linear-gradient(180deg, #fff 0%, transparent 100%);
+  clip-path: polygon(
+    0 0, 100% 0,
+    100% 30%,
+    85% 55%, 70% 35%, 55% 60%, 40% 40%, 25% 65%, 10% 45%, 0 70%
+  );
+}
+
+.blog-promo__wave-bottom {
+  bottom: -1px;
+  background: linear-gradient(0deg, #fff 0%, transparent 100%);
+  clip-path: polygon(
+    0 30%,
+    10% 55%, 25% 35%, 40% 60%, 55% 40%, 70% 65%, 85% 45%, 100% 70%,
+    100% 100%, 0 100%
+  );
+}
+
+/* Container */
+.blog-promo__container {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---- HEADER ---- */
+.blog-promo__header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.blog-promo__eyebrow {
+  display: inline-block;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #00b4d8;
+  background: rgba(0, 180, 216, 0.1);
+  border: 1px solid rgba(0, 180, 216, 0.25);
+  padding: 6px 18px;
+  border-radius: 30px;
+  margin-bottom: 20px;
+}
+
+.blog-promo__title {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+  margin: 0 0 16px;
+}
+
+.blog-promo__title span {
+  background: linear-gradient(135deg, #00b4d8, #48cae4, #90e0ef);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.blog-promo__subtitle {
+  font-family: "Georgia", serif;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ---- CARDS GRID ---- */
+.blog-promo__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+/* Card */
+.blog-promo__card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+  animation: cardFadeUp 0.6s ease-out both;
+}
+
+@keyframes cardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.blog-promo__card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(0, 180, 216, 0.08);
+  border-color: rgba(0, 180, 216, 0.2);
+}
+
+/* Card Image */
+.blog-promo__card-image {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.blog-promo__card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.blog-promo__card:hover .blog-promo__card-image img {
+  transform: scale(1.08);
+}
+
+.blog-promo__card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(10, 22, 40, 0.85) 100%);
+}
+
+.blog-promo__card-tag {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 180, 216, 0.85);
+  backdrop-filter: blur(6px);
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+
+/* Card Body */
+.blog-promo__card-body {
+  padding: 20px 20px 24px;
+}
+
+.blog-promo__card-title {
+  font-family: "Georgia", serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.blog-promo__card-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+.blog-promo__card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #00b4d8;
+  transition: gap 0.3s ease, color 0.3s ease;
+}
+
+.blog-promo__card:hover .blog-promo__card-link {
+  gap: 10px;
+  color: #48cae4;
+}
+
+/* ---- CTA ---- */
+.blog-promo__cta {
+  text-align: center;
+}
+
+.blog-promo__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #0a1628;
+  background: linear-gradient(135deg, #00b4d8, #48cae4);
+  padding: 16px 40px;
+  border-radius: 50px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, gap 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 180, 216, 0.3);
+}
+
+.blog-promo__btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 35px rgba(0, 180, 216, 0.45);
+  gap: 14px;
+}
+
+.blog-promo__cta-note {
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.5px;
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 900px) {
+  .blog-promo {
+    padding: 60px 0 70px;
+  }
+
+  .blog-promo__grid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+    gap: 20px;
+  }
+
+  .blog-promo__card-image {
+    height: 180px;
+  }
+
+  .blog-promo__header {
+    margin-bottom: 36px;
+  }
+
+  .blog-promo__btn {
+    padding: 14px 32px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .blog-promo {
+    padding: 50px 0 60px;
+  }
+
+  .blog-promo__title {
+    font-size: 1.6rem;
+  }
+
+  .blog-promo__subtitle {
+    font-size: 0.95rem;
+  }
+
+  .blog-promo__card-body {
+    padding: 16px 16px 20px;
+  }
+}

@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatBRL } from '../utils/installmentUtils';
 import { formatCep, isValidCep } from '../utils/shippingUtils';
-import { Truck, Gift, Zap, Package } from 'lucide-react';
+import { Truck, Gift, Package } from 'lucide-react';
 
 const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal = 0 }) => {
   const { axios } = useAppContext();
@@ -134,11 +134,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
       return { filteredOptions: [], cheapestId: null, fastestId: null };
     }
 
-    const options = [...results.options];
-
-    // Separar opção "Mesmo Dia" (sempre fica no topo)
-    const sameDayOption = options.find((opt) => opt.isSameDay);
-    const regularOptions = options.filter((opt) => !opt.isSameDay);
+    const regularOptions = [...results.options];
 
     // Remover duplicatas por transportadora (manter a mais barata de cada)
     const uniqueByCarrier = new Map();
@@ -164,8 +160,8 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
       ? top5.reduce((min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min), top5[0])
       : null;
 
-    // Montar lista final: same day no topo + top 5
-    const finalOptions = sameDayOption ? [sameDayOption, ...top5] : top5;
+    // Montar lista final
+    const finalOptions = top5;
 
     return {
       filteredOptions: finalOptions,
@@ -321,9 +317,8 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
           {filteredOptions.map((option) => {
             const isSelected = selectedOption?.id === option.id;
             const isFree = option.freeShipping && option.price === 0;
-            const isSameDay = option.isSameDay;
-            const isCheapest = option.id === cheapestId && !isFree && !isSameDay;
-            const isFastest = option.id === fastestId && fastestId !== cheapestId && !isFree && !isSameDay;
+            const isCheapest = option.id === cheapestId && !isFree;
+            const isFastest = option.id === fastestId && fastestId !== cheapestId && !isFree;
 
             return (
               <div
@@ -334,8 +329,6 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
                     ? 'bg-primary/5 border-primary ring-1 ring-primary'
                     : isFree
                     ? 'bg-green-50 border-green-300 hover:border-green-400'
-                    : isSameDay
-                    ? 'bg-yellow-50 border-yellow-300 hover:border-yellow-400'
                     : isCheapest
                     ? 'bg-green-50/50 border-green-200 hover:border-green-300'
                     : isFastest
@@ -354,12 +347,6 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
                       {isFree && (
                         <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800 border border-green-300 animate-pulse'>
                           🎉 FRETE GRÁTIS
-                        </span>
-                      )}
-                      {/* ═══ BADGE MESMO DIA ═══ */}
-                      {isSameDay && (
-                        <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-200 text-yellow-800 border border-yellow-300'>
-                          ⚡ MESMO DIA
                         </span>
                       )}
                       {isCheapest && !isFree && (

@@ -6,7 +6,7 @@ const BlogHero = () => {
     <section className="blog-hero">
       <img
         className="blog-hero__image"
-        src="/hero-surf.jpg"
+        src="/banner-blog.jpg"
         alt="Surfista numa onda — Blog Elite Surfing"
         loading="eager"
       />
@@ -14,12 +14,9 @@ const BlogHero = () => {
       <div className="blog-hero__content">
         <span className="blog-hero__badge">WSL • WORLD SURF LEAGUE</span>
         <h1 className="blog-hero__title">
-          Blog <span className="blog-hero__accent">Surf</span>
+          Elite Surfing <span className="blog-hero__accent">Blog</span>
         </h1>
-        <p className="blog-hero__subtitle">
-          Rankings, calendário de eventos, atletas e tudo sobre o circuito
-          mundial de surf. Temporada {blogMeta.season}.
-        </p>
+       
         <span className="blog-hero__updated">
           Atualizado em {blogMeta.lastUpdated}
         </span>

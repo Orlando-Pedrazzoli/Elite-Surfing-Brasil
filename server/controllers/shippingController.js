@@ -5,14 +5,13 @@
 // Recebe: CEP de destino + array de produtos (do carrinho)
 // Retorna: Opções de frete com preço e prazo (via Melhor Envio)
 // ✅ Lógica de FRETE GRÁTIS integrada
-// ✅ Opção "Mesmo Dia" para Grande Rio de Janeiro
 // ═══════════════════════════════════════════════════════════════════════
 
 import { calculateShipping } from '../services/melhorEnvioService.js';
 import Product from '../models/Product.js';
 
 // =============================================================================
-// HELPERS — REGIÃO, FRETE GRÁTIS, GRANDE RIO
+// HELPERS — REGIÃO, FRETE GRÁTIS
 // =============================================================================
 
 /**
@@ -73,18 +72,6 @@ const FREE_SHIPPING_THRESHOLDS = {
   sul_sudeste: 199,
   demais: 299,
 };
-
-/**
- * Verifica se o CEP é da Grande Rio de Janeiro (elegível a entrega mesmo dia)
- * Faixa aproximada: 20000-000 a 26600-999
- */
-const isGrandeRio = (cep) => {
-  const num = parseInt(cep.substring(0, 5), 10);
-  return num >= 20000 && num <= 26600;
-};
-
-// Preço fixo da entrega mesmo dia
-const SAME_DAY_PRICE = 9.99;
 
 // =============================================================================
 // POST /api/shipping/calculate
@@ -196,23 +183,7 @@ export const calculateShippingQuote = async (req, res) => {
       };
     });
 
-    // 7. Adicionar opção "Mesmo Dia" para Grande Rio de Janeiro
-    if (isGrandeRio(cleanCep)) {
-      options.unshift({
-        id: 'same_day_rio',
-        name: 'MESMO DIA ÚTIL',
-        carrier: 'Elite Surfing',
-        icon: '⚡',
-        price: SAME_DAY_PRICE,
-        originalPrice: SAME_DAY_PRICE,
-        deliveryDays: 0,
-        deliveryText: 'Entrega no mesmo dia útil (pedidos até 11:30h)',
-        freeShipping: false,
-        isSameDay: true,
-      });
-    }
-
-    // 8. Retornar opções + metadata de frete grátis
+    // 7. Retornar opções + metadata de frete grátis
     return res.json({
       success: true,
       origin: result.origin,
