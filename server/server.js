@@ -15,6 +15,8 @@ import reviewRouter from './routes/reviewRoute.js';
 import { stripeWebhooks } from './controllers/orderController.js';
 import shippingRouter from './routes/shippingRoute.js';
 import pixRouter from './routes/pixManualRoute.js';
+import clienteRouter from './routes/clienteRoute.js'; // ← NOVO
+import romaneioRouter from './routes/romaneioRoute.js'; // ← NOVO
 
 const app = express();
 const port = process.env.PORT || 4001;
@@ -22,7 +24,6 @@ const port = process.env.PORT || 4001;
 // ✅ Conexões
 await connectDB();
 await connectCloudinary();
-
 console.log('✅ Database connected successfully');
 console.log('✅ Cloudinary connected successfully');
 
@@ -47,7 +48,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  })
+  }),
 );
 
 // ✅ Depois CORS, body parsing e cookies
@@ -75,6 +76,8 @@ app.use('/api/order', orderRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/pix', pixRouter);
+app.use('/api/clientes', clienteRouter); // ← NOVO
+app.use('/api/romaneios', romaneioRouter); // ← NOVO
 
 console.log('✅ All routes registered');
 

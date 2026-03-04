@@ -40,6 +40,10 @@ import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
 import BlogManager from './pages/seller/BlogManager';
 
+// ✅ Vendas Diretas
+import Clientes from './pages/seller/Clientes';
+import VendasDiretas from './pages/seller/VendasDiretas';
+
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
 
@@ -69,14 +73,14 @@ const App = () => {
       {/* AnnouncementBar + Navbar - apenas fora do seller */}
       {!isSellerPath && (
         <>
-          <div className="fixed top-0 left-0 right-0 z-50">
+          <div className='fixed top-0 left-0 right-0 z-50'>
             <AnnouncementBar />
             <Navbar />
           </div>
-          <div className="h-[104px]" />
+          <div className='h-[104px]' />
         </>
       )}
-     
+
       {showUserLogin ? <Login /> : null}
 
       <Toaster
@@ -104,14 +108,13 @@ const App = () => {
         }}
       />
       <ScrollToTop />
-      
-      {/* Condicional: Homepage, Collections, Institucional e Blog sem padding lateral */}
+
       <div
         className={`${
-          isSellerPath 
-            ? '' 
-            : (isHomepage || isCollectionPage || isInstitucional || isBlogPage)
-              ? '' 
+          isSellerPath
+            ? ''
+            : isHomepage || isCollectionPage || isInstitucional || isBlogPage
+              ? ''
               : 'px-4 md:px-16 lg:px-24 xl:px-32'
         }`}
       >
@@ -132,9 +135,12 @@ const App = () => {
           <Route path='/terms' element={<Terms />} />
           <Route path='/write-review' element={<WriteReview />} />
           <Route path='/institucional' element={<InstitucionalPage />} />
-          <Route path='/institucional/:section' element={<InstitucionalPage />} />
+          <Route
+            path='/institucional/:section'
+            element={<InstitucionalPage />}
+          />
           <Route path='/loader' element={<Loading />} />
-          <Route path="/pix-payment/:orderId" element={<PixPayment />} />
+          <Route path='/pix-payment/:orderId' element={<PixPayment />} />
 
           {/* ═══ BLOG ROUTES ═══ */}
           <Route path='/blog' element={<Blog />} />
@@ -150,6 +156,9 @@ const App = () => {
             <Route path='product-list' element={<ProductList />} />
             <Route path='orders' element={<Orders />} />
             <Route path='blog' element={<BlogManager />} />
+            {/* ─── Vendas Diretas ─── */}
+            <Route path='clientes' element={<Clientes />} />
+            <Route path='vendas-diretas' element={<VendasDiretas />} />
           </Route>
         </Routes>
       </div>
@@ -217,37 +226,49 @@ const App = () => {
       >
         <div className='cookie-content'>
           <div className='cookie-icon'>
-            <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-              <path d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 11.46 21.95 10.93 21.85 10.42C20.92 10.83 19.89 11.07 18.81 11.07C14.77 11.07 11.5 7.8 11.5 3.76C11.5 3.17 11.57 2.6 11.7 2.06C11.8 2.02 11.9 2 12 2Z' fill='#fbbf24'/>
-              <circle cx='8.5' cy='11.5' r='1.5' fill='#92400e'/>
-              <circle cx='12.5' cy='16' r='1' fill='#92400e'/>
-              <circle cx='15' cy='11' r='1' fill='#92400e'/>
-              <circle cx='10' cy='7.5' r='0.8' fill='#92400e'/>
+            <svg
+              width='28'
+              height='28'
+              viewBox='0 0 24 24'
+              fill='none'
+              xmlns='http://www.w3.org/2000/svg'
+            >
+              <path
+                d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 11.46 21.95 10.93 21.85 10.42C20.92 10.83 19.89 11.07 18.81 11.07C14.77 11.07 11.5 7.8 11.5 3.76C11.5 3.17 11.57 2.6 11.7 2.06C11.8 2.02 11.9 2 12 2Z'
+                fill='#fbbf24'
+              />
+              <circle cx='8.5' cy='11.5' r='1.5' fill='#92400e' />
+              <circle cx='12.5' cy='16' r='1' fill='#92400e' />
+              <circle cx='15' cy='11' r='1' fill='#92400e' />
+              <circle cx='10' cy='7.5' r='0.8' fill='#92400e' />
             </svg>
           </div>
           <div className='cookie-text'>
-            <p className='cookie-title'>
-              Nós valorizamos sua privacidade
-            </p>
+            <p className='cookie-title'>Nós valorizamos sua privacidade</p>
             <p className='cookie-description'>
-              Utilizamos cookies essenciais para o funcionamento do site e cookies de 
-              análise para melhorar sua experiência de navegação. Ao clicar em 
-              "Aceitar Cookies", você consente com o uso de todos os cookies conforme 
-              a <a href='/privacy' className='cookie-link'>Lei Geral de Proteção de Dados (LGPD)</a> e 
-              nossa <a href='/privacy' className='cookie-link'>Política de Privacidade</a>.
+              Utilizamos cookies essenciais para o funcionamento do site e
+              cookies de análise para melhorar sua experiência de navegação. Ao
+              clicar em "Aceitar Cookies", você consente com o uso de todos os
+              cookies conforme a{' '}
+              <a href='/privacy' className='cookie-link'>
+                Lei Geral de Proteção de Dados (LGPD)
+              </a>{' '}
+              e nossa{' '}
+              <a href='/privacy' className='cookie-link'>
+                Política de Privacidade
+              </a>
+              .
             </p>
           </div>
         </div>
       </CookieConsent>
 
       <style>{`
-        /* ═══ Cookie Banner Styles ═══ */
         .cookie-content {
           display: flex;
           align-items: flex-start;
           gap: 16px;
         }
-
         .cookie-icon {
           flex-shrink: 0;
           width: 44px;
@@ -258,7 +279,6 @@ const App = () => {
           align-items: center;
           justify-content: center;
         }
-
         .cookie-title {
           margin: 0 0 4px 0;
           font-weight: 700;
@@ -266,14 +286,12 @@ const App = () => {
           font-size: 15px;
           letter-spacing: -0.01em;
         }
-
         .cookie-description {
           margin: 0;
           color: #94a3b8;
           font-size: 13px;
           line-height: 1.6;
         }
-
         .cookie-link {
           color: #34d399;
           text-decoration: underline;
@@ -281,12 +299,7 @@ const App = () => {
           font-weight: 500;
           transition: color 0.2s;
         }
-
-        .cookie-link:hover {
-          color: #6ee7b7;
-        }
-
-        /* Buttons container */
+        .cookie-link:hover { color: #6ee7b7; }
         .cookie-banner-buttons {
           display: flex;
           align-items: center;
@@ -294,50 +307,23 @@ const App = () => {
           padding: 20px 24px;
           flex-shrink: 0;
         }
-
         .cookie-banner button:hover {
           transform: translateY(-1px);
           filter: brightness(1.1);
         }
-
-        .cookie-banner button:active {
-          transform: translateY(0);
-        }
-
-        /* Mobile responsive */
+        .cookie-banner button:active { transform: translateY(0); }
         @media (max-width: 768px) {
-          .cookie-banner > div:first-child {
-            padding: 16px 16px 8px !important;
-          }
-
-          .cookie-content {
-            gap: 12px;
-          }
-
-          .cookie-icon {
-            width: 36px;
-            height: 36px;
-          }
-
-          .cookie-icon svg {
-            width: 22px;
-            height: 22px;
-          }
-
-          .cookie-title {
-            font-size: 14px;
-          }
-
-          .cookie-description {
-            font-size: 12px;
-          }
-
+          .cookie-banner > div:first-child { padding: 16px 16px 8px !important; }
+          .cookie-content { gap: 12px; }
+          .cookie-icon { width: 36px; height: 36px; }
+          .cookie-icon svg { width: 22px; height: 22px; }
+          .cookie-title { font-size: 14px; }
+          .cookie-description { font-size: 12px; }
           .cookie-banner-buttons {
             padding: 8px 16px 16px !important;
             width: 100%;
             justify-content: stretch;
           }
-
           .cookie-banner-buttons button {
             flex: 1;
             padding: 12px 16px !important;
@@ -345,16 +331,9 @@ const App = () => {
             text-align: center;
           }
         }
-
         @media (max-width: 480px) {
-          .cookie-banner-buttons {
-            flex-direction: column;
-            gap: 8px;
-          }
-
-          .cookie-banner-buttons button {
-            width: 100%;
-          }
+          .cookie-banner-buttons { flex-direction: column; gap: 8px; }
+          .cookie-banner-buttons button { width: 100%; }
         }
       `}</style>
     </div>
