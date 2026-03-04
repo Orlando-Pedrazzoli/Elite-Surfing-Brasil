@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Link } from 'react-router-dom';
 import {
@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { axios, products } = useAppContext();
+  const { axios } = useAppContext(); // ← REMOVIDO 'products' do destructure
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [allProductsForAlerts, setAllProductsForAlerts] = useState([]); // ← NOVO STATE
   const [stats, setStats] = useState({
     totalProducts: 0,
     activeProducts: 0,
@@ -30,19 +31,25 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [products]);
+  }, []); // ← REMOVIDO 'products' da dependency array
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
-      // Buscar pedidos
-      const { data } = await axios.get('/api/order/seller');
-      const allOrders = data.success ? data.orders : [];
+      // ← ALTERADO: fetch paralelo de pedidos + TODOS os produtos (?all=true)
+      const [ordersRes, allProductsRes] = await Promise.all([
+        axios.get('/api/order/seller'),
+        axios.get('/api/product/list?all=true'),
+      ]);
+
+      const allOrders = ordersRes.data.success ? ordersRes.data.orders : [];
       setOrders(allOrders.slice(0, 8));
 
-      // Calcular stats dos produtos
-      const allProducts = products || [];
+      // ← ALTERADO: usa dados do fetch direto, não do contexto
+      const allProducts = allProductsRes.data.success
+        ? allProductsRes.data.products
+        : [];
       const activeProducts = allProducts.filter(p => p.inStock);
       const outOfStock = allProducts.filter(p => !p.inStock || p.stock === 0);
       const lowStock = allProducts.filter(p => p.stock > 0 && p.stock <= 5);
@@ -51,16 +58,16 @@ const Dashboard = () => {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthOrders = allOrders.filter(
-        o => new Date(o.createdAt) >= startOfMonth && o.status !== 'Cancelled'
+        o => new Date(o.createdAt) >= startOfMonth && o.status !== 'Cancelled',
       );
       const monthRevenue = monthOrders.reduce(
         (sum, o) => sum + (o.amount || 0),
-        0
+        0,
       );
 
       // Pedidos pendentes
       const pendingOrders = allOrders.filter(
-        o => o.status === 'Order Placed' || o.status === 'Processing'
+        o => o.status === 'Order Placed' || o.status === 'Processing',
       );
 
       setStats({
@@ -72,6 +79,9 @@ const Dashboard = () => {
         pendingOrders: pendingOrders.length,
         monthRevenue,
       });
+
+      // ← NOVO: guardar todos os produtos para os alertas de estoque
+      setAllProductsForAlerts(allProducts);
     } catch (error) {
       console.error('Dashboard error:', error);
     } finally {
@@ -118,14 +128,13 @@ const Dashboard = () => {
     return labels[status] || status;
   };
 
-  // Produtos com estoque baixo
-  const lowStockProducts = (products || [])
+  // ← ALTERADO: usa allProductsForAlerts em vez de products do contexto
+  const lowStockProducts = allProductsForAlerts
     .filter(p => p.stock > 0 && p.stock <= 5)
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 6);
 
-  // Produtos sem estoque
-  const outOfStockProducts = (products || [])
+  const outOfStockProducts = allProductsForAlerts
     .filter(p => !p.inStock || p.stock === 0)
     .slice(0, 4);
 
@@ -156,9 +165,13 @@ const Dashboard = () => {
               <div className='w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center'>
                 <Package className='w-5 h-5 text-blue-600' />
               </div>
-              <span className='text-xs font-medium text-gray-400'>PRODUTOS</span>
+              <span className='text-xs font-medium text-gray-400'>
+                PRODUTOS
+              </span>
             </div>
-            <p className='text-2xl font-bold text-gray-900'>{stats.activeProducts}</p>
+            <p className='text-2xl font-bold text-gray-900'>
+              {stats.activeProducts}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
               {stats.totalProducts} total · {stats.outOfStock} esgotados
             </p>
@@ -170,9 +183,13 @@ const Dashboard = () => {
               <div className='w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center'>
                 <Clock className='w-5 h-5 text-amber-600' />
               </div>
-              <span className='text-xs font-medium text-gray-400'>PENDENTES</span>
+              <span className='text-xs font-medium text-gray-400'>
+                PENDENTES
+              </span>
             </div>
-            <p className='text-2xl font-bold text-gray-900'>{stats.pendingOrders}</p>
+            <p className='text-2xl font-bold text-gray-900'>
+              {stats.pendingOrders}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
               {stats.totalOrders} pedidos total
             </p>
@@ -181,14 +198,20 @@ const Dashboard = () => {
           {/* Estoque Baixo */}
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                stats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'
-              }`}>
-                <AlertTriangle className={`w-5 h-5 ${
-                  stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'
-                }`} />
+              <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  stats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'
+                }`}
+              >
+                <AlertTriangle
+                  className={`w-5 h-5 ${
+                    stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'
+                  }`}
+                />
               </div>
-              <span className='text-xs font-medium text-gray-400'>ESTOQUE BAIXO</span>
+              <span className='text-xs font-medium text-gray-400'>
+                ESTOQUE BAIXO
+              </span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>{stats.lowStock}</p>
             <p className='text-xs text-gray-500 mt-1'>
@@ -202,13 +225,18 @@ const Dashboard = () => {
               <div className='w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center'>
                 <TrendingUp className='w-5 h-5 text-green-600' />
               </div>
-              <span className='text-xs font-medium text-gray-400'>RECEITA MÊS</span>
+              <span className='text-xs font-medium text-gray-400'>
+                RECEITA MÊS
+              </span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>
               {formatCurrency(stats.monthRevenue)}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              {new Date().toLocaleDateString('pt-BR', {
+                month: 'long',
+                year: 'numeric',
+              })}
             </p>
           </div>
         </div>
@@ -220,7 +248,9 @@ const Dashboard = () => {
             <div className='flex items-center justify-between p-5 border-b border-gray-100'>
               <div className='flex items-center gap-2'>
                 <ShoppingCart className='w-5 h-5 text-gray-400' />
-                <h2 className='text-base font-semibold text-gray-900'>Pedidos Recentes</h2>
+                <h2 className='text-base font-semibold text-gray-900'>
+                  Pedidos Recentes
+                </h2>
               </div>
               <Link
                 to='/seller/orders'
@@ -237,7 +267,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className='divide-y divide-gray-50'>
-                {orders.map((order) => (
+                {orders.map(order => (
                   <div
                     key={order._id}
                     className='flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors'
@@ -248,11 +278,14 @@ const Dashboard = () => {
                       </div>
                       <div className='min-w-0'>
                         <p className='text-sm font-medium text-gray-900 truncate'>
-                          {order.address?.firstName || order.guestName || 'Cliente'}{' '}
+                          {order.address?.firstName ||
+                            order.guestName ||
+                            'Cliente'}{' '}
                           {order.address?.lastName || ''}
                         </p>
                         <p className='text-xs text-gray-400'>
-                          {formatDate(order.createdAt)} · {order.items?.length || 0} item(s)
+                          {formatDate(order.createdAt)} ·{' '}
+                          {order.items?.length || 0} item(s)
                         </p>
                       </div>
                     </div>
@@ -260,7 +293,9 @@ const Dashboard = () => {
                       <span className='text-sm font-semibold text-gray-900'>
                         {formatCurrency(order.amount)}
                       </span>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getStatusColor(order.status)}`}>
+                      <span
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium ${getStatusColor(order.status)}`}
+                      >
                         {getStatusLabel(order.status)}
                       </span>
                     </div>
@@ -275,7 +310,9 @@ const Dashboard = () => {
             <div className='flex items-center justify-between p-5 border-b border-gray-100'>
               <div className='flex items-center gap-2'>
                 <AlertTriangle className='w-5 h-5 text-amber-500' />
-                <h2 className='text-base font-semibold text-gray-900'>Alertas de Estoque</h2>
+                <h2 className='text-base font-semibold text-gray-900'>
+                  Alertas de Estoque
+                </h2>
               </div>
               <Link
                 to='/seller/product-list'
@@ -285,7 +322,8 @@ const Dashboard = () => {
               </Link>
             </div>
 
-            {lowStockProducts.length === 0 && outOfStockProducts.length === 0 ? (
+            {lowStockProducts.length === 0 &&
+            outOfStockProducts.length === 0 ? (
               <div className='p-8 text-center text-gray-400'>
                 <Package className='w-10 h-10 mx-auto mb-3 opacity-40' />
                 <p className='text-sm'>Estoque em dia!</p>
@@ -293,7 +331,7 @@ const Dashboard = () => {
             ) : (
               <div className='divide-y divide-gray-50'>
                 {/* Estoque Baixo */}
-                {lowStockProducts.map((product) => (
+                {lowStockProducts.map(product => (
                   <div
                     key={product._id}
                     className='flex items-center gap-3 p-3 px-5 hover:bg-gray-50/50 transition-colors'
@@ -312,7 +350,9 @@ const Dashboard = () => {
                           {product.stock} un.
                         </span>
                         {product.sku && (
-                          <span className='text-xs text-gray-400 font-mono'>{product.sku}</span>
+                          <span className='text-xs text-gray-400 font-mono'>
+                            {product.sku}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -320,7 +360,7 @@ const Dashboard = () => {
                 ))}
 
                 {/* Sem Estoque */}
-                {outOfStockProducts.map((product) => (
+                {outOfStockProducts.map(product => (
                   <div
                     key={product._id}
                     className='flex items-center gap-3 p-3 px-5 hover:bg-gray-50/50 transition-colors opacity-60'
@@ -354,7 +394,9 @@ const Dashboard = () => {
             <div className='w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center'>
               <Package className='w-4 h-4 text-primary' />
             </div>
-            <span className='text-sm font-medium text-primary'>Novo Produto</span>
+            <span className='text-sm font-medium text-primary'>
+              Novo Produto
+            </span>
           </Link>
           <Link
             to='/seller/orders'
@@ -363,7 +405,9 @@ const Dashboard = () => {
             <div className='w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center'>
               <ShoppingCart className='w-4 h-4 text-gray-600' />
             </div>
-            <span className='text-sm font-medium text-gray-700'>Ver Pedidos</span>
+            <span className='text-sm font-medium text-gray-700'>
+              Ver Pedidos
+            </span>
           </Link>
           <Link
             to='/seller/product-list'
@@ -372,7 +416,9 @@ const Dashboard = () => {
             <div className='w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center'>
               <BarChart3 className='w-4 h-4 text-gray-600' />
             </div>
-            <span className='text-sm font-medium text-gray-700'>Gerir Produtos</span>
+            <span className='text-sm font-medium text-gray-700'>
+              Gerir Produtos
+            </span>
           </Link>
           <Link
             to='/'

@@ -3,25 +3,30 @@ import { X, Printer, Package, MapPin, Phone } from 'lucide-react';
 import { assets } from '../../assets/assets';
 
 const ShippingLabel = ({ order, onClose }) => {
-  // Dados do remetente (fixos)
+  // ← ALTERADO: Dados do remetente atualizados para o Brasil
   const sender = {
-    name: 'Elite Surfing',
-    address: 'Avenida Doutor Francisco de Sá Carneiro 3',
-    apartment: 'Apartamento 3D',
-    zipcode: '2780-241',
-    city: 'Oeiras',
-    country: 'Portugal',
+    name: 'Elite Surfing Brasil',
+    address: 'Av. das Américas, 12900, Bloco 1, Sala 203C',
+    apartment: 'Ed. Argentina — Recreio dos Bandeirantes',
+    zipcode: '22790-702',
+    city: 'Rio de Janeiro',
+    state: 'RJ',
+    country: 'Brasil',
+    phone: '(21) 96435-8058',
   };
 
   // Dados do destinatário (do pedido)
   const recipient = {
     name: `${order.address?.firstName || ''} ${order.address?.lastName || ''}`.trim(),
     address: order.address?.street || '',
+    number: order.address?.number || '',
+    complement: order.address?.complement || '',
+    neighborhood: order.address?.neighborhood || '',
     zipcode: order.address?.zipcode || '',
     city: order.address?.city || '',
     state: order.address?.state || '',
     country: order.address?.country || '',
-    phone: order.address?.phone || '',
+    phone: order.address?.phone || order.guestPhone || '',
   };
 
   const handlePrint = () => {
@@ -47,7 +52,7 @@ const ShippingLabel = ({ order, onClose }) => {
               </div>
               <div>
                 <h2 className='text-xl font-bold text-gray-900'>
-                  Etiqueta de Envio CTT
+                  Etiqueta de Envio {order.shippingCarrier || 'Melhor Envio'}
                 </h2>
                 <p className='text-sm text-gray-500'>
                   Pedido #{order._id.slice(-8).toUpperCase()}
@@ -75,7 +80,11 @@ const ShippingLabel = ({ order, onClose }) => {
           {/* Preview */}
           <div className='p-6 bg-gray-50 flex justify-center overflow-auto max-h-[75vh]'>
             <div className='bg-white p-2 rounded-lg shadow-lg'>
-              <LabelContent sender={sender} recipient={recipient} order={order} />
+              <LabelContent
+                sender={sender}
+                recipient={recipient}
+                order={order}
+              />
             </div>
           </div>
         </div>
@@ -127,21 +136,15 @@ const LabelContent = ({ sender, recipient, order }) => {
         fontFamily: 'Arial, sans-serif',
       }}
     >
-      {/* Container principal */}
       <div className='w-full h-full p-4 flex flex-col'>
-        
         {/* Header - Logo Elite Surfing */}
         <div className='flex items-center justify-center mb-4 pb-4 border-b-2 border-gray-300'>
-          <img 
-            src={assets.logo_es} 
-            alt='Elite Surfing' 
-            className='h-10'
-          />
+          <img src={assets.logo_es} alt='Elite Surfing' className='h-10' />
         </div>
 
-        {/* REMETENTE - Canto Superior Esquerdo */}
+        {/* REMETENTE */}
         <div className='mb-6'>
-          <div className='bg-gray-50 rounded-lg p-3 border-2 border-gray-300 max-w-[60%]'>
+          <div className='bg-gray-50 rounded-lg p-3 border-2 border-gray-300 max-w-[65%]'>
             <div className='flex items-center gap-2 mb-2'>
               <div className='w-5 h-5 bg-blue-100 rounded flex items-center justify-center flex-shrink-0'>
                 <MapPin className='w-3 h-3 text-blue-600' />
@@ -153,12 +156,20 @@ const LabelContent = ({ sender, recipient, order }) => {
 
             <div className='space-y-0.5'>
               <p className='text-sm font-bold text-gray-900'>{sender.name}</p>
-              <p className='text-xs text-gray-700 leading-tight'>{sender.address}</p>
-              <p className='text-xs text-gray-700 leading-tight'>{sender.apartment}</p>
               <p className='text-xs text-gray-700 leading-tight'>
-                {sender.zipcode} {sender.city}
+                {sender.address}
               </p>
-              <p className='text-xs text-gray-700 font-medium'>{sender.country}</p>
+              <p className='text-xs text-gray-700 leading-tight'>
+                {sender.apartment}
+              </p>
+              <p className='text-xs text-gray-700 leading-tight'>
+                CEP {sender.zipcode} — {sender.city}/{sender.state}
+              </p>
+              <p className='text-xs text-gray-700 font-medium'>
+                {sender.country}
+              </p>
+              {/* ← NOVO: telefone do remetente */}
+              <p className='text-xs text-gray-600 pt-1'>📞 {sender.phone}</p>
             </div>
           </div>
         </div>
@@ -166,10 +177,9 @@ const LabelContent = ({ sender, recipient, order }) => {
         {/* Espaço flexível */}
         <div className='flex-1'></div>
 
-        {/* DESTINATÁRIO - Parte Inferior Direita (DESTAQUE) */}
+        {/* DESTINATÁRIO */}
         <div className='flex justify-end mb-4'>
           <div className='bg-white rounded-lg p-4 border-4 border-red-600 relative max-w-[75%]'>
-            {/* Badge "DESTINATÁRIO" */}
             <div className='absolute -top-3 right-3 bg-red-600 text-white px-3 py-1 rounded text-xs font-bold'>
               DESTINATÁRIO
             </div>
@@ -178,20 +188,29 @@ const LabelContent = ({ sender, recipient, order }) => {
               <p className='text-lg font-bold text-gray-900 leading-tight'>
                 {recipient.name || 'Nome não informado'}
               </p>
-              
+
               <div className='space-y-0.5'>
+                {/* ← ALTERADO: endereço completo com número, complemento e bairro */}
                 <p className='text-sm text-gray-800 leading-tight'>
-                  {recipient.address || 'Endereço não informado'}
+                  {recipient.address}
+                  {recipient.number ? `, ${recipient.number}` : ''}
                 </p>
-                
+                {recipient.complement && (
+                  <p className='text-xs text-gray-600 leading-tight'>
+                    {recipient.complement}
+                  </p>
+                )}
+                {recipient.neighborhood && (
+                  <p className='text-xs text-gray-700 leading-tight'>
+                    {recipient.neighborhood}
+                  </p>
+                )}
                 <p className='text-base font-bold text-gray-900'>
-                  {recipient.zipcode} {recipient.city}
+                  CEP {recipient.zipcode} — {recipient.city}
                 </p>
-                
                 {recipient.state && (
                   <p className='text-sm text-gray-700'>{recipient.state}</p>
                 )}
-                
                 <p className='text-sm font-semibold text-gray-900 uppercase'>
                   {recipient.country || 'País não informado'}
                 </p>
@@ -209,7 +228,7 @@ const LabelContent = ({ sender, recipient, order }) => {
           </div>
         </div>
 
-        {/* Footer - Informações do pedido */}
+        {/* Footer */}
         <div className='mt-auto pt-3 border-t-2 border-gray-300'>
           <div className='flex justify-between items-center text-xs'>
             <div className='space-y-0.5'>
@@ -217,19 +236,24 @@ const LabelContent = ({ sender, recipient, order }) => {
                 <span className='font-semibold'>Pedido:</span> #{orderId}
               </p>
               <p className='text-gray-600'>
-                <span className='font-semibold'>Itens:</span> {order.items.length}
+                <span className='font-semibold'>Itens:</span>{' '}
+                {order.items.length}
               </p>
+              {order.shippingCarrier && (
+                <p className='text-gray-600'>
+                  <span className='font-semibold'>Transportadora:</span>{' '}
+                  {order.shippingCarrier}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* CTT Footer */}
+          {/* ← ALTERADO: transportadora dinâmica via Melhor Envio */}
           <div className='mt-3 pt-2 border-t border-gray-200 text-center'>
             <p className='text-xs text-gray-500 font-semibold'>
-              CTT - Correios de Portugal
+              {order.shippingCarrier || 'Melhor Envio'}
             </p>
-            <p className='text-xs text-gray-400'>
-              www.ctt.pt | 707 26 26 26
-            </p>
+            <p className='text-xs text-gray-400'>www.melhorenvio.com.br</p>
           </div>
         </div>
       </div>

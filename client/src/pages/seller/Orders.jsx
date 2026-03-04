@@ -23,6 +23,7 @@ import {
   X,
   Printer,
   QrCode,
+  FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ShippingLabel from '../../components/seller/ShippingLabel';
@@ -41,12 +42,37 @@ const Orders = () => {
 
   // Status options
   const statusOptions = [
-    { value: 'Aguardando Pagamento PIX', label: 'Aguardando PIX', color: 'amber', icon: QrCode },
-    { value: 'Order Placed', label: 'Pedido Recebido', color: 'blue', icon: Package },
-    { value: 'Processing', label: 'Em Processamento', color: 'yellow', icon: Clock },
+    {
+      value: 'Aguardando Pagamento PIX',
+      label: 'Aguardando PIX',
+      color: 'amber',
+      icon: QrCode,
+    },
+    {
+      value: 'Order Placed',
+      label: 'Pedido Recebido',
+      color: 'blue',
+      icon: Package,
+    },
+    {
+      value: 'Processing',
+      label: 'Em Processamento',
+      color: 'yellow',
+      icon: Clock,
+    },
     { value: 'Shipped', label: 'Enviado', color: 'indigo', icon: Truck },
-    { value: 'Out for Delivery', label: 'Saiu para Entrega', color: 'purple', icon: Truck },
-    { value: 'Delivered', label: 'Entregue', color: 'green', icon: CheckCircle },
+    {
+      value: 'Out for Delivery',
+      label: 'Saiu para Entrega',
+      color: 'purple',
+      icon: Truck,
+    },
+    {
+      value: 'Delivered',
+      label: 'Entregue',
+      color: 'green',
+      icon: CheckCircle,
+    },
     { value: 'Cancelled', label: 'Cancelado', color: 'red', icon: XCircle },
   ];
 
@@ -104,13 +130,13 @@ const Orders = () => {
         toast.success(data.message, { icon: '✅' });
         setOrders(prev =>
           prev.map(order =>
-            order._id === orderId ? { ...order, status: newStatus } : order
-          )
+            order._id === orderId ? { ...order, status: newStatus } : order,
+          ),
         );
         setFilteredOrders(prev =>
           prev.map(order =>
-            order._id === orderId ? { ...order, status: newStatus } : order
-          )
+            order._id === orderId ? { ...order, status: newStatus } : order,
+          ),
         );
       } else {
         toast.error(data.message);
@@ -125,8 +151,12 @@ const Orders = () => {
   // ═══════════════════════════════════════════════════════════════
   // 💰 CONFIRMAR PAGAMENTO PIX
   // ═══════════════════════════════════════════════════════════════
-  const confirmPixPayment = async (orderId) => {
-    if (!window.confirm('Confirmar que o pagamento PIX foi recebido na conta?\n\nEsta ação irá:\n• Marcar o pedido como pago\n• Decrementar o estoque\n• Enviar email de confirmação ao cliente')) {
+  const confirmPixPayment = async orderId => {
+    if (
+      !window.confirm(
+        'Confirmar que o pagamento PIX foi recebido na conta?\n\nEsta ação irá:\n• Marcar o pedido como pago\n• Decrementar o estoque\n• Enviar email de confirmação ao cliente',
+      )
+    ) {
       return;
     }
 
@@ -136,24 +166,34 @@ const Orders = () => {
 
       if (data.success) {
         toast.success('✅ Pagamento PIX confirmado com sucesso!');
-        // Atualizar pedido localmente
-        const updateOrder = (order) => {
+        const updateOrder = order => {
           if (order._id === orderId) {
-            return { ...order, isPaid: true, status: 'Order Placed', paidAt: new Date().toISOString() };
+            return {
+              ...order,
+              isPaid: true,
+              status: 'Order Placed',
+              paidAt: new Date().toISOString(),
+            };
           }
           return order;
         };
         setOrders(prev => prev.map(updateOrder));
         setFilteredOrders(prev => prev.map(updateOrder));
-        // Atualizar modal se estiver aberto
         if (selectedOrder && selectedOrder._id === orderId) {
-          setSelectedOrder(prev => ({ ...prev, isPaid: true, status: 'Order Placed', paidAt: new Date().toISOString() }));
+          setSelectedOrder(prev => ({
+            ...prev,
+            isPaid: true,
+            status: 'Order Placed',
+            paidAt: new Date().toISOString(),
+          }));
         }
       } else {
         toast.error(data.message || 'Erro ao confirmar pagamento');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erro ao confirmar pagamento PIX');
+      toast.error(
+        error.response?.data?.message || 'Erro ao confirmar pagamento PIX',
+      );
     } finally {
       setConfirmingPixId(null);
     }
@@ -176,8 +216,8 @@ const Orders = () => {
           order.address?.lastName?.toLowerCase().includes(query) ||
           order.address?.email?.toLowerCase().includes(query) ||
           order.items.some(item =>
-            item.product?.name?.toLowerCase().includes(query)
-          )
+            item.product?.name?.toLowerCase().includes(query),
+          ),
       );
     }
 
@@ -191,16 +231,19 @@ const Orders = () => {
   // Estatísticas
   const stats = {
     total: orders.length,
-    pixPending: orders.filter(o => o.paymentType === 'pix_manual' && !o.isPaid).length,
+    pixPending: orders.filter(o => o.paymentType === 'pix_manual' && !o.isPaid)
+      .length,
     pending: orders.filter(o => o.status === 'Order Placed').length,
     processing: orders.filter(o => o.status === 'Processing').length,
-    shipped: orders.filter(o => ['Shipped', 'Out for Delivery'].includes(o.status)).length,
+    shipped: orders.filter(o =>
+      ['Shipped', 'Out for Delivery'].includes(o.status),
+    ).length,
     delivered: orders.filter(o => o.status === 'Delivered').length,
     cancelled: orders.filter(o => o.status === 'Cancelled').length,
   };
 
-  // Helper: verificar se é pedido PIX pendente de confirmação
-  const isPixPending = (order) => order.paymentType === 'pix_manual' && !order.isPaid;
+  const isPixPending = order =>
+    order.paymentType === 'pix_manual' && !order.isPaid;
 
   if (isLoading) {
     return (
@@ -245,10 +288,15 @@ const Orders = () => {
             </div>
             <div className='flex-1'>
               <p className='font-bold text-amber-800 text-lg'>
-                {stats.pixPending} {stats.pixPending === 1 ? 'pedido PIX aguardando' : 'pedidos PIX aguardando'} confirmação!
+                {stats.pixPending}{' '}
+                {stats.pixPending === 1
+                  ? 'pedido PIX aguardando'
+                  : 'pedidos PIX aguardando'}{' '}
+                confirmação!
               </p>
               <p className='text-amber-700 text-sm'>
-                Verifique o extrato bancário (Chave: 21 96435-8058) e confirme os pagamentos abaixo.
+                Verifique o extrato bancário (Chave: 21 96435-8058) e confirme
+                os pagamentos abaixo.
               </p>
             </div>
             <button
@@ -268,27 +316,34 @@ const Orders = () => {
                 <ShoppingBag className='w-5 h-5 text-gray-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-gray-900'>{stats.total}</p>
+                <p className='text-2xl font-bold text-gray-900'>
+                  {stats.total}
+                </p>
                 <p className='text-xs text-gray-500'>Total</p>
               </div>
             </div>
           </div>
 
-          {/* ═══ CARD PIX PENDENTE ═══ */}
           <div
             className={`bg-white rounded-xl p-4 border shadow-sm cursor-pointer transition-colors ${
               stats.pixPending > 0
                 ? 'border-amber-400 bg-amber-50 hover:bg-amber-100'
                 : 'border-amber-200'
             }`}
-            onClick={() => setStatusFilter(stats.pixPending > 0 ? 'Aguardando Pagamento PIX' : 'all')}
+            onClick={() =>
+              setStatusFilter(
+                stats.pixPending > 0 ? 'Aguardando Pagamento PIX' : 'all',
+              )
+            }
           >
             <div className='flex items-center gap-3'>
               <div className='w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center'>
                 <QrCode className='w-5 h-5 text-amber-600' />
               </div>
               <div>
-                <p className={`text-2xl font-bold ${stats.pixPending > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                <p
+                  className={`text-2xl font-bold ${stats.pixPending > 0 ? 'text-amber-600' : 'text-gray-400'}`}
+                >
                   {stats.pixPending}
                 </p>
                 <p className='text-xs text-gray-500'>PIX Pendente</p>
@@ -302,7 +357,9 @@ const Orders = () => {
                 <Package className='w-5 h-5 text-blue-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-blue-600'>{stats.pending}</p>
+                <p className='text-2xl font-bold text-blue-600'>
+                  {stats.pending}
+                </p>
                 <p className='text-xs text-gray-500'>Novos</p>
               </div>
             </div>
@@ -314,7 +371,9 @@ const Orders = () => {
                 <Clock className='w-5 h-5 text-yellow-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-yellow-600'>{stats.processing}</p>
+                <p className='text-2xl font-bold text-yellow-600'>
+                  {stats.processing}
+                </p>
                 <p className='text-xs text-gray-500'>Processando</p>
               </div>
             </div>
@@ -326,7 +385,9 @@ const Orders = () => {
                 <Truck className='w-5 h-5 text-indigo-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-indigo-600'>{stats.shipped}</p>
+                <p className='text-2xl font-bold text-indigo-600'>
+                  {stats.shipped}
+                </p>
                 <p className='text-xs text-gray-500'>Enviados</p>
               </div>
             </div>
@@ -338,7 +399,9 @@ const Orders = () => {
                 <CheckCircle className='w-5 h-5 text-green-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-green-600'>{stats.delivered}</p>
+                <p className='text-2xl font-bold text-green-600'>
+                  {stats.delivered}
+                </p>
                 <p className='text-xs text-gray-500'>Entregues</p>
               </div>
             </div>
@@ -350,7 +413,9 @@ const Orders = () => {
                 <XCircle className='w-5 h-5 text-red-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-red-600'>{stats.cancelled}</p>
+                <p className='text-2xl font-bold text-red-600'>
+                  {stats.cancelled}
+                </p>
                 <p className='text-xs text-gray-500'>Cancelados</p>
               </div>
             </div>
@@ -360,7 +425,6 @@ const Orders = () => {
         {/* Filters */}
         <div className='bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6'>
           <div className='flex flex-col md:flex-row gap-4'>
-            {/* Search */}
             <div className='flex-1 relative'>
               <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
               <input
@@ -372,7 +436,6 @@ const Orders = () => {
               />
             </div>
 
-            {/* Status Filter */}
             <div className='relative'>
               <Filter className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
               <select
@@ -418,10 +481,12 @@ const Orders = () => {
                 <div
                   key={order._id}
                   className={`bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${
-                    pixPending ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-200'
+                    pixPending
+                      ? 'border-amber-300 ring-1 ring-amber-200'
+                      : 'border-gray-200'
                   }`}
                 >
-                  {/* ═══ BANNER PIX PENDENTE (destaque no topo do card) ═══ */}
+                  {/* ═══ BANNER PIX PENDENTE ═══ */}
                   {pixPending && (
                     <div className='bg-amber-50 border-b border-amber-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
                       <div className='flex items-center gap-2'>
@@ -456,7 +521,7 @@ const Orders = () => {
                       <div className='flex items-center gap-3'>
                         <div
                           className={`w-10 h-10 rounded-lg flex items-center justify-center ${getStatusBadgeClasses(
-                            statusConfig.color
+                            statusConfig.color,
                           )}`}
                         >
                           <StatusIcon className='w-5 h-5' />
@@ -467,13 +532,16 @@ const Orders = () => {
                           </p>
                           <div className='flex items-center gap-2 text-sm text-gray-500'>
                             <Calendar className='w-3.5 h-3.5' />
-                            {new Date(order.createdAt).toLocaleDateString('pt-PT', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {new Date(order.createdAt).toLocaleDateString(
+                              'pt-PT',
+                              {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              },
+                            )}
                           </div>
                         </div>
                       </div>
@@ -487,8 +555,8 @@ const Orders = () => {
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-green-100 text-green-800'
                               : order.paymentType === 'COD'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
                           {order.paymentType === 'pix_manual' ? (
@@ -501,8 +569,8 @@ const Orders = () => {
                           {order.paymentType === 'pix_manual'
                             ? 'PIX'
                             : order.paymentType === 'COD'
-                            ? 'COD'
-                            : 'Online'}
+                              ? 'COD'
+                              : 'Online'}
                           {order.isPaid && (
                             <CheckCircle className='w-3.5 h-3.5 ml-1' />
                           )}
@@ -520,12 +588,16 @@ const Orders = () => {
                         <div className='relative'>
                           <select
                             value={order.status}
-                            onChange={e => updateStatus(order._id, e.target.value)}
+                            onChange={e =>
+                              updateStatus(order._id, e.target.value)
+                            }
                             disabled={isUpdating || pixPending}
                             className={`pl-3 pr-8 py-2 border rounded-lg text-sm font-medium cursor-pointer transition-all appearance-none ${getStatusBadgeClasses(
-                              statusConfig.color
+                              statusConfig.color,
                             )} ${
-                              isUpdating || pixPending ? 'opacity-50 cursor-not-allowed' : ''
+                              isUpdating || pixPending
+                                ? 'opacity-50 cursor-not-allowed'
+                                : ''
                             }`}
                           >
                             {statusOptions.map(status => (
@@ -541,7 +613,6 @@ const Orders = () => {
                           )}
                         </div>
 
-                        {/* View Details Button */}
                         <button
                           onClick={() => setSelectedOrder(order)}
                           className='p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors'
@@ -550,7 +621,6 @@ const Orders = () => {
                           <Eye className='w-5 h-5' />
                         </button>
 
-                        {/* Print Label Button */}
                         <button
                           onClick={() => setLabelOrder(order)}
                           className='p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
@@ -591,7 +661,8 @@ const Orders = () => {
                               </div>
                               <div className='flex-1 min-w-0'>
                                 <p className='font-medium text-gray-900 truncate'>
-                                  {item.product?.name || 'Produto não encontrado'}
+                                  {item.product?.name ||
+                                    'Produto não encontrado'}
                                 </p>
                                 <p className='text-sm text-gray-500'>
                                   {item.product?.category || 'Sem categoria'}
@@ -607,7 +678,8 @@ const Orders = () => {
                                     Preço:{' '}
                                     <span className='font-semibold'>
                                       {currency}
-                                      {item.product?.offerPrice?.toFixed(2) || '0.00'}
+                                      {item.product?.offerPrice?.toFixed(2) ||
+                                        '0.00'}
                                     </span>
                                   </span>
                                 </div>
@@ -616,7 +688,8 @@ const Orders = () => {
                                 <p className='font-bold text-gray-900'>
                                   {currency}
                                   {(
-                                    (item.product?.offerPrice || 0) * item.quantity
+                                    (item.product?.offerPrice || 0) *
+                                    item.quantity
                                   ).toFixed(2)}
                                 </p>
                               </div>
@@ -625,7 +698,7 @@ const Orders = () => {
                         </div>
                       </div>
 
-                      {/* Customer & Address */}
+                      {/* ← ALTERADO: Cliente & Entrega com todos os campos */}
                       <div className='lg:w-72'>
                         <h4 className='text-sm font-medium text-gray-500 mb-3'>
                           Cliente & Entrega
@@ -635,30 +708,56 @@ const Orders = () => {
                             <User className='w-4 h-4 text-gray-400' />
                             <span className='font-medium text-gray-900'>
                               {order.isGuestOrder
-                                ? order.guestName || `${order.address?.firstName || ''} ${order.address?.lastName || ''}`
-                                : `${order.address?.firstName || ''} ${order.address?.lastName || ''}`
-                              }
+                                ? order.guestName ||
+                                  `${order.address?.firstName || ''} ${order.address?.lastName || ''}`
+                                : `${order.address?.firstName || ''} ${order.address?.lastName || ''}`}
                             </span>
                           </div>
 
                           {(order.guestEmail || order.address?.email) && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <Mail className='w-4 h-4 text-gray-400' />
-                              <span className='truncate'>{order.guestEmail || order.address.email}</span>
+                              <span className='truncate'>
+                                {order.guestEmail || order.address.email}
+                              </span>
                             </div>
                           )}
 
                           {(order.guestPhone || order.address?.phone) && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <Phone className='w-4 h-4 text-gray-400' />
-                              <span>{order.guestPhone || order.address.phone}</span>
+                              <span>
+                                {order.guestPhone || order.address.phone}
+                              </span>
                             </div>
                           )}
 
+                          {/* ← NOVO: CPF */}
+                          {order.address?.cpf && (
+                            <div className='flex items-center gap-2 text-sm text-gray-600'>
+                              <FileText className='w-4 h-4 text-gray-400' />
+                              <span>CPF: {order.address.cpf}</span>
+                            </div>
+                          )}
+
+                          {/* ← ALTERADO: Endereço completo com número, complemento e bairro */}
                           <div className='flex items-start gap-2 text-sm text-gray-600 pt-2 border-t border-gray-200'>
                             <MapPin className='w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0' />
                             <div>
-                              <p>{order.address?.street}</p>
+                              <p>
+                                {order.address?.street}
+                                {order.address?.number
+                                  ? `, ${order.address.number}`
+                                  : ''}
+                              </p>
+                              {order.address?.complement && (
+                                <p className='text-gray-500'>
+                                  {order.address.complement}
+                                </p>
+                              )}
+                              {order.address?.neighborhood && (
+                                <p>{order.address.neighborhood}</p>
+                              )}
                               <p>
                                 {order.address?.zipcode} {order.address?.city}
                               </p>
@@ -678,35 +777,44 @@ const Orders = () => {
                       <div className='flex flex-wrap gap-4 text-sm'>
                         {order.promoCode && (
                           <span className='text-green-600 font-medium'>
-                            🎫 Código: {order.promoCode} (-{order.discountPercentage}%)
+                            🎫 Código: {order.promoCode} (-
+                            {order.discountPercentage}%)
                           </span>
                         )}
                         {order.discountAmount > 0 && (
                           <span className='text-green-600'>
-                            Desconto: -{currency}{order.discountAmount.toFixed(2)}
+                            Desconto: -{currency}
+                            {order.discountAmount.toFixed(2)}
                           </span>
                         )}
                         {order.pixDiscount > 0 && (
                           <span className='text-green-600'>
-                            PIX -10%: -{currency}{order.pixDiscount.toFixed(2)}
+                            PIX -10%: -{currency}
+                            {order.pixDiscount.toFixed(2)}
                           </span>
                         )}
                         {order.shippingCost > 0 && (
                           <span className='text-gray-500'>
-                            Frete: {currency}{order.shippingCost.toFixed(2)}
-                            {order.shippingCarrier ? ` (${order.shippingCarrier})` : ''}
+                            Frete: {currency}
+                            {order.shippingCost.toFixed(2)}
+                            {order.shippingCarrier
+                              ? ` (${order.shippingCarrier})`
+                              : ''}
                           </span>
                         )}
                       </div>
 
                       <div className='flex items-center gap-4'>
-                        {order.originalAmount && order.originalAmount !== order.amount && (
-                          <span className='text-sm text-gray-400 line-through'>
-                            {currency}{order.originalAmount.toFixed(2)}
-                          </span>
-                        )}
+                        {order.originalAmount &&
+                          order.originalAmount !== order.amount && (
+                            <span className='text-sm text-gray-400 line-through'>
+                              {currency}
+                              {order.originalAmount.toFixed(2)}
+                            </span>
+                          )}
                         <span className='text-xl font-bold text-gray-900'>
-                          Total: {currency}{order.amount.toFixed(2)}
+                          Total: {currency}
+                          {order.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -734,9 +842,7 @@ const Orders = () => {
                 <h2 className='text-xl font-bold text-gray-900'>
                   Detalhes do Pedido
                 </h2>
-                <p className='text-sm text-gray-500'>
-                  #{selectedOrder._id}
-                </p>
+                <p className='text-sm text-gray-500'>#{selectedOrder._id}</p>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
@@ -752,7 +858,7 @@ const Orders = () => {
               <div className='flex flex-wrap gap-3'>
                 <span
                   className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClasses(
-                    getStatusConfig(selectedOrder.status).color
+                    getStatusConfig(selectedOrder.status).color,
                   )}`}
                 >
                   {getStatusConfig(selectedOrder.status).label}
@@ -770,8 +876,8 @@ const Orders = () => {
                   {selectedOrder.paymentType === 'pix_manual'
                     ? '📱 PIX Manual'
                     : selectedOrder.paymentType === 'COD'
-                    ? '💵 Pagamento na Entrega'
-                    : '💳 Pagamento Online'}
+                      ? '💵 Pagamento na Entrega'
+                      : '💳 Pagamento Online'}
                 </span>
                 {selectedOrder.isGuestOrder && (
                   <span className='px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800'>
@@ -785,7 +891,9 @@ const Orders = () => {
                 <div className='bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3'>
                   <div className='flex items-center gap-2'>
                     <QrCode className='w-5 h-5 text-amber-600' />
-                    <span className='font-medium text-amber-800'>Pagamento PIX ainda não confirmado</span>
+                    <span className='font-medium text-amber-800'>
+                      Pagamento PIX ainda não confirmado
+                    </span>
                   </div>
                   <button
                     onClick={() => confirmPixPayment(selectedOrder._id)}
@@ -838,77 +946,146 @@ const Orders = () => {
                       </div>
                       <p className='font-semibold'>
                         {currency}
-                        {((item.product?.offerPrice || 0) * item.quantity).toFixed(2)}
+                        {(
+                          (item.product?.offerPrice || 0) * item.quantity
+                        ).toFixed(2)}
                       </p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Address */}
+              {/* ← ALTERADO: Endereço de Entrega completo no modal */}
               <div>
-                <h3 className='font-semibold text-gray-900 mb-3'>Endereço de Entrega</h3>
+                <h3 className='font-semibold text-gray-900 mb-3'>
+                  Endereço de Entrega
+                </h3>
                 <div className='bg-gray-50 rounded-lg p-4'>
-                  <p className='font-medium'>
+                  <p className='font-medium text-gray-900'>
                     {selectedOrder.isGuestOrder
-                      ? selectedOrder.guestName || `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`
-                      : `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`
-                    }
+                      ? selectedOrder.guestName ||
+                        `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`
+                      : `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`}
                   </p>
-                  <p className='text-gray-600 mt-1'>{selectedOrder.address?.street}</p>
-                  <p className='text-gray-600'>
-                    {selectedOrder.address?.zipcode} {selectedOrder.address?.city}
-                  </p>
-                  <p className='text-gray-600'>
-                    {selectedOrder.address?.state}, {selectedOrder.address?.country}
-                  </p>
-                  {(selectedOrder.guestPhone || selectedOrder.address?.phone) && (
-                    <p className='text-gray-600 mt-2'>📞 {selectedOrder.guestPhone || selectedOrder.address.phone}</p>
+
+                  {(selectedOrder.guestPhone ||
+                    selectedOrder.address?.phone) && (
+                    <p className='text-gray-600 mt-1'>
+                      📞{' '}
+                      {selectedOrder.guestPhone || selectedOrder.address.phone}
+                    </p>
                   )}
-                  {(selectedOrder.guestEmail || selectedOrder.address?.email) && (
-                    <p className='text-gray-600'>✉️ {selectedOrder.guestEmail || selectedOrder.address.email}</p>
+                  {(selectedOrder.guestEmail ||
+                    selectedOrder.address?.email) && (
+                    <p className='text-gray-600'>
+                      ✉️{' '}
+                      {selectedOrder.guestEmail || selectedOrder.address.email}
+                    </p>
                   )}
+                  {/* ← NOVO: CPF no modal */}
+                  {selectedOrder.address?.cpf && (
+                    <p className='text-gray-600'>
+                      🪪 CPF: {selectedOrder.address.cpf}
+                    </p>
+                  )}
+
+                  {/* ← ALTERADO: Endereço completo no modal */}
+                  <div className='mt-2 pt-2 border-t border-gray-200'>
+                    <p className='text-gray-600'>
+                      {selectedOrder.address?.street}
+                      {selectedOrder.address?.number
+                        ? `, ${selectedOrder.address.number}`
+                        : ''}
+                    </p>
+                    {selectedOrder.address?.complement && (
+                      <p className='text-gray-500 text-sm'>
+                        {selectedOrder.address.complement}
+                      </p>
+                    )}
+                    {selectedOrder.address?.neighborhood && (
+                      <p className='text-gray-600'>
+                        {selectedOrder.address.neighborhood}
+                      </p>
+                    )}
+                    <p className='text-gray-600'>
+                      {selectedOrder.address?.zipcode}{' '}
+                      {selectedOrder.address?.city}
+                    </p>
+                    <p className='text-gray-600'>
+                      {selectedOrder.address?.state},{' '}
+                      {selectedOrder.address?.country}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Totals */}
               <div className='bg-gray-50 rounded-lg p-4'>
-                {selectedOrder.originalAmount && selectedOrder.originalAmount !== selectedOrder.amount && (
-                  <>
-                    <div className='flex justify-between text-gray-600'>
-                      <span>Subtotal</span>
-                      <span>{currency}{selectedOrder.originalAmount?.toFixed(2)}</span>
-                    </div>
-                    {selectedOrder.promoCode && (
-                      <div className='flex justify-between text-green-600'>
-                        <span>Desconto ({selectedOrder.promoCode})</span>
-                        <span>-{currency}{selectedOrder.discountAmount?.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {selectedOrder.pixDiscount > 0 && (
-                      <div className='flex justify-between text-green-600'>
-                        <span>Desconto PIX (10%)</span>
-                        <span>-{currency}{selectedOrder.pixDiscount?.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {selectedOrder.shippingCost > 0 && (
+                {selectedOrder.originalAmount &&
+                  selectedOrder.originalAmount !== selectedOrder.amount && (
+                    <>
                       <div className='flex justify-between text-gray-600'>
-                        <span>Frete {selectedOrder.shippingCarrier ? `(${selectedOrder.shippingCarrier})` : ''}</span>
-                        <span>{currency}{selectedOrder.shippingCost?.toFixed(2)}</span>
+                        <span>Subtotal</span>
+                        <span>
+                          {currency}
+                          {selectedOrder.originalAmount?.toFixed(2)}
+                        </span>
                       </div>
-                    )}
-                    <hr className='my-2' />
-                  </>
-                )}
+                      {selectedOrder.promoCode && (
+                        <div className='flex justify-between text-green-600'>
+                          <span>Desconto ({selectedOrder.promoCode})</span>
+                          <span>
+                            -{currency}
+                            {selectedOrder.discountAmount?.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      {selectedOrder.pixDiscount > 0 && (
+                        <div className='flex justify-between text-green-600'>
+                          <span>Desconto PIX (10%)</span>
+                          <span>
+                            -{currency}
+                            {selectedOrder.pixDiscount?.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      {selectedOrder.shippingCost > 0 && (
+                        <div className='flex justify-between text-gray-600'>
+                          <span>
+                            Frete{' '}
+                            {selectedOrder.shippingCarrier
+                              ? `(${selectedOrder.shippingCarrier})`
+                              : ''}
+                          </span>
+                          <span>
+                            {currency}
+                            {selectedOrder.shippingCost?.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      <hr className='my-2' />
+                    </>
+                  )}
                 <div className='flex justify-between text-lg font-bold'>
                   <span>Total</span>
-                  <span>{currency}{selectedOrder.amount.toFixed(2)}</span>
+                  <span>
+                    {currency}
+                    {selectedOrder.amount.toFixed(2)}
+                  </span>
                 </div>
                 {selectedOrder.paidAt && (
                   <p className='text-xs text-green-600 mt-2'>
-                    ✅ Pago em {new Date(selectedOrder.paidAt).toLocaleDateString('pt-PT', {
-                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
+                    ✅ Pago em{' '}
+                    {new Date(selectedOrder.paidAt).toLocaleDateString(
+                      'pt-PT',
+                      {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      },
+                    )}
                   </p>
                 )}
               </div>
@@ -919,10 +1096,7 @@ const Orders = () => {
 
       {/* Shipping Label Modal */}
       {labelOrder && (
-        <ShippingLabel
-          order={labelOrder}
-          onClose={() => setLabelOrder(null)}
-        />
+        <ShippingLabel order={labelOrder} onClose={() => setLabelOrder(null)} />
       )}
     </div>
   );
