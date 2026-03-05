@@ -30,6 +30,18 @@ const Home = () => {
       </SEO>
 
       <div>
+        {/* =====================================================
+            SEO: H1 obrigatório na homepage
+            
+            Opção A (actual): Visually hidden mas acessível a crawlers e screen readers.
+            Usa a classe sr-only do Tailwind (position:absolute, clip, etc.)
+            
+            Opção B (alternativa): Se preferires H1 visível, remover className 
+            e estilizar como hero heading no MainBanner.
+            
+            IMPORTANTE: Cada página deve ter exactamente 1 H1.
+            O Google usa o H1 como sinal forte de relevância do conteúdo.
+            ===================================================== */}
         <h1 className='sr-only'>
           Elite Surfing Brasil - Loja Online de Acessórios de Surf | Decks,
           Leashes, Capas e Quilhas
@@ -38,6 +50,13 @@ const Home = () => {
         <MainBanner />
         <BenefitsBar />
 
+        {/* =====================================================
+            SEO: Seção com conteúdo textual indexável
+            
+            SPAs React renderizam tudo via JS. O Googlebot executa JS
+            mas outros crawlers (Bing, Yandex, ferramentas SEO) podem não executar.
+            Este bloco garante conteúdo semântico na page mesmo via JS rendering.
+            ===================================================== */}
         <section className='sr-only'>
           <h2>Acessórios de Surf de Alta Qualidade</h2>
           <p>

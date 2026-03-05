@@ -339,18 +339,8 @@
     <!-- =====================================================
          SEO FALLBACK: Conteúdo visível para crawlers sem JavaScript
          
-         Este bloco é ESSENCIAL para SPAs (React/Vite).
-         Crawlers como o Seobility, Bing, Yandex, e alguns modos do 
-         Googlebot não executam JavaScript. Sem este bloco, eles veem
-         apenas <div id="root"></div> vazio.
-         
-         REGRAS:
-         - Mínimo 250 palavras
-         - H1 único e descritivo
-         - Hierarquia de headings (H1 > H2 > H3)
-         - Links internos para todas as páginas importantes
-         - Palavras-chave naturais no texto
-         - Não duplicar exatamente o meta description
+         NOTA: O H1 real da página está no Home.jsx (sr-only).
+         Aqui usamos H2 para não duplicar o H1.
          ===================================================== -->
     <noscript>
       <div
@@ -364,8 +354,7 @@
           line-height: 1.7;
         "
       >
-        <!-- H1 - Tag mais importante para SEO -->
-        <h1
+        <h2
           style="
             font-size: 28px;
             font-weight: 700;
@@ -374,7 +363,7 @@
           "
         >
           Elite Surfing Brasil - Loja Online de Acessórios de Surf
-        </h1>
+        </h2>
 
         <p style="font-size: 16px; margin-bottom: 16px">
           Bem-vindo à <strong>Elite Surfing</strong>, a sua loja online de
@@ -386,7 +375,6 @@
           cartão de crédito em até 10x sem juros ou boleto bancário.
         </p>
 
-        <!-- H2 - Coleções -->
         <h2
           style="
             font-size: 22px;
@@ -404,7 +392,6 @@
           especificações para atender às suas necessidades.
         </p>
 
-        <!-- Nav de coleções com links semânticos -->
         <nav style="margin-bottom: 32px" aria-label="Coleções de produtos">
           <ul
             style="
@@ -517,8 +504,7 @@
           </ul>
         </nav>
 
-        <!-- H2 - Decks -->
-        <h2
+        <h3
           style="
             font-size: 20px;
             font-weight: 600;
@@ -527,7 +513,7 @@
           "
         >
           Decks de Surf - Traction Pads de Alta Performance
-        </h2>
+        </h3>
         <p style="font-size: 15px; margin-bottom: 12px">
           Os nossos decks de surf são fabricados com EVA premium fresado,
           oferecendo aderência máxima em todas as condições. Disponíveis em
@@ -603,8 +589,7 @@
           </li>
         </ul>
 
-        <!-- H2 - Leashes -->
-        <h2
+        <h3
           style="
             font-size: 20px;
             font-weight: 600;
@@ -613,7 +598,7 @@
           "
         >
           Leashes de Surf - Segurança e Durabilidade
-        </h2>
+        </h3>
         <p style="font-size: 15px; margin-bottom: 12px">
           As nossas leashes (cordinhas) são fabricadas com materiais
           ultra-resistentes e possuem swivel duplo anti-torção. Disponíveis para
@@ -647,8 +632,7 @@
           </li>
         </ul>
 
-        <!-- H2 - Capas e Sarcófagos -->
-        <h2
+        <h3
           style="
             font-size: 20px;
             font-weight: 600;
@@ -657,7 +641,7 @@
           "
         >
           Capas e Sarcófagos - Proteção Total para sua Prancha
-        </h2>
+        </h3>
         <p style="font-size: 15px; margin-bottom: 12px">
           Proteja a sua prancha de surf com as nossas capas refletivas e
           sarcófagos de viagem. Modelos Combate e Premium, com ou sem rodas,
@@ -702,8 +686,7 @@
           </li>
         </ul>
 
-        <!-- H2 - Quilhas e Acessórios -->
-        <h2
+        <h3
           style="
             font-size: 20px;
             font-weight: 600;
@@ -712,7 +695,7 @@
           "
         >
           Quilhas, Parafinas e Acessórios de Surf
-        </h2>
+        </h3>
         <p style="font-size: 15px; margin-bottom: 12px">
           Complete o seu equipamento com quilhas de alta performance para
           shortboard, longboard e SUP, parafinas (wax) das melhores marcas,
@@ -768,8 +751,7 @@
           </li>
         </ul>
 
-        <!-- H2 - Pagamento e Envio -->
-        <h2
+        <h3
           style="
             font-size: 20px;
             font-weight: 600;
@@ -778,7 +760,7 @@
           "
         >
           Formas de Pagamento e Envio
-        </h2>
+        </h3>
         <p style="font-size: 15px; margin-bottom: 16px">
           Na Elite Surfing, oferecemos diversas formas de pagamento seguras: PIX
           com 10% de desconto instantâneo, cartão de crédito (Visa, Mastercard)
@@ -788,7 +770,6 @@
           sexta, das 9h às 18h, por WhatsApp, email e telefone.
         </p>
 
-        <!-- Nav - Links institucionais -->
         <nav
           style="
             margin-top: 32px;
@@ -860,7 +841,6 @@
           </ul>
         </nav>
 
-        <!-- Dados de contato (reforça NAP para Local SEO) -->
         <div
           style="
             margin-top: 24px;
@@ -882,7 +862,7 @@
             <strong>Elite Surfing Brasil</strong><br />
             Avenida das Américas, 12900 - Sala 203C, Edifício Argentina Americas
             Avenue<br />
-            Recreio dos Bandeirantes, Rio de Janeiro/RJ - CEP: 22790-702<br />
+            Barra da Tijuca, Rio de Janeiro/RJ - CEP: 22790-702<br />
             WhatsApp:
             <a href="https://wa.me/5521964358058" style="color: #f85032"
               >(21) 96435-8058</a

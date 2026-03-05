@@ -5,8 +5,13 @@ const slides = [
     id: 1,
     desktop: '/hero-new.jpg',
     mobile: '/hero-new.jpg',
-    alt: 'Elite Surfing - Surf Hard, Make History',
-    title: <>Precision Meets <br/>Performance</>,
+    alt: 'Elite Surfing Brasil - Acessórios de Surf Premium - Decks, Leashes, Capas e Quilhas',
+    title: (
+      <>
+        Precision Meets <br />
+        Performance
+      </>
+    ),
     subtitle: 'Elite Surfing',
     objectPosition: 'center',
   },
@@ -14,14 +19,14 @@ const slides = [
     id: 2,
     desktop: '/banner-novo2.png',
     mobile: '/banner-carlos-mobile.jpg',
-    alt: 'Surfer riding a powerful wave',
+    alt: 'Surfista em onda com equipamentos Elite Surfing - Loja Online de Surf no Brasil',
     subtitle: 'Premium Surf Accessories',
     objectPosition: 'center',
   },
 ];
 
-const AUTOPLAY_INTERVAL = 5000; // 5s — mais dinâmico
-const TRANSITION_DURATION = 700; // ms
+const AUTOPLAY_INTERVAL = 5000;
+const TRANSITION_DURATION = 700;
 
 const MainBanner = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -51,50 +56,65 @@ const MainBanner = () => {
   }, [startAutoplay, stopAutoplay]);
 
   // ─── Navigation ───
-  const goToSlide = useCallback((direction) => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
+  const goToSlide = useCallback(
+    direction => {
+      if (isTransitioning) return;
+      setIsTransitioning(true);
 
-    setCurrentSlide((prev) => {
-      if (direction === 'next') return (prev + 1) % slides.length;
-      if (direction === 'prev') return (prev - 1 + slides.length) % slides.length;
-      return direction; // direct index
-    });
+      setCurrentSlide(prev => {
+        if (direction === 'next') return (prev + 1) % slides.length;
+        if (direction === 'prev')
+          return (prev - 1 + slides.length) % slides.length;
+        return direction;
+      });
 
-    setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-  }, [isTransitioning]);
+      setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+    },
+    [isTransitioning],
+  );
 
-  const goToIndex = useCallback((index) => {
-    if (index === currentSlide || isTransitioning) return;
-    setIsTransitioning(true);
-    setCurrentSlide(index);
-    setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
-    stopAutoplay();
-    startAutoplay();
-  }, [currentSlide, isTransitioning, stopAutoplay, startAutoplay]);
+  const goToIndex = useCallback(
+    index => {
+      if (index === currentSlide || isTransitioning) return;
+      setIsTransitioning(true);
+      setCurrentSlide(index);
+      setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION);
+      stopAutoplay();
+      startAutoplay();
+    },
+    [currentSlide, isTransitioning, stopAutoplay, startAutoplay],
+  );
 
   const handlePrev = () => {
     goToSlide('prev');
-    stopAutoplay(); startAutoplay();
+    stopAutoplay();
+    startAutoplay();
   };
 
   const handleNext = () => {
     goToSlide('next');
-    stopAutoplay(); startAutoplay();
+    stopAutoplay();
+    startAutoplay();
   };
 
   // ─── Keyboard Navigation ───
-  const handleKeyDown = (e) => {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrev(); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); handleNext(); }
+  const handleKeyDown = e => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      handlePrev();
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      handleNext();
+    }
   };
 
   // ─── Touch/Swipe Support ───
-  const handleTouchStart = (e) => {
+  const handleTouchStart = e => {
     setTouchStart(e.touches[0].clientX);
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = e => {
     if (touchStart === null) return;
     const diff = touchStart - e.changedTouches[0].clientX;
     const threshold = 50;
@@ -107,7 +127,7 @@ const MainBanner = () => {
 
   // ─── Preload images ───
   useEffect(() => {
-    slides.forEach((slide) => {
+    slides.forEach(slide => {
       const imgDesktop = new Image();
       imgDesktop.src = slide.desktop;
       const imgMobile = new Image();
@@ -151,7 +171,7 @@ const MainBanner = () => {
             loading={index === 0 ? 'eager' : 'lazy'}
             fetchPriority={index === 0 ? 'high' : 'auto'}
           />
-          
+
           {/* Mobile Image */}
           <img
             src={slide.mobile}
@@ -183,25 +203,33 @@ const MainBanner = () => {
 
       {/* ═══ Content ═══ */}
       <div className='text-white absolute inset-0 flex flex-col items-start justify-end pb-16 md:pb-24 px-4 md:px-16 lg:px-24 xl:px-32 z-[3]'>
-        
-        {/* Title com crossfade */}
+        {/* =====================================================
+            SEO FIX: Trocado <h1> por <p> decorativo.
+            
+            ANTES: Cada slide tinha <h1> = 2+ H1s na página
+            DEPOIS: Apenas texto decorativo (p/span)
+            
+            O H1 real está no Home.jsx (sr-only):
+            "Elite Surfing Brasil - Loja Online de Acessórios de Surf"
+            
+            Regra: Cada página deve ter exactamente 1 H1.
+            ===================================================== */}
         <div className='relative w-full min-h-[64px] md:min-h-[120px]'>
           {slides.map((slide, index) => (
-            <h1
+            <p
               key={slide.id}
               className='text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-semibold italic text-left leading-tight md:leading-none transition-all ease-in-out absolute inset-x-0 top-0'
               style={{
                 textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
                 transitionDuration: `${TRANSITION_DURATION}ms`,
                 opacity: index === currentSlide ? 1 : 0,
-                transform: index === currentSlide 
-                  ? 'translateY(0)' 
-                  : 'translateY(12px)',
+                transform:
+                  index === currentSlide ? 'translateY(0)' : 'translateY(12px)',
               }}
               aria-hidden={index !== currentSlide}
             >
               {slide.title}
-            </h1>
+            </p>
           ))}
         </div>
 
@@ -230,8 +258,18 @@ const MainBanner = () => {
           md:opacity-0 md:group-hover:opacity-100
           focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/50'
       >
-        <svg className='w-5 h-5 md:w-6 md:h-6' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
-          <path strokeLinecap='round' strokeLinejoin='round' d='M15 19l-7-7 7-7' />
+        <svg
+          className='w-5 h-5 md:w-6 md:h-6'
+          fill='none'
+          viewBox='0 0 24 24'
+          stroke='currentColor'
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            d='M15 19l-7-7 7-7'
+          />
         </svg>
       </button>
 
@@ -247,13 +285,23 @@ const MainBanner = () => {
           md:opacity-0 md:group-hover:opacity-100
           focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/50'
       >
-        <svg className='w-5 h-5 md:w-6 md:h-6' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2}>
+        <svg
+          className='w-5 h-5 md:w-6 md:h-6'
+          fill='none'
+          viewBox='0 0 24 24'
+          stroke='currentColor'
+          strokeWidth={2}
+        >
           <path strokeLinecap='round' strokeLinejoin='round' d='M9 5l7 7-7 7' />
         </svg>
       </button>
 
       {/* ═══ Dots ═══ */}
-      <div className='absolute bottom-5 md:bottom-8 left-1/2 -translate-x-1/2 z-[4] flex items-center gap-2' role='tablist' aria-label='Slides do banner'>
+      <div
+        className='absolute bottom-5 md:bottom-8 left-1/2 -translate-x-1/2 z-[4] flex items-center gap-2'
+        role='tablist'
+        aria-label='Slides do banner'
+      >
         {slides.map((_, index) => (
           <button
             key={index}
@@ -264,9 +312,10 @@ const MainBanner = () => {
             className={`
               rounded-full transition-all duration-300 
               focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-1 focus:ring-offset-transparent
-              ${index === currentSlide 
-                ? 'w-8 h-2 bg-white' 
-                : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+              ${
+                index === currentSlide
+                  ? 'w-8 h-2 bg-white'
+                  : 'w-2 h-2 bg-white/50 hover:bg-white/80'
               }
             `}
           />

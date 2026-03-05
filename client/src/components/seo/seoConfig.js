@@ -1,7 +1,7 @@
 /**
  * SEO Configuration - Elite Surfing Brasil
- * Versão: 3.0.0
- * Última atualização: 2026-02-16
+ * Versão: 3.1.0
+ * Última atualização: 2026-03-05
  *
  * REGRAS DE SINCRONIZAÇÃO:
  * 1. URLs SEM trailing slash (exceto homepage que usa '')
@@ -39,7 +39,7 @@ const BASE_URL = 'https://www.elitesurfing.com.br';
 
 const seoConfig = {
   home: {
-    title: null, // Usa título padrão do SEO.jsx
+    title: 'Loja de Surf Online - Decks, Leashes, Capas e Quilhas',
     description:
       'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax e quilhas. PIX com 10% OFF. Até 10x sem juros. Frete para todo Brasil.',
     url: '',
@@ -311,7 +311,6 @@ export const collectionDescriptions = {
 export const categoryDescriptions = {
   // ═══════════════════════════════════════════════════════════════
   // DECKS — 12 categorias
-  // Paths: Deck-Maldivas, Deck-Mentawai, etc.
   // ═══════════════════════════════════════════════════════════════
 
   'deck-maldivas': {
@@ -412,7 +411,6 @@ export const categoryDescriptions = {
 
   // ═══════════════════════════════════════════════════════════════
   // LEASHES — 5 categorias
-  // Paths: Leash-Shortboard-Hibridas, Leash-Fun-MiniLong, etc.
   // ═══════════════════════════════════════════════════════════════
 
   'leash-shortboard-hibridas': {
@@ -420,15 +418,25 @@ export const categoryDescriptions = {
     description:
       'Leashes para shortboard e pranchas híbridas. Swivel duplo anti-torção, material ultra-resistente. Diversas espessuras e comprimentos disponíveis.',
     url: '/products/Leash-Shortboard-Hibridas',
-    keywords: ['leash shortboard', 'leash híbrida', 'cordinha shortboard', 'leash comp surf'],
+    keywords: [
+      'leash shortboard',
+      'leash híbrida',
+      'cordinha shortboard',
+      'leash comp surf',
+    ],
   },
 
   'leash-fun-minilong': {
     title: 'Leash Fun / Mini Long',
     description:
-      'Leashes para funboards e mini long. Comprimento ideal para pranchas de 7\' a 8\'. Swivel duplo anti-torção e resistência máxima.',
+      "Leashes para funboards e mini long. Comprimento ideal para pranchas de 7' a 8'. Swivel duplo anti-torção e resistência máxima.",
     url: '/products/Leash-Fun-MiniLong',
-    keywords: ['leash fun', 'leash mini long', 'leash funboard', 'cordinha funboard'],
+    keywords: [
+      'leash fun',
+      'leash mini long',
+      'leash funboard',
+      'cordinha funboard',
+    ],
   },
 
   'leash-longboard': {
@@ -436,7 +444,12 @@ export const categoryDescriptions = {
     description:
       'Leashes para longboard com comprimento e resistência adequados. Swivel duplo anti-torção. Ideal para pranchas acima de 9 pés.',
     url: '/products/Leash-Longboard',
-    keywords: ['leash longboard', 'cordinha longboard', 'leash 9ft', 'leash 10ft'],
+    keywords: [
+      'leash longboard',
+      'cordinha longboard',
+      'leash 9ft',
+      'leash 10ft',
+    ],
   },
 
   'leash-standup': {
@@ -444,7 +457,12 @@ export const categoryDescriptions = {
     description:
       'Leashes para Stand Up Paddle (SUP). Modelos retos e espirais para passeio, race e surf. Resistência máxima para águas abertas.',
     url: '/products/Leash-StandUp',
-    keywords: ['leash sup', 'leash stand up', 'leash stand up paddle', 'cordinha sup'],
+    keywords: [
+      'leash sup',
+      'leash stand up',
+      'leash stand up paddle',
+      'cordinha sup',
+    ],
   },
 
   'leash-bodyboard': {
@@ -452,12 +470,15 @@ export const categoryDescriptions = {
     description:
       'Leashes para bodyboard com design específico para pulso e bíceps. Material resistente e confortável para todas as condições.',
     url: '/products/Leash-Bodyboard',
-    keywords: ['leash bodyboard', 'cordinha bodyboard', 'leash pulso bodyboard'],
+    keywords: [
+      'leash bodyboard',
+      'cordinha bodyboard',
+      'leash pulso bodyboard',
+    ],
   },
 
   // ═══════════════════════════════════════════════════════════════
   // CAPAS — 3 categorias
-  // Paths: Refletiva-Combate, Refletiva-Premium, Capa-Toalha
   // ═══════════════════════════════════════════════════════════════
 
   'refletiva-combate': {
@@ -465,7 +486,11 @@ export const categoryDescriptions = {
     description:
       'Capa refletiva modelo Combate para prancha de surf. Proteção térmica contra o sol. Material resistente e leve. Vários tamanhos disponíveis.',
     url: '/products/Refletiva-Combate',
-    keywords: ['capa refletiva combate', 'capa prancha refletiva', 'boardbag refletiva'],
+    keywords: [
+      'capa refletiva combate',
+      'capa prancha refletiva',
+      'boardbag refletiva',
+    ],
   },
 
   'refletiva-premium': {
@@ -473,7 +498,11 @@ export const categoryDescriptions = {
     description:
       'Capa refletiva modelo Premium para prancha de surf. Máxima proteção térmica e acolchoamento reforçado. Acabamento superior.',
     url: '/products/Refletiva-Premium',
-    keywords: ['capa refletiva premium', 'capa prancha premium', 'boardbag premium'],
+    keywords: [
+      'capa refletiva premium',
+      'capa prancha premium',
+      'boardbag premium',
+    ],
   },
 
   'capa-toalha': {
@@ -486,7 +515,6 @@ export const categoryDescriptions = {
 
   // ═══════════════════════════════════════════════════════════════
   // SARCÓFAGOS — 4 categorias
-  // Paths: Sarcofago-Combate, Sarcofago-Premium, etc.
   // ═══════════════════════════════════════════════════════════════
 
   'sarcofago-combate': {
@@ -494,7 +522,11 @@ export const categoryDescriptions = {
     description:
       'Sarcófago Combate para viagem com pranchas de surf. Estrutura reforçada e acolchoamento interno. Duplos, triplos e quádruplos disponíveis.',
     url: '/products/Sarcofago-Combate',
-    keywords: ['sarcófago combate', 'sarcófago prancha', 'boardbag viagem combate'],
+    keywords: [
+      'sarcófago combate',
+      'sarcófago prancha',
+      'boardbag viagem combate',
+    ],
   },
 
   'sarcofago-premium': {
@@ -502,7 +534,11 @@ export const categoryDescriptions = {
     description:
       'Sarcófago Premium para máxima proteção em viagens. Acolchoamento extra e acabamento superior. Para 2, 3 ou 4 pranchas.',
     url: '/products/Sarcofago-Premium',
-    keywords: ['sarcófago premium', 'sarcófago prancha premium', 'boardbag viagem premium'],
+    keywords: [
+      'sarcófago premium',
+      'sarcófago prancha premium',
+      'boardbag viagem premium',
+    ],
   },
 
   'sarcofago-combate-rodas': {
@@ -518,12 +554,15 @@ export const categoryDescriptions = {
     description:
       'Sarcófago Premium com rodas. Máxima proteção e mobilidade para suas pranchas. Acolchoamento extra e rodas de alta resistência.',
     url: '/products/Sarcofago-Premium-Rodas',
-    keywords: ['sarcófago premium rodas', 'sarcófago surf rodas', 'boardbag premium rodas'],
+    keywords: [
+      'sarcófago premium rodas',
+      'sarcófago surf rodas',
+      'boardbag premium rodas',
+    ],
   },
 
   // ═══════════════════════════════════════════════════════════════
   // QUILHAS — 4 categorias
-  // Paths: Quilha-Shortboard, Quilha-Longboard, Quilha-SUP, Chave-Parafuso
   // ═══════════════════════════════════════════════════════════════
 
   'quilha-shortboard': {
@@ -531,7 +570,12 @@ export const categoryDescriptions = {
     description:
       'Quilhas para shortboard de alta performance. Materiais premium para máxima resposta e velocidade. Vários modelos e tamanhos.',
     url: '/products/Quilha-Shortboard',
-    keywords: ['quilha shortboard', 'quilhas surf', 'fins shortboard', 'quilha fcs'],
+    keywords: [
+      'quilha shortboard',
+      'quilhas surf',
+      'fins shortboard',
+      'quilha fcs',
+    ],
   },
 
   'quilha-longboard': {
@@ -539,7 +583,12 @@ export const categoryDescriptions = {
     description:
       'Quilhas para longboard de alta qualidade. Modelos single fin e side fins. Materiais premium para controle e estabilidade.',
     url: '/products/Quilha-Longboard',
-    keywords: ['quilha longboard', 'single fin', 'quilha central', 'fins longboard'],
+    keywords: [
+      'quilha longboard',
+      'single fin',
+      'quilha central',
+      'fins longboard',
+    ],
   },
 
   'quilha-sup': {
@@ -555,12 +604,16 @@ export const categoryDescriptions = {
     description:
       'Chaves e parafusos para quilhas de surf. Ferramentas essenciais para montagem e troca rápida de quilhas. Aço inox de alta resistência.',
     url: '/products/Chave-Parafuso',
-    keywords: ['chave quilha', 'parafuso quilha', 'ferramenta quilha', 'chave fcs'],
+    keywords: [
+      'chave quilha',
+      'parafuso quilha',
+      'ferramenta quilha',
+      'chave fcs',
+    ],
   },
 
   // ═══════════════════════════════════════════════════════════════
   // ACESSÓRIOS — 6 categorias
-  // Paths: Racks, Parafinas, Bones, Protetor-Rabeta, Wetsuit-Bag, Diversos
   // ═══════════════════════════════════════════════════════════════
 
   racks: {
@@ -576,7 +629,13 @@ export const categoryDescriptions = {
     description:
       'Parafinas e wax para surf. Fu Wax, Bull Wax e mais. Para águas frias e quentes. Aderência máxima garantida.',
     url: '/products/Parafinas',
-    keywords: ['parafina surf', 'wax surf', 'fu wax', 'bull wax', 'cera prancha'],
+    keywords: [
+      'parafina surf',
+      'wax surf',
+      'fu wax',
+      'bull wax',
+      'cera prancha',
+    ],
   },
 
   bones: {
@@ -621,7 +680,7 @@ export const categoryDescriptions = {
  * @param {string} collectionSlug - Slug da coleção (ex: 'decks')
  * @returns {object} Configuração SEO
  */
-export const getCollectionSEO = (collectionSlug) => {
+export const getCollectionSEO = collectionSlug => {
   const slug = (collectionSlug || '').toLowerCase().trim();
 
   if (collectionDescriptions[slug]) {
@@ -643,7 +702,7 @@ export const getCollectionSEO = (collectionSlug) => {
  * @param {string} categorySlug - Slug da categoria (ex: 'Deck-Maldivas' ou 'deck-maldivas')
  * @returns {object} Configuração SEO
  */
-export const getCategorySEO = (categorySlug) => {
+export const getCategorySEO = categorySlug => {
   const slug = (categorySlug || '').toLowerCase().trim();
 
   if (categoryDescriptions[slug]) {
@@ -653,7 +712,7 @@ export const getCategorySEO = (categorySlug) => {
   // Fallback para categorias não definidas
   const formattedName = slug
     .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   return {
@@ -669,7 +728,7 @@ export const getCategorySEO = (categorySlug) => {
  * @param {object} product - Objeto do produto
  * @returns {object} Configuração SEO
  */
-export const getProductSEO = (product) => {
+export const getProductSEO = product => {
   if (!product) return seoConfig.products;
 
   const category = (product.category || '').trim();
@@ -677,11 +736,12 @@ export const getProductSEO = (product) => {
 
   return {
     title: product.name,
-    description: `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${
-      Array.isArray(product.description)
-        ? product.description[0]
-        : product.description || ''
-    }`.slice(0, 155),
+    description:
+      `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${
+        Array.isArray(product.description)
+          ? product.description[0]
+          : product.description || ''
+      }`.slice(0, 155),
     url: `/products/${category}/${product._id}`,
     image: product.image?.[0] || '/og-image.jpg',
     type: 'product',
