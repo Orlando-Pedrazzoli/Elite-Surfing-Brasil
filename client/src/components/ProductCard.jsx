@@ -1,13 +1,31 @@
 import React, { useState, useEffect, memo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
+import {
+  ShoppingBag,
+  Plus,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  Truck,
+} from 'lucide-react';
 import { calculateInstallments, formatBRL } from '../utils/installmentUtils';
 
 // Componente para renderizar bolinha de cor (simples ou dupla)
-const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
+const ColorBall = ({
+  code1,
+  code2,
+  size = 20,
+  selected = false,
+  onClick,
+  onMouseEnter,
+  title,
+  outOfStock = false,
+}) => {
   const isDual = code2 && code2 !== code1;
-  const isLight = (code) => ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA'].includes(code);
-  
+  const isLight = code =>
+    ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA'].includes(code);
+
   return (
     <button
       onClick={onClick}
@@ -22,23 +40,30 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
       style={{ width: size, height: size }}
     >
       {isDual ? (
-        <div 
+        <div
           className='w-full h-full rounded-full overflow-hidden'
           style={{
             background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
-            border: (isLight(code1) || isLight(code2)) ? '1px solid #d1d5db' : 'none'
+            border:
+              isLight(code1) || isLight(code2) ? '1px solid #d1d5db' : 'none',
           }}
         />
       ) : (
-        <div 
+        <div
           className='w-full h-full rounded-full'
           style={{ backgroundColor: code1 }}
         />
       )}
-      
+
       {outOfStock && (
         <span className='absolute inset-0 flex items-center justify-center'>
-          <svg className='w-2.5 h-2.5 text-gray-600' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
+          <svg
+            className='w-2.5 h-2.5 text-gray-600'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='3'
+          >
             <path d='M18 6L6 18M6 6l12 12' />
           </svg>
         </span>
@@ -48,7 +73,14 @@ const ColorBall = ({ code1, code2, size = 20, selected = false, onClick, onMouse
 };
 
 // Componente SizeBadge para variantes por tamanho
-const SizeBadge = ({ label, selected = false, onClick, onMouseEnter, title, outOfStock = false }) => {
+const SizeBadge = ({
+  label,
+  selected = false,
+  onClick,
+  onMouseEnter,
+  title,
+  outOfStock = false,
+}) => {
   return (
     <button
       onClick={onClick}
@@ -56,9 +88,10 @@ const SizeBadge = ({ label, selected = false, onClick, onMouseEnter, title, outO
       title={title}
       className={`
         relative text-[10px] font-semibold px-1.5 py-0.5 rounded transition-all duration-200
-        ${selected 
-          ? 'bg-gray-800 text-white ring-1 ring-gray-800' 
-          : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:scale-105'
+        ${
+          selected
+            ? 'bg-gray-800 text-white ring-1 ring-gray-800'
+            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:scale-105'
         }
         ${outOfStock ? 'opacity-40 line-through' : ''}
       `}
@@ -69,9 +102,15 @@ const SizeBadge = ({ label, selected = false, onClick, onMouseEnter, title, outO
 };
 
 const ProductCard = memo(({ product, largeSwatches = false }) => {
-  const { currency, addToCart, removeFromCart, cartItems, navigate, getProductFamily } =
-    useAppContext();
-  
+  const {
+    currency,
+    addToCart,
+    removeFromCart,
+    cartItems,
+    navigate,
+    getProductFamily,
+  } = useAppContext();
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [familyProducts, setFamilyProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(product);
@@ -110,24 +149,43 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const displayProduct = selectedProduct || product;
   const isInactive = !displayProduct.inStock || displayProduct.stock <= 0;
 
-  const familyVariantType = familyProducts.length > 0 
-    ? (familyProducts[0].variantType || 'color') 
-    : 'color';
+  const familyVariantType =
+    familyProducts.length > 0
+      ? familyProducts[0].variantType || 'color'
+      : 'color';
 
   // Cálculo de parcelas e preço PIX
   const installmentData = calculateInstallments(displayProduct.offerPrice);
 
-  // 🆕 Tags e badges
+  // Tags e badges
   const tags = displayProduct.tags || [];
   const hasFreeShipping = displayProduct.freeShipping === true;
   const isOutlet = tags.includes('outlet');
   const isLancamento = tags.includes('lancamento');
   const isBestseller = tags.includes('bestseller');
 
-  // 🆕 Percentagem de desconto
-  const discountPercent = displayProduct.price > displayProduct.offerPrice
-    ? Math.round(((displayProduct.price - displayProduct.offerPrice) / displayProduct.price) * 100)
-    : 0;
+  // Percentagem de desconto
+  const discountPercent =
+    displayProduct.price > displayProduct.offerPrice
+      ? Math.round(
+          ((displayProduct.price - displayProduct.offerPrice) /
+            displayProduct.price) *
+            100,
+        )
+      : 0;
+
+  /* =====================================================
+     SEO FIX: URL do produto para o <Link> semântico.
+     
+     ANTES: <div onClick={() => navigate(`/products/${cat}/${id}`)}>
+     - Crawlers NÃO seguem onClick (é JavaScript puro)
+     - Resultado: produtos não são linkados internamente
+     
+     DEPOIS: <Link to={`/products/${cat}/${id}`}>
+     - Crawlers SEGUEM <a href=""> (HTML semântico)
+     - Resultado: cada produto é um link crawlável
+     ===================================================== */
+  const productUrl = `/products/${displayProduct.category.toLowerCase()}/${displayProduct._id}`;
 
   const handleColorClick = (familyProduct, e) => {
     e.stopPropagation();
@@ -141,7 +199,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
     }, 150);
   };
 
-  const handleColorHover = (familyProduct) => {
+  const handleColorHover = familyProduct => {
     if (familyProduct._id === displayProduct._id) return;
     setIsColorTransitioning(true);
     setTimeout(() => {
@@ -153,22 +211,20 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
 
   const nextImage = e => {
     e.stopPropagation();
+    e.preventDefault();
     setCurrentImageIndex(prev => (prev + 1) % displayProduct.image.length);
   };
 
   const prevImage = e => {
     e.stopPropagation();
+    e.preventDefault();
     setCurrentImageIndex(
-      prev => (prev - 1 + displayProduct.image.length) % displayProduct.image.length
+      prev =>
+        (prev - 1 + displayProduct.image.length) % displayProduct.image.length,
     );
   };
 
-  const handleCardClick = () => {
-    navigate(`/products/${displayProduct.category.toLowerCase()}/${displayProduct._id}`);
-    window.scrollTo(0, 0);
-  };
-
-  const handleAddToCart = (e) => {
+  const handleAddToCart = e => {
     e.stopPropagation();
     e.preventDefault();
     if (isInactive) return;
@@ -177,7 +233,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
     addToCart(displayProduct._id);
   };
 
-  const handleRemoveFromCart = (e) => {
+  const handleRemoveFromCart = e => {
     e.stopPropagation();
     e.preventDefault();
     removeFromCart(displayProduct._id);
@@ -187,18 +243,20 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const canAddMore = cartQuantity < displayProduct.stock;
 
   return (
-    <div
-      onClick={handleCardClick}
-      className='bg-white w-full transition-all duration-300 flex flex-col h-full relative group cursor-pointer'
+    <Link
+      to={productUrl}
+      onClick={() => window.scrollTo(0, 0)}
+      className='bg-white w-full transition-all duration-300 flex flex-col h-full relative group'
     >
       {/* ═══ IMAGEM ═══ */}
       <div className='relative flex items-center justify-center bg-gray-50/50 rounded-lg overflow-hidden aspect-square'>
-        
-        <div className={`
+        <div
+          className={`
           w-full h-full flex items-center justify-center p-2
           transition-all duration-150 ease-out
           ${isColorTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}
-        `}>
+        `}
+        >
           <img
             className='max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105'
             src={displayProduct.image[currentImageIndex]}
@@ -216,21 +274,21 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
             </span>
           )}
 
-          {/* 🆕 Badge Outlet com % */}
+          {/* Badge Outlet com % */}
           {isOutlet && discountPercent > 0 && !isInactive && (
             <span className='bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider'>
               -{discountPercent}%
             </span>
           )}
 
-          {/* 🆕 Badge Lançamento */}
+          {/* Badge Lançamento */}
           {isLancamento && !isInactive && (
             <span className='bg-gray-900 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
               Novo
             </span>
           )}
 
-          {/* 🆕 Badge Bestseller */}
+          {/* Badge Bestseller */}
           {isBestseller && !isInactive && (
             <span className='bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider'>
               ⭐ Top
@@ -238,7 +296,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
           )}
         </div>
 
-        {/* 🆕 Badge Frete Grátis — canto superior direito */}
+        {/* Badge Frete Grátis — canto superior direito */}
         {hasFreeShipping && !isInactive && (
           <div className='absolute top-2 right-2 z-10'>
             <span className='inline-flex items-center gap-0.5 bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider'>
@@ -267,7 +325,10 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         )}
 
         {/* Botão Carrinho — hover sobre a imagem */}
-        <div className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200' onClick={e => e.stopPropagation()}>
+        <div
+          className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200'
+          onClick={e => e.stopPropagation()}
+        >
           {isInactive ? null : cartQuantity === 0 ? (
             <button
               onClick={handleAddToCart}
@@ -290,7 +351,9 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
                 onClick={handleAddToCart}
                 disabled={!canAddMore}
                 className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                  canAddMore ? 'hover:bg-gray-100' : 'opacity-40 cursor-not-allowed'
+                  canAddMore
+                    ? 'hover:bg-gray-100'
+                    : 'opacity-40 cursor-not-allowed'
                 }`}
               >
                 <Plus className='w-3 h-3 text-gray-600' />
@@ -301,33 +364,42 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       </div>
 
       {/* ═══ INFORMAÇÕES DO PRODUTO ═══ */}
-      <div className={`pt-3 pb-2 px-1 flex flex-col flex-grow text-center transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-        
+      <div
+        className={`pt-3 pb-2 px-1 flex flex-col flex-grow text-center transition-opacity duration-150 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
+      >
         {/* Variantes — Cor ou Tamanho */}
         {familyProducts.length >= 1 ? (
-          <div className={`flex items-center justify-center mb-2 flex-wrap ${
-            familyVariantType === 'size' ? 'gap-1.5' : (largeSwatches ? 'gap-2.5' : 'gap-2')
-          }`}>
+          <div
+            className={`flex items-center justify-center mb-2 flex-wrap ${
+              familyVariantType === 'size'
+                ? 'gap-1.5'
+                : largeSwatches
+                  ? 'gap-2.5'
+                  : 'gap-2'
+            }`}
+          >
             {familyVariantType === 'size' ? (
               <>
-                {familyProducts.slice(0, 6).map((fp) => (
+                {familyProducts.slice(0, 6).map(fp => (
                   <SizeBadge
                     key={fp._id}
                     label={fp.size || '?'}
                     selected={fp._id === displayProduct._id}
                     outOfStock={(fp.stock || 0) <= 0}
-                    onClick={(e) => handleColorClick(fp, e)}
+                    onClick={e => handleColorClick(fp, e)}
                     onMouseEnter={() => handleColorHover(fp)}
                     title={`${fp.size || fp.name}${(fp.stock || 0) <= 0 ? ' (Esgotado)' : ''}`}
                   />
                 ))}
                 {familyProducts.length > 6 && (
-                  <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
+                  <span className='text-xs text-gray-400'>
+                    +{familyProducts.length - 6}
+                  </span>
                 )}
               </>
             ) : (
               <>
-                {familyProducts.slice(0, 6).map((fp) => (
+                {familyProducts.slice(0, 6).map(fp => (
                   <ColorBall
                     key={fp._id}
                     code1={fp.colorCode || '#ccc'}
@@ -335,39 +407,39 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
                     size={largeSwatches ? 26 : 20}
                     selected={fp._id === displayProduct._id}
                     outOfStock={(fp.stock || 0) <= 0}
-                    onClick={(e) => handleColorClick(fp, e)}
+                    onClick={e => handleColorClick(fp, e)}
                     onMouseEnter={() => handleColorHover(fp)}
                     title={`${fp.color || fp.name}${(fp.stock || 0) <= 0 ? ' (Esgotado)' : ''}`}
                   />
                 ))}
                 {familyProducts.length > 6 && (
-                  <span className='text-xs text-gray-400'>+{familyProducts.length - 6}</span>
+                  <span className='text-xs text-gray-400'>
+                    +{familyProducts.length - 6}
+                  </span>
                 )}
               </>
             )}
           </div>
-        ) : (
-          /* Produto sem família mas com cor ou tamanho — mostra 1 swatch avulso */
-          (displayProduct.variantType === 'size' && displayProduct.size) ? (
-            <div className='flex items-center justify-center mb-2'>
-              <SizeBadge
-                label={displayProduct.size}
-                selected={true}
-                title={displayProduct.size}
-              />
-            </div>
-          ) : displayProduct.colorCode ? (
-            <div className='flex items-center justify-center mb-2'>
-              <ColorBall
-                code1={displayProduct.colorCode}
-                code2={displayProduct.colorCode2}
-                size={largeSwatches ? 26 : 20}
-                selected={true}
-                title={displayProduct.color || ''}
-              />
-            </div>
-          ) : null
-        )}
+        ) : /* Produto sem família mas com cor ou tamanho — mostra 1 swatch avulso */
+        displayProduct.variantType === 'size' && displayProduct.size ? (
+          <div className='flex items-center justify-center mb-2'>
+            <SizeBadge
+              label={displayProduct.size}
+              selected={true}
+              title={displayProduct.size}
+            />
+          </div>
+        ) : displayProduct.colorCode ? (
+          <div className='flex items-center justify-center mb-2'>
+            <ColorBall
+              code1={displayProduct.colorCode}
+              code2={displayProduct.colorCode2}
+              size={largeSwatches ? 26 : 20}
+              selected={true}
+              title={displayProduct.color || ''}
+            />
+          </div>
+        ) : null}
 
         {/* Nome do Produto */}
         <h3 className='text-gray-900 font-medium text-sm leading-snug line-clamp-2 mb-3'>
@@ -376,29 +448,27 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
 
         {/* ═══ BLOCO DE PREÇOS ═══ */}
         <div className='mt-auto'>
-          
-          {/* 🆕 PREÇO PIX / BOLETO — Verde (corrigido de azul #2196F3) */}
+          {/* PREÇO PIX / BOLETO */}
           <p className='text-green-700 font-extrabold text-[15px] leading-tight'>
             {formatBRL(installmentData.pixPrice)}
             <span className='text-[11px] font-bold ml-1'>PIX / BOLETO</span>
           </p>
-          
+
           {/* PREÇO CARTÃO */}
           <p className='text-gray-600 text-[13px] font-medium mt-1.5 leading-tight'>
             {formatBRL(displayProduct.offerPrice)}
           </p>
-          
+
           {/* PARCELAMENTO */}
           {installmentData.maxInstallments > 1 && (
             <p className='text-gray-500 text-[11px] font-bold mt-0.5 leading-tight uppercase tracking-wide'>
               EM {installmentData.maxInstallments}X DE{' '}
-              {formatBRL(installmentData.installmentValue)}
-              {' '}SEM JUROS
+              {formatBRL(installmentData.installmentValue)} SEM JUROS
             </p>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 });
 

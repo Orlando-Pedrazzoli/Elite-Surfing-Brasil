@@ -1,117 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
+    />
+
     <!-- =====================================================
          Elite Surfing Brasil - SEO Optimizado para o Brasil
-         Última atualização: 2026-02-24
+         Última atualização: 2026-03-05
          ===================================================== -->
-    
+
     <!-- Favicon - Completo para todos os dispositivos -->
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    
+
     <!-- =====================================================
          ⚠️ IMPORTANTE: Canonical tags são geridas pelo React-Helmet-Async
          NÃO adicionar canonical estática aqui!
          ===================================================== -->
-    
+
     <!-- Meta tags base (sobrescritas pelo React-Helmet-Async por página) -->
     <title>Elite Surfing - Loja de Surf - Equipamentos e Acessórios</title>
-    <meta name="description" content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil. Compre agora!" />
-    
+    <meta
+      name="description"
+      content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil. Compre agora!"
+    />
+
     <!-- Keywords relevantes para o mercado BR -->
-    <meta name="keywords" content="deck surf, leash surf, capa prancha surf, acessórios surf, deck fresado, traction pad, wax surf, loja surf online, comprar deck surf brasil, capa prancha shortboard, leash premium surf" />
-    
+    <meta
+      name="keywords"
+      content="deck surf, leash surf, capa prancha surf, acessórios surf, deck fresado, traction pad, wax surf, loja surf online, comprar deck surf brasil, capa prancha shortboard, leash premium surf, quilhas surf, sarcófago prancha"
+    />
+
     <!-- Robots base -->
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
+
     <!-- Author & Copyright -->
     <meta name="author" content="Elite Surfing Brasil" />
     <meta name="copyright" content="Elite Surfing Brasil" />
-    
+
     <!-- Open Graph base -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Elite Surfing Brasil" />
     <meta property="og:locale" content="pt_BR" />
-    <meta property="og:title" content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios" />
-    <meta property="og:description" content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil!" />
-    <meta property="og:image" content="https://www.elitesurfing.com.br/og-image.jpg" />
+    <meta
+      property="og:title"
+      content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios"
+    />
+    <meta
+      property="og:description"
+      content="Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, wax e mais. Até 10x sem juros. Frete para todo Brasil!"
+    />
+    <meta
+      property="og:image"
+      content="https://www.elitesurfing.com.br/og-image.jpg"
+    />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Elite Surfing Brasil - Loja Online de Acessórios de Surf" />
+    <meta
+      property="og:image:alt"
+      content="Elite Surfing Brasil - Loja Online de Acessórios de Surf"
+    />
     <meta property="og:url" content="https://www.elitesurfing.com.br" />
-    
+
     <!-- Twitter Card base -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios" />
-    <meta name="twitter:description" content="Decks, leashes, capas de prancha e acessórios de surf. Até 10x sem juros. Frete para todo Brasil!" />
-    <meta name="twitter:image" content="https://www.elitesurfing.com.br/og-image.jpg" />
-    
+    <meta
+      name="twitter:title"
+      content="Elite Surfing - Loja de Surf - Equipamentos e Acessórios"
+    />
+    <meta
+      name="twitter:description"
+      content="Decks, leashes, capas de prancha e acessórios de surf. Até 10x sem juros. Frete para todo Brasil!"
+    />
+    <meta
+      name="twitter:image"
+      content="https://www.elitesurfing.com.br/og-image.jpg"
+    />
+
     <!-- Theme Color - Com suporte para dark mode -->
-    <meta name="theme-color" content="#f85032" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="theme-color"
+      content="#f85032"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#1a1a1a"
+      media="(prefers-color-scheme: dark)"
+    />
     <meta name="msapplication-TileColor" content="#f85032" />
     <meta name="msapplication-TileImage" content="/favicon-96x96.png" />
-    
+
     <!-- Geo & Location - Rio de Janeiro, Barra da Tijuca -->
     <meta name="geo.region" content="BR-RJ" />
     <meta name="geo.placename" content="Rio de Janeiro, Brasil" />
     <meta name="geo.position" content="-22.9994;-43.3650" />
     <meta name="ICBM" content="-22.9994, -43.3650" />
-    
+
     <!-- Language -->
     <meta http-equiv="content-language" content="pt-BR" />
-    
+
     <!-- Mobile App Capable -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Elite Surfing" />
-    
+
     <!-- Format Detection -->
     <meta name="format-detection" content="telephone=yes" />
-    
+
     <!-- =====================================================
          Preconnect & DNS Prefetch - Performance
          ===================================================== -->
-    
+
     <!-- Backend API -->
-    <link rel="preconnect" href="https://elitesurfingbr-backend.vercel.app" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://elitesurfingbr-backend.vercel.app"
+      crossorigin
+    />
     <link rel="dns-prefetch" href="https://elitesurfingbr-backend.vercel.app" />
-    
+
     <!-- Cloudinary (imagens) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
     <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-    
+
     <!-- ViaCEP (auto-preenchimento de endereço) -->
     <link rel="dns-prefetch" href="https://viacep.com.br" />
-    
+
     <!-- Google Analytics -->
-    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
-    <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://www.googletagmanager.com"
+      crossorigin
+    />
+    <link
+      rel="preconnect"
+      href="https://www.google-analytics.com"
+      crossorigin
+    />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-    
+
     <!-- Meta/Facebook -->
     <link rel="dns-prefetch" href="https://connect.facebook.net" />
-    
+
     <!-- =====================================================
          Google Analytics 4
-         
-         INSTRUÇÕES:
-         1. Criar conta em https://analytics.google.com
-         2. Criar propriedade para elitesurfing.com.br
-         3. Copiar o ID de medição (G-XXXXXXXXX)
-         4. Substituir 'G-XXXXXXXXX' abaixo pelo ID real
-         5. Descomentar o bloco de código
          ===================================================== -->
-    
+
     <!--
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXX"></script>
     <script>
@@ -124,19 +170,11 @@
       });
     </script>
     -->
-    
+
     <!-- =====================================================
          Meta Pixel (Facebook/Instagram)
-         
-         INSTRUÇÕES:
-         1. Criar conta em https://business.facebook.com
-         2. Ir a Events Manager > Pixels
-         3. Criar novo pixel
-         4. Copiar o Pixel ID
-         5. Substituir 'XXXXXXXXXXXXXXX' abaixo pelo ID real
-         6. Descomentar o bloco de código
          ===================================================== -->
-    
+
     <!--
     <script>
       !function(f,b,e,v,n,t,s)
@@ -155,69 +193,710 @@
            src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXX&ev=PageView&noscript=1"/>
     </noscript>
     -->
-    
-    <!-- =====================================================
-         Google Search Console
-         
-         INSTRUÇÕES:
-         1. Ir a https://search.google.com/search-console
-         2. Adicionar propriedade https://www.elitesurfing.com.br
-         3. Escolher verificação por "Tag HTML"
-         4. Copiar o content="XXXXX" 
-         5. Substituir abaixo e descomentar
-         ===================================================== -->
-    
-    
-   <meta name="google-site-verification" content="fw4QBeN2kxpjFjJpMi47bQCirbDdai5InuAC_aHpVR0" />
-    
-    
+
+    <!-- Google Search Console -->
+    <meta
+      name="google-site-verification"
+      content="fw4QBeN2kxpjFjJpMi47bQCirbDdai5InuAC_aHpVR0"
+    />
+
     <!-- =====================================================
          Structured Data - LocalBusiness + Ecommerce (JSON-LD)
          ===================================================== -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Store",
-      "name": "Elite Surfing Brasil",
-      "description": "Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas de prancha, wax e mais.",
-      "url": "https://www.elitesurfing.com.br",
-      "logo": "https://www.elitesurfing.com.br/logoes.png",
-      "image": "https://www.elitesurfing.com.br/og-image.jpg",
-      "telephone": "+5521964358058",
-      "email": "atendimento@elitesurfing.com.br",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue",
-        "addressLocality": "Rio de Janeiro",
-        "addressRegion": "RJ",
-        "postalCode": "22790-702",
-        "addressCountry": "BR"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": -22.9994,
-        "longitude": -43.3650
-      },
-      "priceRange": "R$",
-      "currenciesAccepted": "BRL",
-      "paymentAccepted": "PIX, Cartão de Crédito, Boleto Bancário",
-      "openingHours": "Mo-Fr 09:00-18:00",
-      "sameAs": [
-        "https://www.instagram.com/elitesurfingbrasil",
-        "https://www.facebook.com/elitesurfingbrasil",
-        "https://wa.me/5521964358058"
-      ],
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://www.elitesurfing.com.br/products?search={search_term_string}",
-        "query-input": "required name=search_term_string"
+      {
+        "@context": "https://schema.org",
+        "@type": "Store",
+        "name": "Elite Surfing Brasil",
+        "description": "Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas de prancha, wax e mais.",
+        "url": "https://www.elitesurfing.com.br",
+        "logo": "https://www.elitesurfing.com.br/logoes.png",
+        "image": "https://www.elitesurfing.com.br/og-image.jpg",
+        "telephone": "+5521964358058",
+        "email": "atendimento@elitesurfing.com.br",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue",
+          "addressLocality": "Rio de Janeiro",
+          "addressRegion": "RJ",
+          "postalCode": "22790-702",
+          "addressCountry": "BR"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": -22.9994,
+          "longitude": -43.365
+        },
+        "priceRange": "R$",
+        "currenciesAccepted": "BRL",
+        "paymentAccepted": "PIX, Cartão de Crédito, Boleto Bancário",
+        "openingHours": "Mo-Fr 09:00-18:00",
+        "sameAs": [
+          "https://www.instagram.com/elitesurfingbrasil",
+          "https://www.facebook.com/elitesurfingbrasil",
+          "https://wa.me/5521964358058"
+        ],
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.elitesurfing.com.br/products?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
       }
-    }
     </script>
-    
+
+    <!-- =====================================================
+         Structured Data - BreadcrumbList (Homepage)
+         ===================================================== -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Início",
+            "item": "https://www.elitesurfing.com.br"
+          }
+        ]
+      }
+    </script>
+
+    <!-- =====================================================
+         Structured Data - ItemList (Coleções principais)
+         ===================================================== -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "Coleções de Acessórios de Surf",
+        "description": "Principais categorias de produtos da Elite Surfing Brasil",
+        "url": "https://www.elitesurfing.com.br/products",
+        "numberOfItems": 9,
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Decks de Surf",
+            "url": "https://www.elitesurfing.com.br/collections/decks"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Leashes de Surf",
+            "url": "https://www.elitesurfing.com.br/collections/leashes"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Capas para Prancha",
+            "url": "https://www.elitesurfing.com.br/collections/capas"
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "name": "Sarcófagos para Prancha",
+            "url": "https://www.elitesurfing.com.br/collections/sarcofagos"
+          },
+          {
+            "@type": "ListItem",
+            "position": 5,
+            "name": "Quilhas de Surf",
+            "url": "https://www.elitesurfing.com.br/collections/quilhas"
+          },
+          {
+            "@type": "ListItem",
+            "position": 6,
+            "name": "Acessórios de Surf",
+            "url": "https://www.elitesurfing.com.br/collections/acessorios"
+          },
+          {
+            "@type": "ListItem",
+            "position": 7,
+            "name": "Bodyboard",
+            "url": "https://www.elitesurfing.com.br/collections/bodyboard"
+          },
+          {
+            "@type": "ListItem",
+            "position": 8,
+            "name": "Stand Up Paddle",
+            "url": "https://www.elitesurfing.com.br/collections/sup"
+          },
+          {
+            "@type": "ListItem",
+            "position": 9,
+            "name": "Outlet",
+            "url": "https://www.elitesurfing.com.br/collections/outlet"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- =====================================================
+         SEO FALLBACK: Conteúdo visível para crawlers sem JavaScript
+         
+         Este bloco é ESSENCIAL para SPAs (React/Vite).
+         Crawlers como o Seobility, Bing, Yandex, e alguns modos do 
+         Googlebot não executam JavaScript. Sem este bloco, eles veem
+         apenas <div id="root"></div> vazio.
+         
+         REGRAS:
+         - Mínimo 250 palavras
+         - H1 único e descritivo
+         - Hierarquia de headings (H1 > H2 > H3)
+         - Links internos para todas as páginas importantes
+         - Palavras-chave naturais no texto
+         - Não duplicar exatamente o meta description
+         ===================================================== -->
+    <noscript>
+      <div
+        style="
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 40px 24px;
+          font-family:
+            -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          color: #333;
+          line-height: 1.7;
+        "
+      >
+        <!-- H1 - Tag mais importante para SEO -->
+        <h1
+          style="
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #111;
+          "
+        >
+          Elite Surfing Brasil - Loja Online de Acessórios de Surf
+        </h1>
+
+        <p style="font-size: 16px; margin-bottom: 16px">
+          Bem-vindo à <strong>Elite Surfing</strong>, a sua loja online de
+          acessórios de surf no Brasil. Oferecemos uma linha completa de
+          produtos de alta qualidade para surfistas de todos os níveis: decks
+          (traction pads), leashes, capas para prancha, sarcófagos de viagem,
+          quilhas, parafinas, racks e muito mais. Entregamos para todo o Brasil
+          com frete calculado na hora. Pagamento por PIX com 10% de desconto,
+          cartão de crédito em até 10x sem juros ou boleto bancário.
+        </p>
+
+        <!-- H2 - Coleções -->
+        <h2
+          style="
+            font-size: 22px;
+            font-weight: 600;
+            margin: 32px 0 16px;
+            color: #222;
+          "
+        >
+          Nossas Coleções de Produtos de Surf
+        </h2>
+
+        <p style="font-size: 15px; margin-bottom: 16px">
+          Explore as nossas coleções organizadas por tipo de produto. Cada
+          coleção possui modelos variados com diferentes tamanhos, cores e
+          especificações para atender às suas necessidades.
+        </p>
+
+        <!-- Nav de coleções com links semânticos -->
+        <nav style="margin-bottom: 32px" aria-label="Coleções de produtos">
+          <ul
+            style="
+              list-style: none;
+              padding: 0;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 12px;
+            "
+          >
+            <li>
+              <a
+                href="/collections/decks"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Decks de Surf / Traction Pads</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/leashes"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Leashes de Surf</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/capas"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Capas para Prancha</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/sarcofagos"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Sarcófagos para Viagem</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/quilhas"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Quilhas de Surf</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/acessorios"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Acessórios de Surf</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/bodyboard"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Bodyboard</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/sup"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Stand Up Paddle (SUP)</a
+              >
+            </li>
+            <li>
+              <a
+                href="/collections/outlet"
+                style="
+                  color: #f85032;
+                  text-decoration: underline;
+                  font-weight: 600;
+                "
+                >Outlet - Ofertas Especiais</a
+              >
+            </li>
+          </ul>
+        </nav>
+
+        <!-- H2 - Decks -->
+        <h2
+          style="
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #222;
+          "
+        >
+          Decks de Surf - Traction Pads de Alta Performance
+        </h2>
+        <p style="font-size: 15px; margin-bottom: 12px">
+          Os nossos decks de surf são fabricados com EVA premium fresado,
+          oferecendo aderência máxima em todas as condições. Disponíveis em
+          diversos modelos para shortboard, longboard, front pad e SUP. Cada
+          modelo foi desenhado para performance e durabilidade.
+        </p>
+        <ul style="list-style: none; padding: 0; margin-bottom: 24px">
+          <li>
+            <a href="/products/Deck-Maldivas" style="color: #f85032"
+              >Deck Maldivas</a
+            >
+            - EVA premium fresado com textura exclusiva
+          </li>
+          <li>
+            <a href="/products/Deck-Mentawai" style="color: #f85032"
+              >Deck Mentawai</a
+            >
+            - Inspirado nas ondas da Indonésia
+          </li>
+          <li>
+            <a href="/products/Deck-Fiji-Classic" style="color: #f85032"
+              >Deck Fiji Classic</a
+            >
+            - 3 partes com ângulo diamantado
+          </li>
+          <li>
+            <a href="/products/Deck-Hawaii" style="color: #f85032"
+              >Deck Hawaii</a
+            >
+            - Kicktail de 26mm e fita adesiva premium
+          </li>
+          <li>
+            <a href="/products/Deck-J-Bay" style="color: #f85032">Deck J-Bay</a>
+            - Inspirado na famosa onda sul-africana
+          </li>
+          <li>
+            <a href="/products/Deck-Noronha" style="color: #f85032"
+              >Deck Noronha</a
+            >
+            - Fresa dupla com detalhes CNC
+          </li>
+          <li>
+            <a href="/products/Deck-Peniche" style="color: #f85032"
+              >Deck Peniche</a
+            >
+            - Design funcional para performance máxima
+          </li>
+          <li>
+            <a href="/products/Deck-Saquarema" style="color: #f85032"
+              >Deck Saquarema</a
+            >
+            - Double Square Groove com fita 3M
+          </li>
+          <li>
+            <a href="/products/Deck-Combate" style="color: #f85032"
+              >Deck Combate</a
+            >
+            - Alta resistência para condições intensas
+          </li>
+          <li>
+            <a href="/products/Deck-Longboard" style="color: #f85032"
+              >Deck Longboard</a
+            >
+            - Cobertura ampla para longboarders
+          </li>
+          <li>
+            <a href="/products/Deck-Front" style="color: #f85032">Deck Front</a>
+            - Traction pad frontal anti-derrapante
+          </li>
+          <li>
+            <a href="/products/Deck-SUP" style="color: #f85032">Deck SUP</a> -
+            Para Stand Up Paddle
+          </li>
+        </ul>
+
+        <!-- H2 - Leashes -->
+        <h2
+          style="
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #222;
+          "
+        >
+          Leashes de Surf - Segurança e Durabilidade
+        </h2>
+        <p style="font-size: 15px; margin-bottom: 12px">
+          As nossas leashes (cordinhas) são fabricadas com materiais
+          ultra-resistentes e possuem swivel duplo anti-torção. Disponíveis para
+          shortboard, funboard, longboard, stand up paddle e bodyboard.
+        </p>
+        <ul style="list-style: none; padding: 0; margin-bottom: 24px">
+          <li>
+            <a href="/products/Leash-Shortboard-Hibridas" style="color: #f85032"
+              >Leash Shortboard / Híbridas</a
+            >
+          </li>
+          <li>
+            <a href="/products/Leash-Fun-MiniLong" style="color: #f85032"
+              >Leash Fun / Mini Long</a
+            >
+          </li>
+          <li>
+            <a href="/products/Leash-Longboard" style="color: #f85032"
+              >Leash Longboard</a
+            >
+          </li>
+          <li>
+            <a href="/products/Leash-StandUp" style="color: #f85032"
+              >Leash Stand Up Paddle</a
+            >
+          </li>
+          <li>
+            <a href="/products/Leash-Bodyboard" style="color: #f85032"
+              >Leash Bodyboard</a
+            >
+          </li>
+        </ul>
+
+        <!-- H2 - Capas e Sarcófagos -->
+        <h2
+          style="
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #222;
+          "
+        >
+          Capas e Sarcófagos - Proteção Total para sua Prancha
+        </h2>
+        <p style="font-size: 15px; margin-bottom: 12px">
+          Proteja a sua prancha de surf com as nossas capas refletivas e
+          sarcófagos de viagem. Modelos Combate e Premium, com ou sem rodas,
+          para shortboard, longboard e funboard. Acolchoamento interno reforçado
+          para máxima proteção contra impactos e calor.
+        </p>
+        <ul style="list-style: none; padding: 0; margin-bottom: 24px">
+          <li>
+            <a href="/products/Refletiva-Combate" style="color: #f85032"
+              >Capa Refletiva Combate</a
+            >
+          </li>
+          <li>
+            <a href="/products/Refletiva-Premium" style="color: #f85032"
+              >Capa Refletiva Premium</a
+            >
+          </li>
+          <li>
+            <a href="/products/Capa-Toalha" style="color: #f85032"
+              >Capa Toalha</a
+            >
+          </li>
+          <li>
+            <a href="/products/Sarcofago-Combate" style="color: #f85032"
+              >Sarcófago Combate</a
+            >
+          </li>
+          <li>
+            <a href="/products/Sarcofago-Premium" style="color: #f85032"
+              >Sarcófago Premium</a
+            >
+          </li>
+          <li>
+            <a href="/products/Sarcofago-Combate-Rodas" style="color: #f85032"
+              >Sarcófago Combate com Rodas</a
+            >
+          </li>
+          <li>
+            <a href="/products/Sarcofago-Premium-Rodas" style="color: #f85032"
+              >Sarcófago Premium com Rodas</a
+            >
+          </li>
+        </ul>
+
+        <!-- H2 - Quilhas e Acessórios -->
+        <h2
+          style="
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #222;
+          "
+        >
+          Quilhas, Parafinas e Acessórios de Surf
+        </h2>
+        <p style="font-size: 15px; margin-bottom: 12px">
+          Complete o seu equipamento com quilhas de alta performance para
+          shortboard, longboard e SUP, parafinas (wax) das melhores marcas,
+          racks para transporte, bonés, protetores de rabeta, wetsuit bags e
+          diversos outros acessórios essenciais para a sua sessão de surf.
+        </p>
+        <ul style="list-style: none; padding: 0; margin-bottom: 24px">
+          <li>
+            <a href="/products/Quilha-Shortboard" style="color: #f85032"
+              >Quilhas Shortboard</a
+            >
+          </li>
+          <li>
+            <a href="/products/Quilha-Longboard" style="color: #f85032"
+              >Quilhas Longboard</a
+            >
+          </li>
+          <li>
+            <a href="/products/Quilha-SUP" style="color: #f85032"
+              >Quilhas SUP</a
+            >
+          </li>
+          <li>
+            <a href="/products/Chave-Parafuso" style="color: #f85032"
+              >Chaves e Parafusos</a
+            >
+          </li>
+          <li>
+            <a href="/products/Parafinas" style="color: #f85032"
+              >Parafinas / Wax</a
+            >
+          </li>
+          <li>
+            <a href="/products/Racks" style="color: #f85032"
+              >Racks para Prancha</a
+            >
+          </li>
+          <li>
+            <a href="/products/Bones" style="color: #f85032">Bonés de Surf</a>
+          </li>
+          <li>
+            <a href="/products/Protetor-Rabeta" style="color: #f85032"
+              >Protetores de Rabeta</a
+            >
+          </li>
+          <li>
+            <a href="/products/Wetsuit-Bag" style="color: #f85032"
+              >Wetsuit Bags</a
+            >
+          </li>
+          <li>
+            <a href="/products/Diversos" style="color: #f85032">Diversos</a>
+          </li>
+        </ul>
+
+        <!-- H2 - Pagamento e Envio -->
+        <h2
+          style="
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #222;
+          "
+        >
+          Formas de Pagamento e Envio
+        </h2>
+        <p style="font-size: 15px; margin-bottom: 16px">
+          Na Elite Surfing, oferecemos diversas formas de pagamento seguras: PIX
+          com 10% de desconto instantâneo, cartão de crédito (Visa, Mastercard)
+          em até 10x sem juros via Stripe, e boleto bancário. Enviamos para todo
+          o Brasil através dos Correios e transportadoras parceiras, com cálculo
+          de frete automático pelo seu CEP. Atendimento ao cliente de segunda a
+          sexta, das 9h às 18h, por WhatsApp, email e telefone.
+        </p>
+
+        <!-- Nav - Links institucionais -->
+        <nav
+          style="
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #ddd;
+          "
+          aria-label="Links institucionais"
+        >
+          <h3
+            style="
+              font-size: 16px;
+              font-weight: 600;
+              margin-bottom: 12px;
+              color: #222;
+            "
+          >
+            Informações
+          </h3>
+          <ul
+            style="
+              list-style: none;
+              padding: 0;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+            "
+          >
+            <li>
+              <a href="/products" style="color: #f85032">Todos os Produtos</a>
+            </li>
+            <li><a href="/blog" style="color: #f85032">Blog de Surf</a></li>
+            <li><a href="/contact" style="color: #f85032">Contato</a></li>
+            <li>
+              <a href="/faq" style="color: #f85032">Perguntas Frequentes</a>
+            </li>
+            <li>
+              <a href="/institucional/quem-somos" style="color: #f85032"
+                >Quem Somos</a
+              >
+            </li>
+            <li>
+              <a href="/institucional/catalogo" style="color: #f85032"
+                >Catálogo</a
+              >
+            </li>
+            <li>
+              <a href="/institucional/frete-gratis" style="color: #f85032"
+                >Frete Grátis</a
+              >
+            </li>
+            <li>
+              <a href="/institucional/representantes" style="color: #f85032"
+                >Representantes</a
+              >
+            </li>
+            <li>
+              <a href="/privacy" style="color: #f85032"
+                >Política de Privacidade</a
+              >
+            </li>
+            <li>
+              <a href="/terms" style="color: #f85032">Termos e Condições</a>
+            </li>
+            <li>
+              <a href="/refund-policy" style="color: #f85032"
+                >Política de Devolução</a
+              >
+            </li>
+          </ul>
+        </nav>
+
+        <!-- Dados de contato (reforça NAP para Local SEO) -->
+        <div
+          style="
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+          "
+        >
+          <h3
+            style="
+              font-size: 16px;
+              font-weight: 600;
+              margin-bottom: 8px;
+              color: #222;
+            "
+          >
+            Contato
+          </h3>
+          <p style="font-size: 14px; color: #555">
+            <strong>Elite Surfing Brasil</strong><br />
+            Avenida das Américas, 12900 - Sala 203C, Edifício Argentina Americas
+            Avenue<br />
+            Recreio dos Bandeirantes, Rio de Janeiro/RJ - CEP: 22790-702<br />
+            WhatsApp:
+            <a href="https://wa.me/5521964358058" style="color: #f85032"
+              >(21) 96435-8058</a
+            ><br />
+            Email:
+            <a
+              href="mailto:atendimento@elitesurfing.com.br"
+              style="color: #f85032"
+              >atendimento@elitesurfing.com.br</a
+            ><br />
+            Horário: Segunda a sexta, das 9h às 18h
+          </p>
+        </div>
+      </div>
+    </noscript>
   </body>
 </html>
