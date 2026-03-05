@@ -39,7 +39,6 @@ import leash_tech from './leash-tech.png';
 import bodyboard from './bodyboard.jpg';
 import standup from './standup.jpg';
 
-
 export const assets = {
   logo,
   logo_es,
@@ -81,7 +80,7 @@ export const assets = {
 // ═══════════════════════════════════════════════════════════════════
 //
 // COMO FUNCIONA:
-// 
+//
 // 1. Cada group tem um array de filtros (acordeões na GroupPage)
 // 2. Cada filtro tem:
 //    - key:     campo salvo em product.filters (ex: product.filters.boardType)
@@ -114,7 +113,6 @@ export const assets = {
 // ═══════════════════════════════════════════════════════════════════
 
 export const filterDefinitions = {
-
   // ═══════════════════════════════════════════════════════════════
   // 🏄 DECKS
   // ═══════════════════════════════════════════════════════════════
@@ -261,8 +259,14 @@ export const filterDefinitions = {
       options: [
         { value: 'sarcofago-combate', label: 'Sarcófago Combate' },
         { value: 'sarcofago-premium', label: 'Sarcófago Premium' },
-        { value: 'sarcofago-combate-rodas', label: 'Sarcófago Combate / Rodas' },
-        { value: 'sarcofago-premium-rodas', label: 'Sarcófago Premium / Rodas' },
+        {
+          value: 'sarcofago-combate-rodas',
+          label: 'Sarcófago Combate / Rodas',
+        },
+        {
+          value: 'sarcofago-premium-rodas',
+          label: 'Sarcófago Premium / Rodas',
+        },
       ],
     },
     {
@@ -392,42 +396,48 @@ export const groups = [
     id: 'acessorios',
     name: 'Acessórios',
     slug: 'acessorios',
-    description: 'Wax, racks, wetsuits e tudo que você precisa para sua sessão de surf.',
+    description:
+      'Wax, racks, wetsuits e tudo que você precisa para sua sessão de surf.',
     image: acessorios_card,
   },
   {
     id: 'leashes',
     name: 'Leashes',
     slug: 'leashes',
-    description: 'Leashes premium para máxima segurança e durabilidade. Construídos para aguentar as condições mais pesadas.',
+    description:
+      'Leashes premium para máxima segurança e durabilidade. Construídos para aguentar as condições mais pesadas.',
     image: decks_card,
   },
   {
     id: 'decks',
     name: 'Decks',
     slug: 'decks',
-    description: 'Traction pads de alta performance para todas as condições. Tecnologia EVA premium com texturas que garantem aderência máxima.',
+    description:
+      'Traction pads de alta performance para todas as condições. Tecnologia EVA premium com texturas que garantem aderência máxima.',
     image: decktop_card,
   },
   {
     id: 'capas',
     name: 'Capas',
     slug: 'capas',
-    description: 'Proteja sua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
+    description:
+      'Proteja sua prancha com as nossas capas de qualidade. Materiais resistentes e designs funcionais.',
     image: capas_card,
   },
   {
     id: 'sarcofagos',
     name: 'Sarcófagos',
     slug: 'sarcofagos',
-    description: 'Sarcófagos para viagens e proteção total da sua prancha. Estrutura reforçada com acolchoamento interno.',
+    description:
+      'Sarcófagos para viagens e proteção total da sua prancha. Estrutura reforçada com acolchoamento interno.',
     image: sarcofago_card,
   },
   {
     id: 'quilhas',
     name: 'Quilhas',
     slug: 'quilhas',
-    description: 'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
+    description:
+      'Quilhas de alta performance para shortboard, longboard e SUP. Materiais premium para máximo controle e velocidade.',
     image: quilhas_card,
   },
   // ═══════════════════════════════════════════════════════════════
@@ -439,7 +449,8 @@ export const groups = [
     slug: 'bodyboard',
     isTagGroup: true,
     tagKey: 'bodyboard',
-    description: 'Tudo para bodyboard: pranchas, leashes, pés de pato e acessórios. Qualidade premium para todas as ondas.',
+    description:
+      'Tudo para bodyboard: pranchas, leashes, pés de pato e acessórios. Qualidade premium para todas as ondas.',
     image: bodyboard,
   },
   {
@@ -448,7 +459,8 @@ export const groups = [
     slug: 'sup',
     isTagGroup: true,
     tagKey: 'sup',
-    description: 'Pranchas, remos, leashes e acessórios de Stand Up Paddle. Para passeio, race e surf.',
+    description:
+      'Pranchas, remos, leashes e acessórios de Stand Up Paddle. Para passeio, race e surf.',
     image: standup,
   },
   {
@@ -457,8 +469,10 @@ export const groups = [
     slug: 'outlet',
     isTagGroup: true,
     tagKey: 'outlet',
-    description: 'Produtos com desconto especial. Aproveite as melhores ofertas da Elite Surfing Brasil!',
-    image: 'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
+    description:
+      'Produtos com desconto especial. Aproveite as melhores ofertas da Elite Surfing Brasil!',
+    image:
+      'https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=800&q=80',
   },
 ];
 
@@ -466,16 +480,36 @@ export const groups = [
 // 🆕 TAGS DISPONÍVEIS — Para o AddProduct e para referência geral
 // ═══════════════════════════════════════════════════════════════════
 export const AVAILABLE_TAGS = [
-  { value: 'sup', label: 'Stand Up Paddle', icon: '🛶',
-    description: 'Aparece na coleção Stand Up Paddle' },
-  { value: 'bodyboard', label: 'Bodyboard', icon: '🏊',
-    description: 'Aparece na coleção Bodyboard' },
-  { value: 'outlet', label: 'Outlet', icon: '🏷️',
-    description: 'Aparece na coleção Outlet (com desconto)' },
-  { value: 'lancamento', label: 'Lançamento', icon: '🆕',
-    description: 'Destaque como produto novo' },
-  { value: 'bestseller', label: 'Mais Vendido', icon: '⭐',
-    description: 'Destaque como mais vendido' },
+  {
+    value: 'sup',
+    label: 'Stand Up Paddle',
+    icon: '🛶',
+    description: 'Aparece na coleção Stand Up Paddle',
+  },
+  {
+    value: 'bodyboard',
+    label: 'Bodyboard',
+    icon: '🏊',
+    description: 'Aparece na coleção Bodyboard',
+  },
+  {
+    value: 'outlet',
+    label: 'Outlet',
+    icon: '🏷️',
+    description: 'Aparece na coleção Outlet (com desconto)',
+  },
+  {
+    value: 'lancamento',
+    label: 'Lançamento',
+    icon: '🆕',
+    description: 'Destaque como produto novo',
+  },
+  {
+    value: 'bestseller',
+    label: 'Mais Vendido',
+    icon: '⭐',
+    description: 'Destaque como mais vendido',
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -497,14 +531,22 @@ export const categories = [
   { text: 'Deck Longboard', path: 'Deck-Longboard', group: 'decks' },
   { text: 'Deck Front', path: 'Deck-Front', group: 'decks' },
   { text: 'Deck SUP', path: 'Deck-SUP', group: 'decks' },
-  
+
   // ═══ LEASHES ═══
-  { text: 'Leash Shortboard / Híbridas', path: 'Leash-Shortboard-Hibridas', group: 'leashes' },
-  { text: 'Leash Fun / Mini Long', path: 'Leash-Fun-MiniLong', group: 'leashes' },
+  {
+    text: 'Leash Shortboard / Híbridas',
+    path: 'Leash-Shortboard-Hibridas',
+    group: 'leashes',
+  },
+  {
+    text: 'Leash Fun / Mini Long',
+    path: 'Leash-Fun-MiniLong',
+    group: 'leashes',
+  },
   { text: 'Leash Longboard', path: 'Leash-Longboard', group: 'leashes' },
   { text: 'Leash Stand Up', path: 'Leash-StandUp', group: 'leashes' },
   { text: 'Leash Bodyboard', path: 'Leash-Bodyboard', group: 'leashes' },
-  
+
   // ═══ CAPAS ═══
   { text: 'Refletiva Combate', path: 'Refletiva-Combate', group: 'capas' },
   { text: 'Refletiva Premium', path: 'Refletiva-Premium', group: 'capas' },
@@ -513,8 +555,16 @@ export const categories = [
   // ═══ SARCÓFAGOS ═══
   { text: 'Sarcófago Combate', path: 'Sarcofago-Combate', group: 'sarcofagos' },
   { text: 'Sarcófago Premium', path: 'Sarcofago-Premium', group: 'sarcofagos' },
-  { text: 'Sarcófago Combate c/ Rodas', path: 'Sarcofago-Combate-Rodas', group: 'sarcofagos' },
-  { text: 'Sarcófago Premium c/ Rodas', path: 'Sarcofago-Premium-Rodas', group: 'sarcofagos' },
+  {
+    text: 'Sarcófago Combate c/ Rodas',
+    path: 'Sarcofago-Combate-Rodas',
+    group: 'sarcofagos',
+  },
+  {
+    text: 'Sarcófago Premium c/ Rodas',
+    path: 'Sarcofago-Premium-Rodas',
+    group: 'sarcofagos',
+  },
 
   // ═══ QUILHAS ═══
   { text: 'Quilha Shortboard', path: 'Quilha-Shortboard', group: 'quilhas' },
@@ -540,7 +590,7 @@ export const categories = [
  * @param {string} groupSlug - Slug do grupo (ex: 'decks')
  * @returns {Array} Categorias do grupo
  */
-export const getCategoriesByGroup = (groupSlug) => {
+export const getCategoriesByGroup = groupSlug => {
   return categories.filter(cat => cat.group === groupSlug);
 };
 
@@ -549,7 +599,7 @@ export const getCategoriesByGroup = (groupSlug) => {
  * @param {string} slug - Slug do grupo
  * @returns {Object|undefined} Dados do grupo
  */
-export const getGroupBySlug = (slug) => {
+export const getGroupBySlug = slug => {
   return groups.find(g => g.slug === slug);
 };
 
@@ -558,8 +608,8 @@ export const getGroupBySlug = (slug) => {
  * @returns {Array} Grupos com pelo menos uma categoria
  */
 export const getGroupsWithCategories = () => {
-  return groups.filter(group => 
-    categories.some(cat => cat.group === group.slug)
+  return groups.filter(group =>
+    categories.some(cat => cat.group === group.slug),
   );
 };
 
@@ -568,7 +618,7 @@ export const getGroupsWithCategories = () => {
  * @param {string} groupSlug - Slug do grupo (ex: 'leashes')
  * @returns {Array} Array de filtros com key, label e options
  */
-export const getFiltersByGroup = (groupSlug) => {
+export const getFiltersByGroup = groupSlug => {
   return filterDefinitions[groupSlug] || [];
 };
 
@@ -577,7 +627,7 @@ export const getFiltersByGroup = (groupSlug) => {
  * @param {string} groupSlug - Slug do grupo
  * @returns {boolean}
  */
-export const groupHasFilters = (groupSlug) => {
+export const groupHasFilters = groupSlug => {
   const filters = filterDefinitions[groupSlug];
   return filters && filters.length > 0;
 };
@@ -592,10 +642,10 @@ export const groupHasFilters = (groupSlug) => {
 export const getFilterLabel = (groupSlug, filterKey, value) => {
   const filters = filterDefinitions[groupSlug];
   if (!filters) return value;
-  
+
   const filter = filters.find(f => f.key === filterKey);
   if (!filter) return value;
-  
+
   const option = filter.options.find(o => o.value === value);
   return option ? option.label : value;
 };
@@ -610,19 +660,20 @@ export const getFilterLabel = (groupSlug, filterKey, value) => {
  */
 export const filterProductsByFilters = (products, activeFilters, groupSlug) => {
   const activeKeys = Object.keys(activeFilters).filter(
-    key => activeFilters[key].length > 0
+    key => activeFilters[key].length > 0,
   );
-  
+
   if (activeKeys.length === 0) return products;
 
   // Obter definições de filtros para verificar fieldPath
   const defs = filterDefinitions[groupSlug] || [];
-  
+
   return products.filter(product => {
-    const productFilters = product.filters instanceof Map 
-      ? Object.fromEntries(product.filters) 
-      : (product.filters || {});
-    
+    const productFilters =
+      product.filters instanceof Map
+        ? Object.fromEntries(product.filters)
+        : product.filters || {};
+
     return activeKeys.every(filterKey => {
       const selectedValues = activeFilters[filterKey];
 
@@ -648,7 +699,12 @@ export const filterProductsByFilters = (products, activeFilters, groupSlug) => {
  * @param {string} groupSlug - Slug do grupo (para verificar fieldPath)
  * @returns {number}
  */
-export const countProductsByFilter = (products, filterKey, filterValue, groupSlug) => {
+export const countProductsByFilter = (
+  products,
+  filterKey,
+  filterValue,
+  groupSlug,
+) => {
   const defs = filterDefinitions[groupSlug] || [];
   const filterDef = defs.find(f => f.key === filterKey);
 
@@ -660,9 +716,10 @@ export const countProductsByFilter = (products, filterKey, filterValue, groupSlu
       return product[filterDef.fieldPath] === filterValue;
     }
 
-    const productFilters = product.filters instanceof Map 
-      ? Object.fromEntries(product.filters) 
-      : (product.filters || {});
+    const productFilters =
+      product.filters instanceof Map
+        ? Object.fromEntries(product.filters)
+        : product.filters || {};
     return productFilters[filterKey] === filterValue;
   }).length;
 };
