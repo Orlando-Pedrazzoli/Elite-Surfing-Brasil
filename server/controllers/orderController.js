@@ -6,6 +6,7 @@
 // ✅ Locale: pt-BR
 // ✅ Domínio: www.elitesurfing.com.br
 // ✅ Notificações: Email + WhatsApp (via adminNotificationService)
+// ✅ FIX: getAllOrders agora inclui pedidos PIX pendentes no painel seller
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -39,28 +40,28 @@ try {
 // =============================================================================
 // FUNÇÃO PARA DECREMENTAR STOCK
 // =============================================================================
-const decrementProductStock = async (items) => {
+const decrementProductStock = async items => {
   try {
     console.log('📦 Decrementando estoque dos produtos...');
-    
+
     for (const item of items) {
       const productId = item.product._id || item.product;
       const quantity = item.quantity;
-      
+
       const product = await Product.findById(productId);
-      
+
       if (product) {
         const newStock = Math.max(0, (product.stock || 0) - quantity);
-        
+
         await Product.findByIdAndUpdate(productId, {
           stock: newStock,
-          inStock: newStock > 0
+          inStock: newStock > 0,
         });
-        
+
         console.log(`  ✓ ${product.name}: ${product.stock} → ${newStock}`);
       }
     }
-    
+
     console.log('✅ Estoque atualizado com sucesso');
     return true;
   } catch (error) {
@@ -72,66 +73,77 @@ const decrementProductStock = async (items) => {
 // =============================================================================
 // FUNÇÃO PARA VALIDAR STOCK ANTES DE CRIAR PEDIDO
 // =============================================================================
-const validateOrderStock = async (items) => {
+const validateOrderStock = async items => {
   const errors = [];
-  
+
   for (const item of items) {
     const productId = item.product._id || item.product;
     const quantity = item.quantity;
-    
+
     const product = await Product.findById(productId);
-    
+
     if (!product) {
       errors.push(`Produto não encontrado: ${productId}`);
       continue;
     }
-    
+
     const availableStock = product.stock || 0;
-    
+
     if (availableStock === 0) {
       errors.push(`${product.name} está esgotado`);
     } else if (quantity > availableStock) {
-      errors.push(`${product.name}: apenas ${availableStock} disponível(eis), solicitado ${quantity}`);
+      errors.push(
+        `${product.name}: apenas ${availableStock} disponível(eis), solicitado ${quantity}`,
+      );
     }
   }
-  
+
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
 // =============================================================================
 // FORMATAR VALOR EM BRL
 // =============================================================================
-const formatBRL = (value) => {
+const formatBRL = value => {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 // =============================================================================
 // GERAR HTML DO EMAIL DE CONFIRMAÇÃO PARA CLIENTE
 // =============================================================================
-const generateOrderConfirmationHTML = (order, customerName, products, address) => {
+const generateOrderConfirmationHTML = (
+  order,
+  customerName,
+  products,
+  address,
+) => {
   const orderDate = new Date(order.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 
-  const itemsHTML = order.items.map(item => {
-    const product = products.find(p => p._id.toString() === (item.product._id || item.product).toString());
-    const productName = product?.name || 'Produto';
-    const productPrice = item.price || product?.offerPrice || 0;
-    return `
+  const itemsHTML = order.items
+    .map(item => {
+      const product = products.find(
+        p => p._id.toString() === (item.product._id || item.product).toString(),
+      );
+      const productName = product?.name || 'Produto';
+      const productPrice = item.price || product?.offerPrice || 0;
+      return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #eee;">${productName}</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
         <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${formatBRL(productPrice * item.quantity)}</td>
       </tr>
     `;
-  }).join('');
+    })
+    .join('');
 
   return `
     <!DOCTYPE html>
@@ -187,11 +199,15 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
             <span style="font-size: 24px; font-weight: bold;">${formatBRL(order.amount)}</span>
           </div>
           
-          ${order.promoCode ? `
+          ${
+            order.promoCode
+              ? `
           <p style="margin-top: 10px; color: #28a745; font-size: 14px;">
             🎉 Cupom aplicado: <strong>${order.promoCode}</strong> (-${order.discountPercentage}%)
           </p>
-          ` : ''}
+          `
+              : ''
+          }
           
           <!-- Footer -->
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
@@ -211,27 +227,38 @@ const generateOrderConfirmationHTML = (order, customerName, products, address) =
 // =============================================================================
 // GERAR HTML DO EMAIL PARA ADMIN
 // =============================================================================
-const generateAdminNotificationHTML = (order, customerName, customerEmail, customerPhone, products, address) => {
+const generateAdminNotificationHTML = (
+  order,
+  customerName,
+  customerEmail,
+  customerPhone,
+  products,
+  address,
+) => {
   const orderDate = new Date(order.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 
-  const itemsHTML = order.items.map(item => {
-    const product = products.find(p => p._id.toString() === (item.product._id || item.product).toString());
-    const productName = product?.name || 'Produto';
-    const productPrice = item.price || product?.offerPrice || 0;
-    return `
+  const itemsHTML = order.items
+    .map(item => {
+      const product = products.find(
+        p => p._id.toString() === (item.product._id || item.product).toString(),
+      );
+      const productName = product?.name || 'Produto';
+      const productPrice = item.price || product?.offerPrice || 0;
+      return `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">${productName}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatBRL(productPrice * item.quantity)}</td>
       </tr>
     `;
-  }).join('');
+    })
+    .join('');
 
   return `
     <!DOCTYPE html>
@@ -291,9 +318,13 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
             </tbody>
           </table>
           
-          ${order.promoCode ? `
+          ${
+            order.promoCode
+              ? `
           <p style="color: #28a745;"><strong>🎉 Cupom:</strong> ${order.promoCode} (-${order.discountPercentage}%)</p>
-          ` : ''}
+          `
+              : ''
+          }
           
           <!-- Total -->
           <div style="background: #007bff; color: white; padding: 15px; border-radius: 8px; text-align: center;">
@@ -320,22 +351,28 @@ const generateAdminNotificationHTML = (order, customerName, customerEmail, custo
 // =============================================================================
 const sendAllOrderEmails = async (order, userOrEmail) => {
   console.log('');
-  console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║           📧 INICIANDO ENVIO DE EMAILS (PARALELO)             ║');
-  console.log('╚═══════════════════════════════════════════════════════════════╝');
+  console.log(
+    '╔═══════════════════════════════════════════════════════════════╗',
+  );
+  console.log(
+    '║           📧 INICIANDO ENVIO DE EMAILS (PARALELO)             ║',
+  );
+  console.log(
+    '╚═══════════════════════════════════════════════════════════════╝',
+  );
   console.log('');
-  
+
   try {
     // 1. IDENTIFICAR O DESTINATÁRIO
     console.log('📋 Order ID:', order?._id);
     console.log('📧 userOrEmail recebido:', userOrEmail);
     console.log('🛒 isGuestOrder:', order?.isGuestOrder);
-    
+
     let customerEmail = null;
     let customerName = null;
     let customerPhone = null;
     let userObj = null;
-    
+
     // Determinar email e nome do cliente
     if (order.isGuestOrder) {
       customerEmail = order.guestEmail;
@@ -367,51 +404,59 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
       customerPhone = userOrEmail.phone || '';
       console.log('👤 Modo: Objeto user');
     }
-    
+
     // Fallback para guest
     if (!customerEmail && order.guestEmail) {
       customerEmail = order.guestEmail;
       customerName = order.guestName || 'Cliente';
       console.log('👤 Modo: Fallback guest');
     }
-    
+
     console.log('');
     console.log('📧 Email final do cliente:', customerEmail);
     console.log('👤 Nome final:', customerName);
     console.log('📱 Telefone:', customerPhone || 'N/A');
-    
+
     if (!customerEmail) {
       console.error('❌ ERRO: Nenhum email de cliente encontrado!');
       return { success: false, error: 'Email não encontrado' };
     }
-    
+
     // 2. BUSCAR ADDRESS
     console.log('');
     console.log('📍 Buscando endereço:', order.address);
     const address = await Address.findById(order.address);
-    
+
     if (!address) {
       console.error('❌ ERRO: Endereço não encontrado!');
       return { success: false, error: 'Endereço não encontrado' };
     }
     console.log('✅ Endereço encontrado:', address.city, address.state);
-    
+
     // 3. BUSCAR PRODUTOS
-    const productIds = order.items.map(item => item.product._id || item.product);
+    const productIds = order.items.map(
+      item => item.product._id || item.product,
+    );
     const products = await Product.find({ _id: { $in: productIds } });
     console.log('📦 Produtos encontrados:', products.length);
-    
+
     // 4. CRIAR TRANSPORTER
     console.log('');
     console.log('📧 Criando transporter...');
-    console.log('📧 GMAIL_USER:', process.env.GMAIL_USER ? '✅ Configurado' : '❌ NÃO CONFIGURADO');
-    console.log('📧 GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? '✅ Configurado' : '❌ NÃO CONFIGURADO');
-    
+    console.log(
+      '📧 GMAIL_USER:',
+      process.env.GMAIL_USER ? '✅ Configurado' : '❌ NÃO CONFIGURADO',
+    );
+    console.log(
+      '📧 GMAIL_APP_PASSWORD:',
+      process.env.GMAIL_APP_PASSWORD ? '✅ Configurado' : '❌ NÃO CONFIGURADO',
+    );
+
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.error('❌ ERRO: Variáveis de email não configuradas!');
       return { success: false, error: 'Configuração de email incompleta' };
     }
-    
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -419,25 +464,40 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
         pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
-    
+
     // 5. PREPARAR EMAILS
     const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER;
-    
-    const clientHTML = generateOrderConfirmationHTML(order, customerName, products, address);
+
+    const clientHTML = generateOrderConfirmationHTML(
+      order,
+      customerName,
+      products,
+      address,
+    );
     const clientSubject = `✅ Confirmação do Pedido #${order._id.toString().slice(-8).toUpperCase()} - Elite Surfing Brasil`;
-    
-    const adminHTML = generateAdminNotificationHTML(order, customerName, customerEmail, customerPhone, products, address);
+
+    const adminHTML = generateAdminNotificationHTML(
+      order,
+      customerName,
+      customerEmail,
+      customerPhone,
+      products,
+      address,
+    );
     const adminSubject = `🔔 NOVO PEDIDO #${order._id.toString().slice(-8).toUpperCase()} - ${formatBRL(order.amount)}`;
-    
+
     // 6. ENVIAR EMAILS EM PARALELO + NOTIFICAÇÃO ADMIN (WhatsApp)
     console.log('');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📧 ENVIANDO EMAILS + NOTIFICAÇÕES EM PARALELO...');
     console.log('   → Cliente:', customerEmail);
     console.log('   → Admin:', adminEmail);
-    console.log('   → WhatsApp:', notifyAdminNewOrder ? '✅ Ativo' : '⚠️ Indisponível');
+    console.log(
+      '   → WhatsApp:',
+      notifyAdminNewOrder ? '✅ Ativo' : '⚠️ Indisponível',
+    );
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     // Preparar user object para adminNotificationService
     const userForAdmin = userObj || {
       name: customerName,
@@ -447,21 +507,31 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
 
     const promises = [
       // Email para cliente
-      transporter.sendMail({
-        from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
-        to: customerEmail,
-        subject: clientSubject,
-        html: clientHTML,
-      }).then(r => ({ success: true, messageId: r.messageId }))
+      transporter
+        .sendMail({
+          from: {
+            name: 'Elite Surfing Brasil',
+            address: process.env.GMAIL_USER,
+          },
+          to: customerEmail,
+          subject: clientSubject,
+          html: clientHTML,
+        })
+        .then(r => ({ success: true, messageId: r.messageId }))
         .catch(e => ({ success: false, error: e.message })),
-      
+
       // Email para admin
-      transporter.sendMail({
-        from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
-        to: adminEmail,
-        subject: adminSubject,
-        html: adminHTML,
-      }).then(r => ({ success: true, messageId: r.messageId }))
+      transporter
+        .sendMail({
+          from: {
+            name: 'Elite Surfing Brasil',
+            address: process.env.GMAIL_USER,
+          },
+          to: adminEmail,
+          subject: adminSubject,
+          html: adminHTML,
+        })
+        .then(r => ({ success: true, messageId: r.messageId }))
         .catch(e => ({ success: false, error: e.message })),
     ];
 
@@ -470,32 +540,50 @@ const sendAllOrderEmails = async (order, userOrEmail) => {
       promises.push(
         notifyAdminNewOrder(order, userForAdmin, products, address)
           .then(r => ({ success: true, details: r }))
-          .catch(e => ({ success: false, error: e.message }))
+          .catch(e => ({ success: false, error: e.message })),
       );
     }
 
     const results = await Promise.all(promises);
     const [clientResult, adminResult, adminNotifyResult] = results;
-    
+
     // 7. LOG DOS RESULTADOS
     console.log('');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
     console.log('📧 RESULTADO DAS NOTIFICAÇÕES:');
-    console.log('   Cliente:', clientResult.success ? `✅ ENVIADO (${clientResult.messageId})` : `❌ FALHOU (${clientResult.error})`);
-    console.log('   Admin:', adminResult.success ? `✅ ENVIADO (${adminResult.messageId})` : `❌ FALHOU (${adminResult.error})`);
+    console.log(
+      '   Cliente:',
+      clientResult.success
+        ? `✅ ENVIADO (${clientResult.messageId})`
+        : `❌ FALHOU (${clientResult.error})`,
+    );
+    console.log(
+      '   Admin:',
+      adminResult.success
+        ? `✅ ENVIADO (${adminResult.messageId})`
+        : `❌ FALHOU (${adminResult.error})`,
+    );
     if (adminNotifyResult) {
-      console.log('   Admin+WhatsApp:', adminNotifyResult.success ? '✅ ENVIADO' : `❌ FALHOU (${adminNotifyResult.error})`);
+      console.log(
+        '   Admin+WhatsApp:',
+        adminNotifyResult.success
+          ? '✅ ENVIADO'
+          : `❌ FALHOU (${adminNotifyResult.error})`,
+      );
     }
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
     console.log('');
-    
+
     return {
       success: clientResult.success || adminResult.success,
       clientEmail: clientResult,
       adminEmail: adminResult,
       adminNotification: adminNotifyResult || null,
     };
-    
   } catch (error) {
     console.error('');
     console.error('❌ ═══════════════════════════════════════════════════════');
@@ -552,19 +640,25 @@ export const placeOrderStripe = async (req, res) => {
     }
 
     if (!userId && !isGuestOrder) {
-      return res.json({ success: false, message: 'Usuário ou dados de visitante necessários' });
+      return res.json({
+        success: false,
+        message: 'Usuário ou dados de visitante necessários',
+      });
     }
 
     if (isGuestOrder && !guestEmail) {
-      return res.json({ success: false, message: 'Email é obrigatório para compra como visitante' });
+      return res.json({
+        success: false,
+        message: 'Email é obrigatório para compra como visitante',
+      });
     }
 
     // Validar stock
     const stockValidation = await validateOrderStock(items);
     if (!stockValidation.valid) {
-      return res.json({ 
-        success: false, 
-        message: 'Estoque insuficiente: ' + stockValidation.errors.join(', ')
+      return res.json({
+        success: false,
+        message: 'Estoque insuficiente: ' + stockValidation.errors.join(', '),
       });
     }
 
@@ -622,7 +716,10 @@ export const placeOrderStripe = async (req, res) => {
         price_data: {
           currency: 'brl',
           product_data: {
-            name: discountPercentage > 0 ? `${item.name} (${discountPercentage}% OFF)` : item.name,
+            name:
+              discountPercentage > 0
+                ? `${item.name} (${discountPercentage}% OFF)`
+                : item.name,
           },
           unit_amount: Math.floor(itemPrice * 100),
         },
@@ -671,7 +768,7 @@ export const placeOrderStripe = async (req, res) => {
         sessionOptions.payment_method_options = {
           pix: {
             expires_after_seconds: 1800, // PIX expira em 30 minutos
-          }
+          },
         };
         break;
 
@@ -680,28 +777,24 @@ export const placeOrderStripe = async (req, res) => {
         sessionOptions.payment_method_options = {
           boleto: {
             expires_after_days: 3, // Boleto expira em 3 dias
-          }
+          },
         };
         break;
 
       default:
         // CARTÃO — sempre com opção de parcelamento
         payment_method_types = ['card'];
-        
-        // Parcelamento: Stripe Brasil suporta installments nativamente
-        // Quando enabled: true, o Stripe Checkout mostra automaticamente
-        // as opções 1x, 2x, 3x... até 10x na página de pagamento.
-        // O CLIENTE escolhe as parcelas na página do Stripe.
-        // O lojista absorve os juros (10x "sem juros" = lojista paga taxa)
-        // NOTA: Requer que installments esteja habilitado na conta Stripe
+
         sessionOptions.payment_method_options = {
           card: {
             installments: {
               enabled: true,
-            }
-          }
+            },
+          },
         };
-        console.log('💳 Parcelamento habilitado (cliente escolhe na página Stripe)');
+        console.log(
+          '💳 Parcelamento habilitado (cliente escolhe na página Stripe)',
+        );
         break;
     }
 
@@ -711,7 +804,8 @@ export const placeOrderStripe = async (req, res) => {
       sessionOptions.customer_email = guestEmail;
     }
 
-    const session = await stripeInstance.checkout.sessions.create(sessionOptions);
+    const session =
+      await stripeInstance.checkout.sessions.create(sessionOptions);
     console.log('✅ Sessão Stripe criada:', session.id);
 
     return res.json({ success: true, url: session.url });
@@ -729,7 +823,7 @@ export const stripeWebhooks = async (request, response) => {
   console.log('🔔 ═══════════════════════════════════════════════════');
   console.log('🔔 STRIPE WEBHOOK RECEBIDO');
   console.log('🔔 ═══════════════════════════════════════════════════');
-  
+
   const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
   const sig = request.headers['stripe-signature'];
   let event;
@@ -738,7 +832,7 @@ export const stripeWebhooks = async (request, response) => {
     event = stripeInstance.webhooks.constructEvent(
       request.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET,
     );
     console.log('🔔 Evento:', event.type);
   } catch (error) {
@@ -751,31 +845,44 @@ export const stripeWebhooks = async (request, response) => {
       const session = event.data.object;
       console.log('✅ Checkout Session Completed:', session.id);
       console.log('💳 Payment Status:', session.payment_status);
-      
-      const { orderId, userId, paymentMethod, isGuestOrder, guestEmail, guestName, guestPhone } = session.metadata;
-      
-      console.log('📋 Metadata:', { orderId, userId, isGuestOrder, guestEmail });
-      
+
+      const {
+        orderId,
+        userId,
+        paymentMethod,
+        isGuestOrder,
+        guestEmail,
+        guestName,
+        guestPhone,
+      } = session.metadata;
+
+      console.log('📋 Metadata:', {
+        orderId,
+        userId,
+        isGuestOrder,
+        guestEmail,
+      });
+
       if (session.payment_status === 'paid') {
         console.log('💰 Pagamento confirmado!');
-        
+
         // Atualizar pedido como pago
         const updatedOrder = await Order.findByIdAndUpdate(
-          orderId, 
+          orderId,
           { isPaid: true },
-          { new: true }
+          { new: true },
         ).populate('items.product');
-        
+
         if (!updatedOrder) {
           console.error('❌ Pedido não encontrado:', orderId);
           break;
         }
-        
+
         console.log('✅ Pedido marcado como pago:', orderId);
-        
+
         // Decrementar estoque
         await decrementProductStock(updatedOrder.items);
-        
+
         // Limpar carrinho (se não for guest)
         if (userId && isGuestOrder !== 'true') {
           await User.findByIdAndUpdate(userId, { cartItems: {} });
@@ -784,7 +891,7 @@ export const stripeWebhooks = async (request, response) => {
         // ✅ ENVIAR EMAILS + WHATSAPP COM AWAIT
         console.log('');
         console.log('📧 Preparando envio de emails + notificações...');
-        
+
         let emailRecipient;
         if (isGuestOrder === 'true') {
           emailRecipient = guestEmail || updatedOrder.guestEmail;
@@ -793,15 +900,23 @@ export const stripeWebhooks = async (request, response) => {
           emailRecipient = userId;
           console.log('📧 Modo: User cadastrado - ID:', emailRecipient);
         }
-        
+
         if (emailRecipient) {
-          const emailResult = await sendAllOrderEmails(updatedOrder, emailRecipient);
-          console.log('📧 Resultado dos emails:', JSON.stringify(emailResult, null, 2));
+          const emailResult = await sendAllOrderEmails(
+            updatedOrder,
+            emailRecipient,
+          );
+          console.log(
+            '📧 Resultado dos emails:',
+            JSON.stringify(emailResult, null, 2),
+          );
         } else {
           console.error('❌ Nenhum destinatário de email encontrado!');
         }
-        
-      } else if (session.payment_status === 'unpaid' && paymentMethod === 'boleto') {
+      } else if (
+        session.payment_status === 'unpaid' &&
+        paymentMethod === 'boleto'
+      ) {
         // Boleto: pagamento pendente — será confirmado via payment_intent.succeeded
         console.log('⏳ Boleto: Aguardando pagamento');
       }
@@ -822,34 +937,37 @@ export const stripeWebhooks = async (request, response) => {
           break;
         }
 
-        const { orderId, userId, isGuestOrder, guestEmail } = sessions.data[0].metadata;
-        
+        const { orderId, userId, isGuestOrder, guestEmail } =
+          sessions.data[0].metadata;
+
         // Verificar se já foi processado
         const existingOrder = await Order.findById(orderId);
         if (existingOrder?.isPaid) {
           console.log('⚠️ Pedido já processado, ignorando duplicado');
           break;
         }
-        
+
         // Este caso cobre BOLETO pago após emissão
-        console.log('💰 Pagamento assíncrono confirmado (provavelmente Boleto)');
-        
+        console.log(
+          '💰 Pagamento assíncrono confirmado (provavelmente Boleto)',
+        );
+
         const updatedOrder = await Order.findByIdAndUpdate(
-          orderId, 
+          orderId,
           { isPaid: true },
-          { new: true }
+          { new: true },
         ).populate('items.product');
-        
+
         if (!updatedOrder) {
           console.error('❌ Pedido não encontrado:', orderId);
           break;
         }
-        
+
         console.log('✅ Pedido marcado como pago (payment_intent):', orderId);
-        
+
         // Decrementar estoque
         await decrementProductStock(updatedOrder.items);
-        
+
         // Limpar carrinho
         if (userId && isGuestOrder !== 'true') {
           await User.findByIdAndUpdate(userId, { cartItems: {} });
@@ -862,10 +980,15 @@ export const stripeWebhooks = async (request, response) => {
         } else {
           emailRecipient = userId;
         }
-        
+
         if (emailRecipient) {
-          console.log('📧 Enviando emails para pagamento assíncrono (Boleto)...');
-          const emailResult = await sendAllOrderEmails(updatedOrder, emailRecipient);
+          console.log(
+            '📧 Enviando emails para pagamento assíncrono (Boleto)...',
+          );
+          const emailResult = await sendAllOrderEmails(
+            updatedOrder,
+            emailRecipient,
+          );
           console.log('📧 Resultado:', JSON.stringify(emailResult, null, 2));
         }
       } catch (error) {
@@ -897,7 +1020,7 @@ export const stripeWebhooks = async (request, response) => {
     default:
       console.log('ℹ️ Evento não tratado:', event.type);
   }
-  
+
   // ✅ Responder ao Stripe DEPOIS dos emails serem enviados
   response.json({ received: true });
 };
@@ -907,7 +1030,8 @@ export const stripeWebhooks = async (request, response) => {
 // =============================================================================
 export const getUserOrders = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id || req.query.userId || req.body.userId;
+    const userId =
+      req.user?.id || req.user?._id || req.query.userId || req.body.userId;
     const guestEmail = req.query.guestEmail || req.body.guestEmail;
 
     let query;
@@ -923,7 +1047,10 @@ export const getUserOrders = async (req, res) => {
         isPaid: true,
       };
     } else {
-      return res.json({ success: false, message: 'User ID ou Email de visitante necessário' });
+      return res.json({
+        success: false,
+        message: 'User ID ou Email de visitante necessário',
+      });
     }
 
     const orders = await Order.find(query)
@@ -933,7 +1060,8 @@ export const getUserOrders = async (req, res) => {
       })
       .populate({
         path: 'address',
-        select: 'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
+        select:
+          'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
       })
       .sort({ createdAt: -1 });
 
@@ -962,7 +1090,8 @@ export const getOrderById = async (req, res) => {
       })
       .populate({
         path: 'address',
-        select: 'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
+        select:
+          'firstName lastName street complement neighborhood city state zipcode country email phone cpf',
       });
 
     if (!order) {
@@ -971,7 +1100,11 @@ export const getOrderById = async (req, res) => {
 
     // Só mostra pedidos pagos
     if (!order.isPaid) {
-      return res.json({ success: false, message: 'Pedido ainda não confirmado', pending: true });
+      return res.json({
+        success: false,
+        message: 'Pedido ainda não confirmado',
+        pending: true,
+      });
     }
 
     res.json({ success: true, order });
@@ -983,11 +1116,14 @@ export const getOrderById = async (req, res) => {
 
 // =============================================================================
 // GET ALL ORDERS (SELLER/ADMIN)
+// ✅ FIX CRÍTICO: Agora inclui pedidos PIX pendentes para o painel seller
+// Antes: filtrava apenas { isPaid: true } — pedidos PIX nunca apareciam
+// Agora: inclui pedidos PIX manual não pagos + todos os pagos
 // =============================================================================
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      isPaid: true,
+      $or: [{ isPaid: true }, { paymentType: 'pix_manual', isPaid: false }],
     })
       .populate('items.product address')
       .sort({ createdAt: -1 });
@@ -1006,10 +1142,20 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId, status } = req.body;
 
     if (!orderId || !status) {
-      return res.json({ success: false, message: 'ID do pedido e Status são obrigatórios' });
+      return res.json({
+        success: false,
+        message: 'ID do pedido e Status são obrigatórios',
+      });
     }
 
-    const validStatuses = ['Order Placed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+    const validStatuses = [
+      'Order Placed',
+      'Processing',
+      'Shipped',
+      'Out for Delivery',
+      'Delivered',
+      'Cancelled',
+    ];
 
     if (!validStatuses.includes(status)) {
       return res.json({ success: false, message: 'Status inválido' });
@@ -1026,19 +1172,31 @@ export const updateOrderStatus = async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       { status },
-      { new: true }
-    ).populate('items.product').populate('address');
+      { new: true },
+    )
+      .populate('items.product')
+      .populate('address');
 
-    console.log('✅ Status atualizado:', { orderId, oldStatus: previousStatus, newStatus: status });
+    console.log('✅ Status atualizado:', {
+      orderId,
+      oldStatus: previousStatus,
+      newStatus: status,
+    });
 
     // Enviar notificação de status
     let notificationSent = false;
     if (previousStatus !== status && sendOrderStatusUpdateEmail) {
-      const productIds = updatedOrder.items.map(item => item.product?._id || item.product);
+      const productIds = updatedOrder.items.map(
+        item => item.product?._id || item.product,
+      );
       const products = await Product.find({ _id: { $in: productIds } });
 
       try {
-        const result = await sendOrderStatusUpdateEmail(updatedOrder, status, products);
+        const result = await sendOrderStatusUpdateEmail(
+          updatedOrder,
+          status,
+          products,
+        );
         if (result.success) {
           console.log('✅ Email de status enviado');
           notificationSent = true;
@@ -1064,8 +1222,9 @@ export const updateOrderStatus = async (req, res) => {
 // COD DESATIVADO
 // =============================================================================
 export const placeOrderCOD = async (req, res) => {
-  return res.json({ 
-    success: false, 
-    message: 'Pagamento na entrega não está disponível. Por favor, use pagamento online (PIX, Boleto ou Cartão).' 
+  return res.json({
+    success: false,
+    message:
+      'Pagamento na entrega não está disponível. Por favor, use pagamento online (PIX, Boleto ou Cartão).',
   });
 };
