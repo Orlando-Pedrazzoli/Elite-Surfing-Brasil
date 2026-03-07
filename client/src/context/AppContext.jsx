@@ -47,21 +47,27 @@ export const AppContextProvider = ({ children }) => {
     return localStorage.getItem('auth_token');
   };
 
-  // ✅ FIX IPHONE: Restaurar seller token no header customizado
-  // Usa 'x-seller-token' para NÃO conflitar com 'Authorization' do user
-  const restoreSellerToken = () => {
-    const sellerToken = localStorage.getItem('sellerToken');
-    if (sellerToken) {
-      axios.defaults.headers.common['x-seller-token'] = sellerToken;
-      return true;
-    }
-    return false;
-  };
-
   // ✅ FIX IPHONE: Limpar seller token
   const clearSellerToken = () => {
     localStorage.removeItem('sellerToken');
-    delete axios.defaults.headers.common['x-seller-token'];
+    // NÃO usamos mais defaults.headers — o interceptor cuida de tudo
+  };
+
+  // ✅ FIX IPHONE: Verificar se uma URL é rota protegida por authSeller
+  const isSellerRoute = url => {
+    if (!url) return false;
+    return (
+      url.includes('/api/seller') ||
+      url.includes('/api/order/seller') ||
+      url.includes('/api/order/status') ||
+      url.includes('/api/pix/confirm') ||
+      url.includes('/api/clientes') ||
+      url.includes('/api/romaneios') ||
+      url.includes('/api/product/add') ||
+      url.includes('/api/product/update') ||
+      url.includes('/api/product/delete') ||
+      url.includes('/api/product/stock')
+    );
   };
 
   // Save cart to localStorage
@@ -214,7 +220,7 @@ export const AppContextProvider = ({ children }) => {
       console.log('Logout do seller falhou:', error);
     } finally {
       setIsSeller(false);
-      clearSellerToken(); // ✅ FIX: Limpa token do localStorage e header
+      clearSellerToken();
       sessionStorage.removeItem('seller_just_logged_in');
       sessionStorage.removeItem('seller_authenticated');
       navigate('/');
@@ -222,13 +228,10 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ FIX: Fetch Seller — restaura token antes de verificar
+  // ✅ FIX: Fetch Seller
   const fetchSeller = async () => {
     try {
       setIsSellerLoading(true);
-
-      // ✅ FIX IPHONE: Garantir que o header x-seller-token está presente
-      restoreSellerToken();
 
       const { data } = await axios.get('/api/seller/is-auth');
 
@@ -246,7 +249,7 @@ export const AppContextProvider = ({ children }) => {
         }
       } else {
         setIsSeller(false);
-        clearSellerToken(); // ✅ Token inválido — limpar
+        clearSellerToken();
         sessionStorage.removeItem('seller_authenticated');
       }
     } catch (error) {
@@ -254,7 +257,7 @@ export const AppContextProvider = ({ children }) => {
 
       if (error.response?.status === 401) {
         setIsSeller(false);
-        clearSellerToken(); // ✅ Token expirado — limpar
+        clearSellerToken();
         sessionStorage.removeItem('seller_authenticated');
         sessionStorage.removeItem('seller_just_logged_in');
       }
@@ -491,14 +494,17 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       config => {
+        // User auth token — todas as requests
         const token = getStoredToken();
         if (token && !config.headers.Authorization) {
           config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // ✅ FIX IPHONE: Sempre incluir seller token se existir
+        // ✅ FIX: Seller token — APENAS em rotas protegidas por authSeller
+        // Enviar em todas as requests causava preflight CORS failure
+        // nas rotas públicas (/api/product/list, /api/user, etc.)
         const sellerToken = localStorage.getItem('sellerToken');
-        if (sellerToken && !config.headers['x-seller-token']) {
+        if (sellerToken && isSellerRoute(config.url)) {
           config.headers['x-seller-token'] = sellerToken;
         }
 
@@ -512,7 +518,6 @@ export const AppContextProvider = ({ children }) => {
       async error => {
         if (error.response?.status === 401) {
           // ⚠️ Só limpar dados do USER, não do seller
-          // O seller usa token separado (x-seller-token)
           const requestUrl = error.config?.url || '';
           if (!requestUrl.includes('/api/seller/')) {
             setUser(null);
@@ -538,9 +543,6 @@ export const AppContextProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
-      // ✅ FIX IPHONE: Restaurar seller token no arranque
-      restoreSellerToken();
-
       const savedCart = loadCartFromStorage();
       setCartItems(savedCart);
 
@@ -554,13 +556,11 @@ export const AppContextProvider = ({ children }) => {
 
       if (window.location.pathname.startsWith('/seller')) {
         const sellerCached = sessionStorage.getItem('seller_authenticated');
-
-        // ✅ FIX: Verificar se tem token guardado (iPhone pode ter feito login antes)
         const hasSellerToken = !!localStorage.getItem('sellerToken');
 
         if (sellerCached === 'true' || hasSellerToken) {
           if (hasSellerToken) {
-            setIsSeller(true); // Mostrar UI imediatamente
+            setIsSeller(true);
           }
           setIsSellerLoading(false);
 
