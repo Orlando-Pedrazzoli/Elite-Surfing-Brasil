@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Eye, EyeOff, Lock, Mail, Shield, ArrowLeft, Loader2 } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Shield,
+  ArrowLeft,
+  Loader2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SellerLogin = () => {
@@ -48,6 +56,13 @@ const SellerLogin = () => {
           localStorage.removeItem('seller_email');
         }
 
+        // ✅ FIX IPHONE: Guardar token no localStorage e setar header customizado
+        // Safari bloqueia cookies cross-site, então usamos x-seller-token
+        if (data.token) {
+          localStorage.setItem('sellerToken', data.token);
+          axios.defaults.headers.common['x-seller-token'] = data.token;
+        }
+
         // ✅ CRÍTICO: Marcar que acabou de fazer login
         sessionStorage.setItem('seller_just_logged_in', 'true');
 
@@ -63,7 +78,8 @@ const SellerLogin = () => {
     } catch (error) {
       console.error('Erro no login:', error);
       toast.error(
-        error.response?.data?.message || 'Erro ao fazer login. Tente novamente.'
+        error.response?.data?.message ||
+          'Erro ao fazer login. Tente novamente.',
       );
     } finally {
       setIsLoading(false);
@@ -98,7 +114,8 @@ const SellerLogin = () => {
 
           <div className='space-y-6'>
             <h2 className='text-4xl font-bold leading-tight'>
-              Gerencie sua loja<br />
+              Gerencie sua loja
+              <br />
               <span className='text-white/80'>de forma simples</span>
             </h2>
             <p className='text-white/70 text-lg max-w-md'>
@@ -115,9 +132,11 @@ const SellerLogin = () => {
 
       {/* Lado Direito - Formulário */}
       <div className='w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gray-50'>
-        <div className={`w-full max-w-md transition-all duration-700 ease-out ${
-          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        }`}>
+        <div
+          className={`w-full max-w-md transition-all duration-700 ease-out ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
           <button
             onClick={handleGoBack}
             className='flex items-center gap-2 text-gray-500 hover:text-primary mb-8 transition-colors group'
@@ -143,13 +162,20 @@ const SellerLogin = () => {
 
             <form onSubmit={onSubmitHandler} className='space-y-6'>
               <div className='space-y-2'>
-                <label htmlFor='email' className='block text-sm font-medium text-gray-700'>
+                <label
+                  htmlFor='email'
+                  className='block text-sm font-medium text-gray-700'
+                >
                   Email
                 </label>
                 <div className='relative'>
-                  <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                    focusedField === 'email' ? 'text-primary' : 'text-gray-400'
-                  }`}>
+                  <div
+                    className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                      focusedField === 'email'
+                        ? 'text-primary'
+                        : 'text-gray-400'
+                    }`}
+                  >
                     <Mail className='w-5 h-5' />
                   </div>
                   <input
@@ -173,13 +199,20 @@ const SellerLogin = () => {
               </div>
 
               <div className='space-y-2'>
-                <label htmlFor='password' className='block text-sm font-medium text-gray-700'>
+                <label
+                  htmlFor='password'
+                  className='block text-sm font-medium text-gray-700'
+                >
                   Password
                 </label>
                 <div className='relative'>
-                  <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                    focusedField === 'password' ? 'text-primary' : 'text-gray-400'
-                  }`}>
+                  <div
+                    className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                      focusedField === 'password'
+                        ? 'text-primary'
+                        : 'text-gray-400'
+                    }`}
+                  >
                     <Lock className='w-5 h-5' />
                   </div>
                   <input
@@ -205,7 +238,11 @@ const SellerLogin = () => {
                     className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors'
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className='w-5 h-5' /> : <Eye className='w-5 h-5' />}
+                    {showPassword ? (
+                      <EyeOff className='w-5 h-5' />
+                    ) : (
+                      <Eye className='w-5 h-5' />
+                    )}
                   </button>
                 </div>
               </div>
@@ -252,7 +289,9 @@ const SellerLogin = () => {
               <div className='flex items-start gap-3'>
                 <Shield className='w-5 h-5 text-primary mt-0.5' />
                 <div>
-                  <p className='text-sm font-medium text-gray-800'>Área Segura</p>
+                  <p className='text-sm font-medium text-gray-800'>
+                    Área Segura
+                  </p>
                   <p className='text-xs text-gray-500 mt-1'>
                     Esta área é restrita a administradores.
                   </p>

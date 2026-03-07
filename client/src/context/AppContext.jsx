@@ -18,7 +18,7 @@ export const AppContextProvider = ({ children }) => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [user, setUser] = useState(null);
   const [isSeller, setIsSeller] = useState(false);
   const [showUserLogin, setShowUserLogin] = useState(false);
@@ -27,7 +27,7 @@ export const AppContextProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [showCartSidebar, setShowCartSidebar] = useState(false);
-  
+
   // OTIMIZADO: isLoading começa false - site carrega imediato
   const [isLoading, setIsLoading] = useState(false);
   const [isSellerLoading, setIsSellerLoading] = useState(true);
@@ -45,6 +45,23 @@ export const AppContextProvider = ({ children }) => {
 
   const getStoredToken = () => {
     return localStorage.getItem('auth_token');
+  };
+
+  // ✅ FIX IPHONE: Restaurar seller token no header customizado
+  // Usa 'x-seller-token' para NÃO conflitar com 'Authorization' do user
+  const restoreSellerToken = () => {
+    const sellerToken = localStorage.getItem('sellerToken');
+    if (sellerToken) {
+      axios.defaults.headers.common['x-seller-token'] = sellerToken;
+      return true;
+    }
+    return false;
+  };
+
+  // ✅ FIX IPHONE: Limpar seller token
+  const clearSellerToken = () => {
+    localStorage.removeItem('sellerToken');
+    delete axios.defaults.headers.common['x-seller-token'];
   };
 
   // Save cart to localStorage
@@ -75,6 +92,7 @@ export const AppContextProvider = ({ children }) => {
     localStorage.removeItem('guest_checkout_email');
     localStorage.removeItem('guest_checkout_address');
     delete axios.defaults.headers.common['Authorization'];
+    // ⚠️ NÃO limpa sellerToken aqui — só no logoutSeller
   };
 
   // Save user data to localStorage
@@ -102,9 +120,10 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // 🆕 Detectar se é mobile
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
 
   // OTIMIZADO: fetchUser sem setIsLoading global
   const fetchUser = async () => {
@@ -126,7 +145,8 @@ export const AppContextProvider = ({ children }) => {
 
       const storedToken = getStoredToken();
       if (storedToken) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        axios.defaults.headers.common['Authorization'] =
+          `Bearer ${storedToken}`;
 
         try {
           response = await axios.get('/api/user/is-auth');
@@ -186,7 +206,7 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
-  // Logout do Seller centralizado
+  // ✅ FIX: Logout do Seller — agora também limpa token do localStorage
   const logoutSeller = async () => {
     try {
       await axios.get('/api/seller/logout');
@@ -194,6 +214,7 @@ export const AppContextProvider = ({ children }) => {
       console.log('Logout do seller falhou:', error);
     } finally {
       setIsSeller(false);
+      clearSellerToken(); // ✅ FIX: Limpa token do localStorage e header
       sessionStorage.removeItem('seller_just_logged_in');
       sessionStorage.removeItem('seller_authenticated');
       navigate('/');
@@ -201,16 +222,20 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
-  // Fetch Seller só quando necessário
+  // ✅ FIX: Fetch Seller — restaura token antes de verificar
   const fetchSeller = async () => {
     try {
       setIsSellerLoading(true);
+
+      // ✅ FIX IPHONE: Garantir que o header x-seller-token está presente
+      restoreSellerToken();
+
       const { data } = await axios.get('/api/seller/is-auth');
-      
+
       if (data.success) {
         const isInSellerArea = window.location.pathname.startsWith('/seller');
         const justLoggedIn = sessionStorage.getItem('seller_just_logged_in');
-        
+
         if (isInSellerArea || justLoggedIn) {
           setIsSeller(true);
           sessionStorage.setItem('seller_authenticated', 'true');
@@ -221,13 +246,15 @@ export const AppContextProvider = ({ children }) => {
         }
       } else {
         setIsSeller(false);
+        clearSellerToken(); // ✅ Token inválido — limpar
         sessionStorage.removeItem('seller_authenticated');
       }
     } catch (error) {
       console.log('❌ Erro ao verificar seller:', error.message);
-      
+
       if (error.response?.status === 401) {
         setIsSeller(false);
+        clearSellerToken(); // ✅ Token expirado — limpar
         sessionStorage.removeItem('seller_authenticated');
         sessionStorage.removeItem('seller_just_logged_in');
       }
@@ -237,41 +264,43 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // Fetch All Products
-const fetchProducts = async () => {
-  try {
-    const { data } = await axios.get('/api/product/list');
-    if (data.success) {
-      setProducts(data.products);
-      setFamilyCache({});  // ← ADICIONA ESTA LINHA
+  const fetchProducts = async () => {
+    try {
+      const { data } = await axios.get('/api/product/list');
+      if (data.success) {
+        setProducts(data.products);
+        setFamilyCache({});
+      }
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
     }
-  } catch (error) {
-    console.error('Erro ao buscar produtos:', error);
-  }
-};
+  };
 
   // =============================================================================
   // FUNÇÕES DE ESTOQUE
   // =============================================================================
 
   // Função auxiliar para encontrar produto
-  const findProduct = (productId) => {
+  const findProduct = productId => {
     let product = products.find(p => p._id === productId);
-    
+
     if (!product) {
       for (const familySlug in familyCache) {
-        const familyProduct = familyCache[familySlug].find(p => p._id === productId);
+        const familyProduct = familyCache[familySlug].find(
+          p => p._id === productId,
+        );
         if (familyProduct) {
           product = familyProduct;
           break;
         }
       }
     }
-    
+
     return product;
   };
 
   // Obter estoque disponível de um produto
-  const getAvailableStock = (productId) => {
+  const getAvailableStock = productId => {
     const product = findProduct(productId);
     return product?.stock || 0;
   };
@@ -279,25 +308,25 @@ const fetchProducts = async () => {
   // Validar se pode adicionar ao carrinho
   const canAddToCart = (productId, quantityToAdd = 1) => {
     const product = findProduct(productId);
-    
+
     if (!product) {
       return { can: false, reason: 'Produto não encontrado' };
     }
-    
+
     const currentInCart = cartItems[productId] || 0;
     const availableStock = product.stock !== undefined ? product.stock : 999;
-    
+
     if (availableStock === 0) {
       return { can: false, reason: 'Produto esgotado' };
     }
-    
+
     if (currentInCart + quantityToAdd > availableStock) {
-      return { 
-        can: false, 
-        reason: `Apenas ${availableStock} unidade(s) disponível(eis). Você já tem ${currentInCart} no carrinho.`
+      return {
+        can: false,
+        reason: `Apenas ${availableStock} unidade(s) disponível(eis). Você já tem ${currentInCart} no carrinho.`,
       };
     }
-    
+
     return { can: true };
   };
 
@@ -306,20 +335,20 @@ const fetchProducts = async () => {
   // =============================================================================
 
   // Buscar todos os produtos de uma família (com cache)
-  const getProductFamily = async (familySlug) => {
+  const getProductFamily = async familySlug => {
     if (!familySlug) return [];
-    
+
     if (familyCache[familySlug]) {
       return familyCache[familySlug];
     }
-    
+
     try {
       const { data } = await axios.post('/api/product/family', { familySlug });
-      
+
       if (data.success && data.products) {
         setFamilyCache(prev => ({
           ...prev,
-          [familySlug]: data.products
+          [familySlug]: data.products,
         }));
         return data.products;
       }
@@ -331,7 +360,7 @@ const fetchProducts = async () => {
   };
 
   // Limpar cache de uma família
-  const clearFamilyCache = (familySlug) => {
+  const clearFamilyCache = familySlug => {
     if (familySlug) {
       setFamilyCache(prev => {
         const newCache = { ...prev };
@@ -349,7 +378,7 @@ const fetchProducts = async () => {
 
   const addToCart = async itemId => {
     const validation = canAddToCart(itemId, 1);
-    
+
     if (!validation.can) {
       toast.error(validation.reason);
       return false;
@@ -366,7 +395,7 @@ const fetchProducts = async () => {
     setCartItems(newCartItems);
     saveCartToStorage(newCartItems);
     toast.success('Adicionado ao carrinho');
-    
+
     setShowCartSidebar(true);
 
     if (user) {
@@ -376,7 +405,7 @@ const fetchProducts = async () => {
         console.error('Erro ao sincronizar carrinho com o servidor:', error);
       }
     }
-    
+
     return true;
   };
 
@@ -388,12 +417,12 @@ const fetchProducts = async () => {
       toast.success('Produto removido do carrinho');
     } else {
       const availableStock = getAvailableStock(itemId);
-      
+
       if (availableStock > 0 && quantity > availableStock) {
         toast.error(`Apenas ${availableStock} unidade(s) disponível(eis)`);
         return false;
       }
-      
+
       newCartItems[itemId] = quantity;
       toast.success('Carrinho atualizado');
     }
@@ -408,7 +437,7 @@ const fetchProducts = async () => {
         console.error('Erro ao sincronizar carrinho com o servidor:', error);
       }
     }
-    
+
     return true;
   };
 
@@ -466,21 +495,33 @@ const fetchProducts = async () => {
         if (token && !config.headers.Authorization) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // ✅ FIX IPHONE: Sempre incluir seller token se existir
+        const sellerToken = localStorage.getItem('sellerToken');
+        if (sellerToken && !config.headers['x-seller-token']) {
+          config.headers['x-seller-token'] = sellerToken;
+        }
+
         return config;
       },
-      error => Promise.reject(error)
+      error => Promise.reject(error),
     );
 
     const responseInterceptor = axios.interceptors.response.use(
       response => response,
       async error => {
         if (error.response?.status === 401) {
-          setUser(null);
-          setCartItems(loadCartFromStorage());
-          clearStoredData();
+          // ⚠️ Só limpar dados do USER, não do seller
+          // O seller usa token separado (x-seller-token)
+          const requestUrl = error.config?.url || '';
+          if (!requestUrl.includes('/api/seller/')) {
+            setUser(null);
+            setCartItems(loadCartFromStorage());
+            clearStoredData();
+          }
         }
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
@@ -497,6 +538,9 @@ const fetchProducts = async () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
+      // ✅ FIX IPHONE: Restaurar seller token no arranque
+      restoreSellerToken();
+
       const savedCart = loadCartFromStorage();
       setCartItems(savedCart);
 
@@ -510,11 +554,16 @@ const fetchProducts = async () => {
 
       if (window.location.pathname.startsWith('/seller')) {
         const sellerCached = sessionStorage.getItem('seller_authenticated');
-        
-        if (sellerCached === 'true') {
-          setIsSeller(true);
+
+        // ✅ FIX: Verificar se tem token guardado (iPhone pode ter feito login antes)
+        const hasSellerToken = !!localStorage.getItem('sellerToken');
+
+        if (sellerCached === 'true' || hasSellerToken) {
+          if (hasSellerToken) {
+            setIsSeller(true); // Mostrar UI imediatamente
+          }
           setIsSellerLoading(false);
-          
+
           fetchSeller().catch(() => {
             console.log('⚠️ Verificação de seller falhou, mantendo sessão');
           });
@@ -531,7 +580,11 @@ const fetchProducts = async () => {
 
   // Verificar seller apenas na primeira vez que entra na área de seller
   useEffect(() => {
-    if (location.pathname.startsWith('/seller') && !isSeller && isSellerLoading) {
+    if (
+      location.pathname.startsWith('/seller') &&
+      !isSeller &&
+      isSellerLoading
+    ) {
       fetchSeller();
     }
   }, [location.pathname]);

@@ -24,6 +24,7 @@ import {
   Printer,
   QrCode,
   FileText,
+  Trash2, // ✅ NEW: ícone para cancelar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ShippingLabel from '../../components/seller/ShippingLabel';
@@ -35,6 +36,7 @@ const Orders = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [confirmingPixId, setConfirmingPixId] = useState(null);
+  const [cancellingPixId, setCancellingPixId] = useState(null); // ✅ NEW: state para cancelamento
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -196,6 +198,53 @@ const Orders = () => {
       );
     } finally {
       setConfirmingPixId(null);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // ✅ NEW: ❌ CANCELAR PEDIDO PIX NÃO PAGO
+  // Remove o pedido da lista (nunca foi pago, não afeta estoque)
+  // ═══════════════════════════════════════════════════════════════
+  const cancelPixOrder = async orderId => {
+    if (
+      !window.confirm(
+        'Tem certeza que deseja cancelar este pedido PIX?\n\n' +
+          'O pedido NÃO foi pago, então:\n' +
+          '• Nenhum estoque será afetado\n' +
+          '• O pedido será removido da lista\n\n' +
+          'Esta ação não pode ser desfeita.',
+      )
+    ) {
+      return;
+    }
+
+    setCancellingPixId(orderId);
+    try {
+      const { data } = await axios.post('/api/order/status', {
+        orderId,
+        status: 'Cancelled',
+      });
+
+      if (data.success) {
+        toast.success('Pedido PIX cancelado com sucesso!', { icon: '🗑️' });
+
+        // Remover da lista (pedido não pago cancelado não precisa aparecer)
+        setOrders(prev => prev.filter(order => order._id !== orderId));
+        setFilteredOrders(prev => prev.filter(order => order._id !== orderId));
+
+        // Fechar modal se estiver aberto
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(null);
+        }
+      } else {
+        toast.error(data.message || 'Erro ao cancelar pedido');
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || 'Erro ao cancelar pedido PIX',
+      );
+    } finally {
+      setCancellingPixId(null);
     }
   };
 
@@ -475,6 +524,7 @@ const Orders = () => {
               const StatusIcon = statusConfig.icon;
               const isUpdating = updatingOrderId === order._id;
               const isConfirmingPix = confirmingPixId === order._id;
+              const isCancellingPix = cancellingPixId === order._id; // ✅ NEW
               const pixPending = isPixPending(order);
 
               return (
@@ -495,23 +545,43 @@ const Orders = () => {
                           ⏳ Aguardando confirmação do pagamento PIX
                         </span>
                       </div>
-                      <button
-                        onClick={() => confirmPixPayment(order._id)}
-                        disabled={isConfirmingPix}
-                        className='flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm'
-                      >
-                        {isConfirmingPix ? (
-                          <>
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                            Confirmando...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className='w-4 h-4' />
-                            Confirmar Pagamento PIX
-                          </>
-                        )}
-                      </button>
+                      {/* ✅ NEW: Botões lado a lado — Confirmar + Cancelar */}
+                      <div className='flex items-center gap-2'>
+                        <button
+                          onClick={() => confirmPixPayment(order._id)}
+                          disabled={isConfirmingPix || isCancellingPix}
+                          className='flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm'
+                        >
+                          {isConfirmingPix ? (
+                            <>
+                              <Loader2 className='w-4 h-4 animate-spin' />
+                              Confirmando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className='w-4 h-4' />
+                              Confirmar Pagamento PIX
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => cancelPixOrder(order._id)}
+                          disabled={isConfirmingPix || isCancellingPix}
+                          className='flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm shadow-sm'
+                        >
+                          {isCancellingPix ? (
+                            <>
+                              <Loader2 className='w-4 h-4 animate-spin' />
+                              Cancelando...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className='w-4 h-4' />
+                              Cancelar Pedido
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -698,7 +768,7 @@ const Orders = () => {
                         </div>
                       </div>
 
-                      {/* ← ALTERADO: Cliente & Entrega com todos os campos */}
+                      {/* Cliente & Entrega */}
                       <div className='lg:w-72'>
                         <h4 className='text-sm font-medium text-gray-500 mb-3'>
                           Cliente & Entrega
@@ -732,7 +802,6 @@ const Orders = () => {
                             </div>
                           )}
 
-                          {/* ← NOVO: CPF */}
                           {order.address?.cpf && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <FileText className='w-4 h-4 text-gray-400' />
@@ -740,7 +809,6 @@ const Orders = () => {
                             </div>
                           )}
 
-                          {/* ← ALTERADO: Endereço completo com número, complemento e bairro */}
                           <div className='flex items-start gap-2 text-sm text-gray-600 pt-2 border-t border-gray-200'>
                             <MapPin className='w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0' />
                             <div>
@@ -886,7 +954,7 @@ const Orders = () => {
                 )}
               </div>
 
-              {/* ═══ BOTÃO CONFIRMAR PIX NO MODAL ═══ */}
+              {/* ═══ BOTÕES PIX PENDENTE NO MODAL — Confirmar + Cancelar ═══ */}
               {isPixPending(selectedOrder) && (
                 <div className='bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3'>
                   <div className='flex items-center gap-2'>
@@ -895,23 +963,49 @@ const Orders = () => {
                       Pagamento PIX ainda não confirmado
                     </span>
                   </div>
-                  <button
-                    onClick={() => confirmPixPayment(selectedOrder._id)}
-                    disabled={confirmingPixId === selectedOrder._id}
-                    className='flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all disabled:opacity-50 text-sm'
-                  >
-                    {confirmingPixId === selectedOrder._id ? (
-                      <>
-                        <Loader2 className='w-4 h-4 animate-spin' />
-                        Confirmando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className='w-4 h-4' />
-                        Confirmar Pagamento PIX
-                      </>
-                    )}
-                  </button>
+                  {/* ✅ NEW: Botões no modal */}
+                  <div className='flex items-center gap-2'>
+                    <button
+                      onClick={() => confirmPixPayment(selectedOrder._id)}
+                      disabled={
+                        confirmingPixId === selectedOrder._id ||
+                        cancellingPixId === selectedOrder._id
+                      }
+                      className='flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all disabled:opacity-50 text-sm'
+                    >
+                      {confirmingPixId === selectedOrder._id ? (
+                        <>
+                          <Loader2 className='w-4 h-4 animate-spin' />
+                          Confirmando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className='w-4 h-4' />
+                          Confirmar PIX
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => cancelPixOrder(selectedOrder._id)}
+                      disabled={
+                        confirmingPixId === selectedOrder._id ||
+                        cancellingPixId === selectedOrder._id
+                      }
+                      className='flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition-all disabled:opacity-50 text-sm'
+                    >
+                      {cancellingPixId === selectedOrder._id ? (
+                        <>
+                          <Loader2 className='w-4 h-4 animate-spin' />
+                          Cancelando...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className='w-4 h-4' />
+                          Cancelar
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -955,7 +1049,7 @@ const Orders = () => {
                 </div>
               </div>
 
-              {/* ← ALTERADO: Endereço de Entrega completo no modal */}
+              {/* Endereço de Entrega */}
               <div>
                 <h3 className='font-semibold text-gray-900 mb-3'>
                   Endereço de Entrega
@@ -982,14 +1076,12 @@ const Orders = () => {
                       {selectedOrder.guestEmail || selectedOrder.address.email}
                     </p>
                   )}
-                  {/* ← NOVO: CPF no modal */}
                   {selectedOrder.address?.cpf && (
                     <p className='text-gray-600'>
                       🪪 CPF: {selectedOrder.address.cpf}
                     </p>
                   )}
 
-                  {/* ← ALTERADO: Endereço completo no modal */}
                   <div className='mt-2 pt-2 border-t border-gray-200'>
                     <p className='text-gray-600'>
                       {selectedOrder.address?.street}

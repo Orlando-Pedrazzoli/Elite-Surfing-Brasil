@@ -6,14 +6,14 @@ const getCookieOptions = () => ({
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-  // ✅ SEM domain - deixa o browser decidir automaticamente (funciona em mobile)
+  // ✅ SEM domain - deixa o browser decidir automaticamente
 });
 
 // Login Seller : /api/seller/login
 export const sellerLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (
       password === process.env.SELLER_PASSWORD &&
       email === process.env.SELLER_EMAIL
@@ -21,11 +21,12 @@ export const sellerLogin = async (req, res) => {
       const token = jwt.sign({ email }, process.env.JWT_SECRET, {
         expiresIn: '7d',
       });
-      
-      // ✅ Set cookie mobile-friendly
+
+      // ✅ Set cookie (funciona em desktop e Android)
       res.cookie('sellerToken', token, getCookieOptions());
-      
-      return res.json({ success: true, message: 'Logged In' });
+
+      // ✅ FIX: Também retorna token no body para Safari/iPhone
+      return res.json({ success: true, message: 'Logged In', token });
     } else {
       return res.json({ success: false, message: 'Invalid Credentials' });
     }
@@ -48,9 +49,9 @@ export const isSellerAuth = async (req, res) => {
 // Logout Seller : /api/seller/logout
 export const sellerLogout = async (req, res) => {
   try {
-    // ✅ Clear cookie com mesmas opções
+    // ✅ Clear cookie
     res.clearCookie('sellerToken', getCookieOptions());
-    
+
     return res.json({ success: true, message: 'Logged Out' });
   } catch (error) {
     console.log(error.message);
