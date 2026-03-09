@@ -1123,7 +1123,14 @@ export const getOrderById = async (req, res) => {
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      $or: [{ isPaid: true }, { paymentType: 'pix_manual', isPaid: false }],
+      $or: [
+        { isPaid: true },
+        {
+          paymentType: 'pix_manual',
+          isPaid: false,
+          status: { $ne: 'Cancelled' },
+        },
+      ],
     })
       .populate('items.product address')
       .sort({ createdAt: -1 });
