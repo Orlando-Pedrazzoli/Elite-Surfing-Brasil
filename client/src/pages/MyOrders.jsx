@@ -7,15 +7,12 @@ import { Loader2 } from 'lucide-react';
 
 const MyOrders = () => {
   const [myOrders, setMyOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // ✅ NOVO: loading state
-  const [error, setError] = useState(null); // ✅ NOVO: error state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { currency, axios, user } = useAppContext();
 
-  // ✅ CORRIGIDO: useCallback para evitar re-criação da função
   const fetchMyOrders = useCallback(async () => {
-    // ✅ Verificar se user existe e tem _id
     if (!user?._id) {
-      console.log('❌ User não disponível ainda');
       setIsLoading(false);
       return;
     }
@@ -24,40 +21,24 @@ const MyOrders = () => {
     setError(null);
 
     try {
-      console.log('🔍 Buscando pedidos para usuário:', user._id);
-
       const { data } = await axios.post('/api/order/user', {
         userId: user._id,
       });
 
-      console.log('📋 Resposta do servidor:', data);
-
       if (data.success) {
-        console.log('📋 Pedidos carregados:', data.orders.length);
-
-        // ✅ FILTRAR PEDIDOS: COD (sempre) + Online (só se pagos)
+        // ✅ FILTRAR PEDIDOS: COD + Online pagos + PIX Manual pagos
         const validOrders = data.orders.filter(order => {
-          if (order.paymentType === 'COD') {
-            return true;
-          }
-          if (order.paymentType === 'Online') {
-            return order.isPaid === true;
-          }
+          if (order.paymentType === 'COD') return true;
+          if (order.paymentType === 'Online') return order.isPaid === true;
+          if (order.paymentType === 'pix_manual') return order.isPaid === true;
           return false;
         });
 
-        console.log('✅ Pedidos válidos (filtrados):', validOrders.length);
         setMyOrders(validOrders);
       } else {
-        console.error('❌ Erro ao buscar pedidos:', data.message);
         setError(data.message || 'Erro ao carregar pedidos');
       }
     } catch (error) {
-      console.error('❌ Erro na requisição de pedidos:', error);
-      console.error('❌ Status do erro:', error.response?.status);
-      console.error('❌ Dados do erro:', error.response?.data);
-      
-      // ✅ NOVO: Tratamento específico para erro de autenticação
       if (error.response?.status === 401) {
         setError('Sessão expirada. Por favor, faça login novamente.');
       } else {
@@ -68,24 +49,35 @@ const MyOrders = () => {
     }
   }, [user?._id, axios]);
 
-  // ✅ CORRIGIDO: Dependência correta e delay para garantir token configurado
   useEffect(() => {
     if (user?._id) {
-      console.log('👤 Usuário encontrado, buscando pedidos...');
-      // Pequeno delay para garantir que o token está configurado nos headers
       const timer = setTimeout(() => {
         fetchMyOrders();
       }, 100);
       return () => clearTimeout(timer);
     } else {
-      console.log('❌ Usuário não encontrado');
       setMyOrders([]);
       setIsLoading(false);
     }
   }, [user?._id, fetchMyOrders]);
 
-  // ✅ FUNÇÃO PARA MOSTRAR STATUS DE PAGAMENTO
+  // ✅ NOVO: Badge de pagamento — suporta PIX manual
   const getPaymentStatusBadge = order => {
+    if (order.paymentType === 'pix_manual') {
+      if (order.isPaid) {
+        return (
+          <span className='inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium'>
+            ✅ PIX Pago
+          </span>
+        );
+      }
+      return (
+        <span className='inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium'>
+          ⏳ PIX Pendente
+        </span>
+      );
+    }
+
     if (order.paymentType === 'Online') {
       if (order.isPaid) {
         return (
@@ -104,38 +96,30 @@ const MyOrders = () => {
             Pago
           </span>
         );
-      } else {
-        return (
-          <span className='inline-flex items-center px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium'>
-            <svg
-              className='w-3 h-3 mr-1'
-              fill='currentColor'
-              viewBox='0 0 20 20'
-            >
-              <path
-                fillRule='evenodd'
-                d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z'
-                clipRule='evenodd'
-              />
-            </svg>
-            Pendente
-          </span>
-        );
       }
-    } else {
       return (
-        <span className='inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium'>
-          💰 COD
+        <span className='inline-flex items-center px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium'>
+          <svg className='w-3 h-3 mr-1' fill='currentColor' viewBox='0 0 20 20'>
+            <path
+              fillRule='evenodd'
+              d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z'
+              clipRule='evenodd'
+            />
+          </svg>
+          Pendente
         </span>
       );
     }
+
+    return (
+      <span className='inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium'>
+        💰 COD
+      </span>
+    );
   };
 
-  // ✅ FUNÇÃO PARA CALCULAR VALOR TOTAL EXIBIDO
   const getDisplayAmount = order => {
-    if (order.amount) {
-      return order.amount.toFixed(2);
-    }
+    if (order.amount) return order.amount.toFixed(2);
 
     let total = 0;
     order.items.forEach(item => {
@@ -143,54 +127,64 @@ const MyOrders = () => {
         total += item.product.offerPrice * item.quantity;
       }
     });
-
     total += Math.floor(total * 0.02);
-
-    if (order.discountAmount > 0) {
-      total -= order.discountAmount;
-    }
-
+    if (order.discountAmount > 0) total -= order.discountAmount;
     return Math.max(0, total).toFixed(2);
   };
 
-  // 🆕 Helper: verificar se cor é clara
-  const isLightColor = (color) => {
+  // ✅ NOVO: Classificação e label do status — backward compat
+  const getStatusClasses = status => {
+    if (['Entregue', 'Delivered'].includes(status))
+      return 'bg-green-100 text-green-800';
+    if (['Cancelado', 'Cancelled'].includes(status))
+      return 'bg-red-100 text-red-800';
+    if (['Enviado', 'Shipped', 'Out for Delivery'].includes(status))
+      return 'bg-purple-100 text-purple-800';
+    if (['Pedido Confirmado', 'Order Placed', 'Processing'].includes(status))
+      return 'bg-blue-100 text-blue-800';
+    return 'bg-amber-100 text-amber-800';
+  };
+
+  const getStatusLabel = status => {
+    if (['Entregue', 'Delivered'].includes(status)) return '📦 Entregue';
+    if (['Cancelado', 'Cancelled'].includes(status)) return '❌ Cancelado';
+    if (['Enviado', 'Shipped', 'Out for Delivery'].includes(status))
+      return '🚚 Enviado';
+    if (['Pedido Confirmado', 'Order Placed', 'Processing'].includes(status))
+      return '✅ Pedido Confirmado';
+    return '⏳ Aguardando Pagamento';
+  };
+
+  const isLightColor = color => {
     if (!color) return false;
     const hex = color.replace('#', '');
     if (hex.length !== 6) return false;
     const r = parseInt(hex.substr(0, 2), 16);
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 200;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 200;
   };
 
-  // 🆕 Componente para renderizar bolinha de cor
   const ColorBall = ({ code1, code2, size = 22, title }) => {
     if (!code1) return null;
-    
     const isDual = code2 && code2 !== code1;
-    const isLight1 = isLightColor(code1);
-    const isLight2 = isLightColor(code2);
-    const needsBorder = isLight1 || (isDual && isLight2);
-    
+    const needsBorder = isLightColor(code1) || (isDual && isLightColor(code2));
+
     return (
       <div
-        className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white shadow-sm ${
-          needsBorder ? 'ring-1 ring-gray-300' : ''
-        }`}
+        className={`absolute -bottom-1 -right-1 rounded-full border-2 border-white shadow-sm ${needsBorder ? 'ring-1 ring-gray-300' : ''}`}
         style={{ width: size, height: size }}
         title={title}
       >
         {isDual ? (
-          <div 
+          <div
             className='w-full h-full rounded-full overflow-hidden'
             style={{
               background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
             }}
           />
         ) : (
-          <div 
+          <div
             className='w-full h-full rounded-full'
             style={{ backgroundColor: code1 }}
           />
@@ -201,7 +195,7 @@ const MyOrders = () => {
 
   return (
     <>
-      <SEO 
+      <SEO
         title={seoConfig.myOrders.title}
         description={seoConfig.myOrders.description}
         url={seoConfig.myOrders.url}
@@ -211,21 +205,29 @@ const MyOrders = () => {
       <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[calc(100vh-60px)] bg-gray-50'>
         <div className='max-w-4xl mx-auto'>
           <h1 className='text-3xl sm:text-4xl font-bold text-gray-800 mb-8 text-center'>
-            As Minhas Encomendas
+            Meus Pedidos
           </h1>
 
-          {/* ✅ NOVO: Loading State */}
           {isLoading ? (
             <div className='flex flex-col items-center justify-center min-h-[50vh] text-center'>
               <Loader2 className='w-12 h-12 text-primary animate-spin mb-4' />
-              <p className='text-gray-600'>A carregar as suas encomendas...</p>
+              <p className='text-gray-600'>Carregando seus pedidos...</p>
             </div>
           ) : error ? (
-            /* ✅ NOVO: Error State */
             <div className='flex flex-col items-center justify-center min-h-[50vh] text-center'>
               <div className='w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4'>
-                <svg className='w-10 h-10 text-red-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
+                <svg
+                  className='w-10 h-10 text-red-500'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                  />
                 </svg>
               </div>
               <p className='text-xl font-semibold mb-3 text-gray-700'>
@@ -243,15 +245,14 @@ const MyOrders = () => {
             <div className='flex flex-col items-center justify-center min-h-[50vh] text-center'>
               <img
                 src={assets.empty_cart}
-                alt='Sem encomendas'
+                alt='Sem pedidos'
                 className='w-48 sm:w-56 md:w-64 mb-6 opacity-75'
               />
               <p className='text-xl sm:text-2xl font-semibold mb-3 text-gray-700'>
-                Ainda não existem encomendas!
+                Você ainda não tem pedidos!
               </p>
               <p className='text-gray-600 max-w-md'>
-                Parece que ainda não efetuou nenhuma encomenda. Comece já a
-                comprar!
+                Parece que ainda não fez nenhum pedido. Comece já a comprar!
               </p>
             </div>
           ) : (
@@ -265,12 +266,14 @@ const MyOrders = () => {
                   <div className='bg-primary-light/30 p-4 sm:p-5 border-b border-gray-200'>
                     <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3'>
                       <h3 className='text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-0'>
-                        Encomenda ID: #{order._id?.slice(-8) || 'N/A'}
+                        Pedido #{order._id?.slice(-8).toUpperCase() || 'N/A'}
                       </h3>
                       <div className='flex flex-col sm:items-end gap-2'>
                         <p className='text-sm sm:text-base text-gray-700'>
                           Data:{' '}
-                          {new Date(order.createdAt).toLocaleDateString('pt-PT')}
+                          {new Date(order.createdAt).toLocaleDateString(
+                            'pt-BR',
+                          )}
                         </p>
                         {getPaymentStatusBadge(order)}
                       </div>
@@ -285,7 +288,9 @@ const MyOrders = () => {
                         <p className='font-semibold text-gray-800'>
                           {order.paymentType === 'COD'
                             ? '💰 Pagamento na Entrega'
-                            : '💳 Pagamento Online (Stripe)'}
+                            : order.paymentType === 'pix_manual'
+                              ? '📱 PIX'
+                              : '💳 Pagamento Online (Stripe)'}
                         </p>
                       </div>
 
@@ -301,8 +306,14 @@ const MyOrders = () => {
                             )}
                           {order.discountAmount > 0 && (
                             <p className='text-sm text-green-600 font-medium'>
-                              Desconto ({order.discountPercentage}%): -{currency}{' '}
-                              {order.discountAmount.toFixed(2)}
+                              Desconto ({order.discountPercentage}%): -
+                              {currency} {order.discountAmount.toFixed(2)}
+                            </p>
+                          )}
+                          {order.pixDiscount > 0 && (
+                            <p className='text-sm text-green-600 font-medium'>
+                              PIX (-10%): -{currency}{' '}
+                              {order.pixDiscount.toFixed(2)}
                             </p>
                           )}
                           <p className='font-bold text-lg text-primary-dark'>
@@ -311,6 +322,16 @@ const MyOrders = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Shipping Info */}
+                    {order.shippingCost > 0 && (
+                      <div className='text-sm text-gray-600 mb-2'>
+                        🚚 Frete: {currency} {order.shippingCost.toFixed(2)}
+                        {order.shippingCarrier
+                          ? ` (${order.shippingCarrier})`
+                          : ''}
+                      </div>
+                    )}
 
                     {/* Promo Code Info */}
                     {order.promoCode && (
@@ -327,8 +348,7 @@ const MyOrders = () => {
                           />
                         </svg>
                         <span className='text-sm font-medium text-green-800'>
-                          Código promocional aplicado:{' '}
-                          <strong>{order.promoCode}</strong>
+                          Cupom aplicado: <strong>{order.promoCode}</strong>
                         </span>
                       </div>
                     )}
@@ -343,14 +363,14 @@ const MyOrders = () => {
                           key={item?.product?._id || itemIndex}
                           className='flex flex-col sm:flex-row items-center p-4 sm:p-5 gap-4'
                         >
-                          {/* Product Image com bolinha de cor */}
+                          {/* Product Image */}
                           <div className='relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-lg overflow-hidden border border-gray-200'>
                             <img
                               src={
                                 item?.product?.image?.[0] ||
                                 assets.placeholder_image
                               }
-                              alt={item?.product?.name || 'Imagem do Produto'}
+                              alt={item?.product?.name || 'Produto'}
                               className='w-full h-full object-contain'
                             />
                             <ColorBall
@@ -369,13 +389,13 @@ const MyOrders = () => {
                             <p className='text-sm text-gray-600'>
                               Categoria: {item?.product?.category || 'N/D'}
                             </p>
-                            
+
                             {item?.product?.color && (
                               <p className='text-sm text-gray-600'>
                                 Cor: {item.product.color}
                               </p>
                             )}
-                            
+
                             <div className='flex flex-col sm:flex-row gap-2 mt-2'>
                               <p className='text-sm text-gray-600'>
                                 Quantidade:{' '}
@@ -403,29 +423,15 @@ const MyOrders = () => {
                             </p>
                           </div>
 
-                          {/* Order Status */}
+                          {/* ✅ ATUALIZADO: Order Status — backward compat */}
                           <div className='flex-shrink-0 text-center sm:text-right mt-3 sm:mt-0'>
-                            <p className='text-sm text-gray-600 mb-1'>Estado:</p>
+                            <p className='text-sm text-gray-600 mb-1'>
+                              Status:
+                            </p>
                             <span
-                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                order.status === 'Delivered'
-                                  ? 'bg-green-100 text-green-800'
-                                  : order.status === 'Cancelled'
-                                  ? 'bg-red-100 text-red-800'
-                                  : order.status === 'Shipped'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-orange-100 text-orange-800'
-                              }`}
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClasses(order.status)}`}
                             >
-                              {order.status === 'Processing'
-                                ? '🔄 A Processar'
-                                : order.status === 'Shipped'
-                                ? '🚚 Enviado'
-                                : order.status === 'Delivered'
-                                ? '✅ Entregue'
-                                : order.status === 'Pending'
-                                ? '⏳ Pendente'
-                                : '📦 A Aguardar Envio'}
+                              {getStatusLabel(order.status)}
                             </span>
                           </div>
                         </div>
@@ -436,18 +442,20 @@ const MyOrders = () => {
                   <div className='bg-gray-50 px-4 sm:px-5 py-3 border-t border-gray-200'>
                     <div className='flex flex-col sm:flex-row justify-between items-center gap-3'>
                       <div className='text-sm text-gray-600'>
-                        <span>ID completo: </span>
+                        <span>Pedido: </span>
                         <span className='font-mono text-xs bg-gray-200 px-2 py-1 rounded'>
-                          {order._id}
+                          #{order._id?.slice(-8).toUpperCase()}
                         </span>
                       </div>
 
                       <div className='flex gap-2'>
-                        {order.paymentType === 'Online' && order.isPaid && (
-                          <span className='text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium'>
-                            ✅ Pagamento Confirmado
-                          </span>
-                        )}
+                        {(order.paymentType === 'Online' ||
+                          order.paymentType === 'pix_manual') &&
+                          order.isPaid && (
+                            <span className='text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium'>
+                              ✅ Pagamento Confirmado
+                            </span>
+                          )}
                         {order.paymentType === 'COD' && (
                           <span className='text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium'>
                             💰 Pagar na Entrega

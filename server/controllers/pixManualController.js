@@ -405,7 +405,7 @@ export const createPixOrder = async (req, res) => {
       originalAmount,
       paymentType: 'pix_manual',
       isPaid: false,
-      status: 'Aguardando Pagamento PIX',
+      status: 'Aguardando Pagamento',
       promoCode,
       discountAmount: couponDiscount,
       discountPercentage,
@@ -452,7 +452,7 @@ export const createPixOrder = async (req, res) => {
     // ─── Resposta para o frontend ───
     return res.status(201).json({
       success: true,
-      message: 'Pedido criado. Aguardando pagamento PIX.',
+      message: 'Pedido criado. Aguardando Pagamento.',
       order: {
         orderId: order._id,
         amount: totalAmount,
@@ -548,7 +548,7 @@ export const createPixOrderGuest = async (req, res) => {
       originalAmount,
       paymentType: 'pix_manual',
       isPaid: false,
-      status: 'Aguardando Pagamento PIX',
+      status: 'Aguardando Pagamento',
       promoCode,
       discountAmount: couponDiscount,
       discountPercentage,
@@ -593,7 +593,7 @@ export const createPixOrderGuest = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Pedido criado. Aguardando pagamento PIX.',
+      message: 'Pedido criado. Aguardando Pagamento.',
       order: {
         orderId: order._id,
         amount: totalAmount,

@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { axios } = useAppContext(); // ← REMOVIDO 'products' do destructure
+  const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [allProductsForAlerts, setAllProductsForAlerts] = useState([]); // ← NOVO STATE
+  const [allProductsForAlerts, setAllProductsForAlerts] = useState([]);
   const [stats, setStats] = useState({
     totalProducts: 0,
     activeProducts: 0,
@@ -31,13 +31,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []); // ← REMOVIDO 'products' da dependency array
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
-      // ← ALTERADO: fetch paralelo de pedidos + TODOS os produtos (?all=true)
       const [ordersRes, allProductsRes] = await Promise.all([
         axios.get('/api/order/seller'),
         axios.get('/api/product/list?all=true'),
@@ -46,7 +45,6 @@ const Dashboard = () => {
       const allOrders = ordersRes.data.success ? ordersRes.data.orders : [];
       setOrders(allOrders.slice(0, 8));
 
-      // ← ALTERADO: usa dados do fetch direto, não do contexto
       const allProducts = allProductsRes.data.success
         ? allProductsRes.data.products
         : [];
@@ -54,20 +52,25 @@ const Dashboard = () => {
       const outOfStock = allProducts.filter(p => !p.inStock || p.stock === 0);
       const lowStock = allProducts.filter(p => p.stock > 0 && p.stock <= 5);
 
-      // Calcular receita do mês
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthOrders = allOrders.filter(
-        o => new Date(o.createdAt) >= startOfMonth && o.status !== 'Cancelled',
+        o =>
+          new Date(o.createdAt) >= startOfMonth &&
+          o.status !== 'Cancelado' &&
+          o.status !== 'Cancelled',
       );
       const monthRevenue = monthOrders.reduce(
         (sum, o) => sum + (o.amount || 0),
         0,
       );
 
-      // Pedidos pendentes
+      // ✅ ATUALIZADO: Pedidos pendentes — suporta novos E antigos status
       const pendingOrders = allOrders.filter(
-        o => o.status === 'Order Placed' || o.status === 'Processing',
+        o =>
+          o.status === 'Pedido Confirmado' ||
+          o.status === 'Order Placed' ||
+          o.status === 'Processing',
       );
 
       setStats({
@@ -80,7 +83,6 @@ const Dashboard = () => {
         monthRevenue,
       });
 
-      // ← NOVO: guardar todos os produtos para os alertas de estoque
       setAllProductsForAlerts(allProducts);
     } catch (error) {
       console.error('Dashboard error:', error);
@@ -106,29 +108,48 @@ const Dashboard = () => {
     });
   };
 
+  // ✅ ATUALIZADO: Suporta novos E antigos status
   const getStatusColor = status => {
     const colors = {
+      // Novos
+      'Aguardando Pagamento': 'bg-amber-100 text-amber-700',
+      'Pedido Confirmado': 'bg-blue-100 text-blue-700',
+      Enviado: 'bg-purple-100 text-purple-700',
+      Entregue: 'bg-green-100 text-green-700',
+      Cancelado: 'bg-red-100 text-red-700',
+      // Antigos (backward compat)
+      'Aguardando Pagamento PIX': 'bg-amber-100 text-amber-700',
       'Order Placed': 'bg-blue-100 text-blue-700',
-      Processing: 'bg-yellow-100 text-yellow-700',
+      Processing: 'bg-blue-100 text-blue-700',
       Shipped: 'bg-purple-100 text-purple-700',
+      'Out for Delivery': 'bg-purple-100 text-purple-700',
       Delivered: 'bg-green-100 text-green-700',
       Cancelled: 'bg-red-100 text-red-700',
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
 
+  // ✅ ATUALIZADO: Labels em português + backward compat
   const getStatusLabel = status => {
     const labels = {
-      'Order Placed': 'Novo',
-      Processing: 'Processando',
+      // Novos
+      'Aguardando Pagamento': 'Aguardando',
+      'Pedido Confirmado': 'Confirmado',
+      Enviado: 'Enviado',
+      Entregue: 'Entregue',
+      Cancelado: 'Cancelado',
+      // Antigos
+      'Aguardando Pagamento PIX': 'Aguardando',
+      'Order Placed': 'Confirmado',
+      Processing: 'Confirmado',
       Shipped: 'Enviado',
+      'Out for Delivery': 'Enviado',
       Delivered: 'Entregue',
       Cancelled: 'Cancelado',
     };
     return labels[status] || status;
   };
 
-  // ← ALTERADO: usa allProductsForAlerts em vez de products do contexto
   const lowStockProducts = allProductsForAlerts
     .filter(p => p.stock > 0 && p.stock <= 5)
     .sort((a, b) => a.stock - b.stock)
@@ -149,7 +170,6 @@ const Dashboard = () => {
   return (
     <div className='flex-1 h-[95vh] overflow-y-auto'>
       <div className='p-6 md:p-8 max-w-7xl mx-auto space-y-8'>
-        {/* Header */}
         <div>
           <h1 className='text-2xl font-bold text-gray-900'>Dashboard</h1>
           <p className='text-sm text-gray-500 mt-1'>
@@ -159,7 +179,6 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
-          {/* Produtos Ativos */}
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center'>
@@ -177,7 +196,6 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Pedidos Pendentes */}
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center'>
@@ -195,18 +213,13 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Estoque Baixo */}
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  stats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'
-                }`}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'}`}
               >
                 <AlertTriangle
-                  className={`w-5 h-5 ${
-                    stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'
-                  }`}
+                  className={`w-5 h-5 ${stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'}`}
                 />
               </div>
               <span className='text-xs font-medium text-gray-400'>
@@ -219,7 +232,6 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Receita do Mês */}
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center'>
@@ -243,7 +255,6 @@ const Dashboard = () => {
 
         {/* Content Grid */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          {/* Pedidos Recentes (2/3) */}
           <div className='lg:col-span-2 bg-white border border-gray-200 rounded-xl'>
             <div className='flex items-center justify-between p-5 border-b border-gray-100'>
               <div className='flex items-center gap-2'>
@@ -305,7 +316,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Alertas de Estoque (1/3) */}
+          {/* Alertas de Estoque */}
           <div className='bg-white border border-gray-200 rounded-xl'>
             <div className='flex items-center justify-between p-5 border-b border-gray-100'>
               <div className='flex items-center gap-2'>
@@ -330,7 +341,6 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className='divide-y divide-gray-50'>
-                {/* Estoque Baixo */}
                 {lowStockProducts.map(product => (
                   <div
                     key={product._id}
@@ -358,8 +368,6 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ))}
-
-                {/* Sem Estoque */}
                 {outOfStockProducts.map(product => (
                   <div
                     key={product._id}

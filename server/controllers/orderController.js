@@ -1156,12 +1156,10 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     const validStatuses = [
-      'Order Placed',
-      'Processing',
-      'Shipped',
-      'Out for Delivery',
-      'Delivered',
-      'Cancelled',
+      'Pedido Confirmado',
+      'Enviado',
+      'Entregue',
+      'Cancelado',
     ];
 
     if (!validStatuses.includes(status)) {

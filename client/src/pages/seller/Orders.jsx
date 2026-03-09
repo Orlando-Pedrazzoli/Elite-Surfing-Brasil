@@ -24,7 +24,7 @@ import {
   Printer,
   QrCode,
   FileText,
-  Trash2, // ✅ NEW: ícone para cancelar
+  Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ShippingLabel from '../../components/seller/ShippingLabel';
@@ -36,51 +36,49 @@ const Orders = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [confirmingPixId, setConfirmingPixId] = useState(null);
-  const [cancellingPixId, setCancellingPixId] = useState(null); // ✅ NEW: state para cancelamento
+  const [cancellingPixId, setCancellingPixId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [labelOrder, setLabelOrder] = useState(null);
 
-  // Status options
+  // ✅ NOVO: Status simplificados (5 status em português)
   const statusOptions = [
     {
-      value: 'Aguardando Pagamento PIX',
-      label: 'Aguardando PIX',
+      value: 'Aguardando Pagamento',
+      label: 'Aguardando Pagamento',
       color: 'amber',
       icon: QrCode,
     },
     {
-      value: 'Order Placed',
-      label: 'Pedido Recebido',
+      value: 'Pedido Confirmado',
+      label: 'Pedido Confirmado',
       color: 'blue',
       icon: Package,
     },
-    {
-      value: 'Processing',
-      label: 'Em Processamento',
-      color: 'yellow',
-      icon: Clock,
-    },
-    { value: 'Shipped', label: 'Enviado', color: 'indigo', icon: Truck },
-    {
-      value: 'Out for Delivery',
-      label: 'Saiu para Entrega',
-      color: 'purple',
-      icon: Truck,
-    },
-    {
-      value: 'Delivered',
-      label: 'Entregue',
-      color: 'green',
-      icon: CheckCircle,
-    },
-    { value: 'Cancelled', label: 'Cancelado', color: 'red', icon: XCircle },
+    { value: 'Enviado', label: 'Enviado', color: 'purple', icon: Truck },
+    { value: 'Entregue', label: 'Entregue', color: 'green', icon: CheckCircle },
+    { value: 'Cancelado', label: 'Cancelado', color: 'red', icon: XCircle },
   ];
 
+  // ✅ NOVO: Normalizar status antigos para novos (backward compat)
+  const normalizeStatus = status => {
+    const map = {
+      'Aguardando Pagamento PIX': 'Aguardando Pagamento',
+      'Order Placed': 'Pedido Confirmado',
+      Processing: 'Pedido Confirmado',
+      Shipped: 'Enviado',
+      'Out for Delivery': 'Enviado',
+      Delivered: 'Entregue',
+      Cancelled: 'Cancelado',
+    };
+    return map[status] || status;
+  };
+
   const getStatusConfig = status => {
+    const normalized = normalizeStatus(status);
     return (
-      statusOptions.find(s => s.value === status) || {
+      statusOptions.find(s => s.value === normalized) || {
         value: status,
         label: status,
         color: 'gray',
@@ -93,7 +91,6 @@ const Orders = () => {
     const classes = {
       blue: 'bg-blue-100 text-blue-800 border-blue-200',
       yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      indigo: 'bg-indigo-100 text-indigo-800 border-indigo-200',
       purple: 'bg-purple-100 text-purple-800 border-purple-200',
       green: 'bg-green-100 text-green-800 border-green-200',
       red: 'bg-red-100 text-red-800 border-red-200',
@@ -150,9 +147,6 @@ const Orders = () => {
     }
   };
 
-  // ═══════════════════════════════════════════════════════════════
-  // 💰 CONFIRMAR PAGAMENTO PIX
-  // ═══════════════════════════════════════════════════════════════
   const confirmPixPayment = async orderId => {
     if (
       !window.confirm(
@@ -173,7 +167,7 @@ const Orders = () => {
             return {
               ...order,
               isPaid: true,
-              status: 'Order Placed',
+              status: 'Pedido Confirmado',
               paidAt: new Date().toISOString(),
             };
           }
@@ -185,7 +179,7 @@ const Orders = () => {
           setSelectedOrder(prev => ({
             ...prev,
             isPaid: true,
-            status: 'Order Placed',
+            status: 'Pedido Confirmado',
             paidAt: new Date().toISOString(),
           }));
         }
@@ -201,10 +195,6 @@ const Orders = () => {
     }
   };
 
-  // ═══════════════════════════════════════════════════════════════
-  // ✅ NEW: ❌ CANCELAR PEDIDO PIX NÃO PAGO
-  // Remove o pedido da lista (nunca foi pago, não afeta estoque)
-  // ═══════════════════════════════════════════════════════════════
   const cancelPixOrder = async orderId => {
     if (
       !window.confirm(
@@ -222,17 +212,13 @@ const Orders = () => {
     try {
       const { data } = await axios.post('/api/order/status', {
         orderId,
-        status: 'Cancelled',
+        status: 'Cancelado',
       });
 
       if (data.success) {
         toast.success('Pedido PIX cancelado com sucesso!', { icon: '🗑️' });
-
-        // Remover da lista (pedido não pago cancelado não precisa aparecer)
         setOrders(prev => prev.filter(order => order._id !== orderId));
         setFilteredOrders(prev => prev.filter(order => order._id !== orderId));
-
-        // Fechar modal se estiver aberto
         if (selectedOrder && selectedOrder._id === orderId) {
           setSelectedOrder(null);
         }
@@ -248,12 +234,14 @@ const Orders = () => {
     }
   };
 
-  // Filtrar pedidos
+  // ✅ NOVO: Filtro backward compatible (normaliza antes de comparar)
   useEffect(() => {
     let result = orders;
 
     if (statusFilter !== 'all') {
-      result = result.filter(order => order.status === statusFilter);
+      result = result.filter(
+        order => normalizeStatus(order.status) === statusFilter,
+      );
     }
 
     if (searchQuery.trim()) {
@@ -277,18 +265,21 @@ const Orders = () => {
     fetchOrders();
   }, []);
 
-  // Estatísticas
+  // ✅ NOVO: Stats backward compatible (6 cards em vez de 7)
   const stats = {
     total: orders.length,
     pixPending: orders.filter(o => o.paymentType === 'pix_manual' && !o.isPaid)
       .length,
-    pending: orders.filter(o => o.status === 'Order Placed').length,
-    processing: orders.filter(o => o.status === 'Processing').length,
-    shipped: orders.filter(o =>
-      ['Shipped', 'Out for Delivery'].includes(o.status),
+    confirmed: orders.filter(o =>
+      ['Pedido Confirmado', 'Order Placed', 'Processing'].includes(o.status),
     ).length,
-    delivered: orders.filter(o => o.status === 'Delivered').length,
-    cancelled: orders.filter(o => o.status === 'Cancelled').length,
+    shipped: orders.filter(o =>
+      ['Enviado', 'Shipped', 'Out for Delivery'].includes(o.status),
+    ).length,
+    delivered: orders.filter(o => ['Entregue', 'Delivered'].includes(o.status))
+      .length,
+    cancelled: orders.filter(o => ['Cancelado', 'Cancelled'].includes(o.status))
+      .length,
   };
 
   const isPixPending = order =>
@@ -349,7 +340,7 @@ const Orders = () => {
               </p>
             </div>
             <button
-              onClick={() => setStatusFilter('Aguardando Pagamento PIX')}
+              onClick={() => setStatusFilter('Aguardando Pagamento')}
               className='px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors text-sm whitespace-nowrap'
             >
               Ver Pedidos PIX
@@ -357,8 +348,8 @@ const Orders = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8'>
+        {/* ✅ NOVO: Stats Cards — 6 cards simplificados */}
+        <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8'>
           <div className='bg-white rounded-xl p-4 border border-gray-200 shadow-sm'>
             <div className='flex items-center gap-3'>
               <div className='w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center'>
@@ -381,7 +372,7 @@ const Orders = () => {
             }`}
             onClick={() =>
               setStatusFilter(
-                stats.pixPending > 0 ? 'Aguardando Pagamento PIX' : 'all',
+                stats.pixPending > 0 ? 'Aguardando Pagamento' : 'all',
               )
             }
           >
@@ -407,34 +398,20 @@ const Orders = () => {
               </div>
               <div>
                 <p className='text-2xl font-bold text-blue-600'>
-                  {stats.pending}
+                  {stats.confirmed}
                 </p>
-                <p className='text-xs text-gray-500'>Novos</p>
+                <p className='text-xs text-gray-500'>Confirmados</p>
               </div>
             </div>
           </div>
 
-          <div className='bg-white rounded-xl p-4 border border-yellow-200 shadow-sm'>
+          <div className='bg-white rounded-xl p-4 border border-purple-200 shadow-sm'>
             <div className='flex items-center gap-3'>
-              <div className='w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center'>
-                <Clock className='w-5 h-5 text-yellow-600' />
+              <div className='w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center'>
+                <Truck className='w-5 h-5 text-purple-600' />
               </div>
               <div>
-                <p className='text-2xl font-bold text-yellow-600'>
-                  {stats.processing}
-                </p>
-                <p className='text-xs text-gray-500'>Processando</p>
-              </div>
-            </div>
-          </div>
-
-          <div className='bg-white rounded-xl p-4 border border-indigo-200 shadow-sm'>
-            <div className='flex items-center gap-3'>
-              <div className='w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center'>
-                <Truck className='w-5 h-5 text-indigo-600' />
-              </div>
-              <div>
-                <p className='text-2xl font-bold text-indigo-600'>
+                <p className='text-2xl font-bold text-purple-600'>
                   {stats.shipped}
                 </p>
                 <p className='text-xs text-gray-500'>Enviados</p>
@@ -524,7 +501,7 @@ const Orders = () => {
               const StatusIcon = statusConfig.icon;
               const isUpdating = updatingOrderId === order._id;
               const isConfirmingPix = confirmingPixId === order._id;
-              const isCancellingPix = cancellingPixId === order._id; // ✅ NEW
+              const isCancellingPix = cancellingPixId === order._id;
               const pixPending = isPixPending(order);
 
               return (
@@ -545,7 +522,6 @@ const Orders = () => {
                           ⏳ Aguardando confirmação do pagamento PIX
                         </span>
                       </div>
-                      {/* ✅ NEW: Botões lado a lado — Confirmar + Cancelar */}
                       <div className='flex items-center gap-2'>
                         <button
                           onClick={() => confirmPixPayment(order._id)}
@@ -554,13 +530,13 @@ const Orders = () => {
                         >
                           {isConfirmingPix ? (
                             <>
-                              <Loader2 className='w-4 h-4 animate-spin' />
+                              <Loader2 className='w-4 h-4 animate-spin' />{' '}
                               Confirmando...
                             </>
                           ) : (
                             <>
-                              <CheckCircle className='w-4 h-4' />
-                              Confirmar Pagamento PIX
+                              <CheckCircle className='w-4 h-4' /> Confirmar
+                              Pagamento PIX
                             </>
                           )}
                         </button>
@@ -571,13 +547,12 @@ const Orders = () => {
                         >
                           {isCancellingPix ? (
                             <>
-                              <Loader2 className='w-4 h-4 animate-spin' />
+                              <Loader2 className='w-4 h-4 animate-spin' />{' '}
                               Cancelando...
                             </>
                           ) : (
                             <>
-                              <Trash2 className='w-4 h-4' />
-                              Cancelar Pedido
+                              <Trash2 className='w-4 h-4' /> Cancelar Pedido
                             </>
                           )}
                         </button>
@@ -590,9 +565,7 @@ const Orders = () => {
                     <div className='flex flex-col md:flex-row md:items-center justify-between gap-3'>
                       <div className='flex items-center gap-3'>
                         <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${getStatusBadgeClasses(
-                            statusConfig.color,
-                          )}`}
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${getStatusBadgeClasses(statusConfig.color)}`}
                         >
                           <StatusIcon className='w-5 h-5' />
                         </div>
@@ -649,26 +622,19 @@ const Orders = () => {
                         {/* Guest Badge */}
                         {order.isGuestOrder && (
                           <div className='flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800'>
-                            <User className='w-3 h-3' />
-                            Visitante
+                            <User className='w-3 h-3' /> Visitante
                           </div>
                         )}
 
                         {/* Status Dropdown */}
                         <div className='relative'>
                           <select
-                            value={order.status}
+                            value={normalizeStatus(order.status)}
                             onChange={e =>
                               updateStatus(order._id, e.target.value)
                             }
                             disabled={isUpdating || pixPending}
-                            className={`pl-3 pr-8 py-2 border rounded-lg text-sm font-medium cursor-pointer transition-all appearance-none ${getStatusBadgeClasses(
-                              statusConfig.color,
-                            )} ${
-                              isUpdating || pixPending
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
+                            className={`pl-3 pr-8 py-2 border rounded-lg text-sm font-medium cursor-pointer transition-all appearance-none ${getStatusBadgeClasses(statusConfig.color)} ${isUpdating || pixPending ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             {statusOptions.map(status => (
                               <option key={status.value} value={status.value}>
@@ -690,11 +656,10 @@ const Orders = () => {
                         >
                           <Eye className='w-5 h-5' />
                         </button>
-
                         <button
                           onClick={() => setLabelOrder(order)}
                           className='p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
-                          title='Imprimir etiqueta de envio'
+                          title='Imprimir etiqueta'
                         >
                           <Printer className='w-5 h-5' />
                         </button>
@@ -705,7 +670,6 @@ const Orders = () => {
                   {/* Order Content */}
                   <div className='p-4 md:p-5'>
                     <div className='flex flex-col lg:flex-row gap-6'>
-                      {/* Products */}
                       <div className='flex-1'>
                         <h4 className='text-sm font-medium text-gray-500 mb-3'>
                           Produtos ({order.items.length})
@@ -768,7 +732,6 @@ const Orders = () => {
                         </div>
                       </div>
 
-                      {/* Cliente & Entrega */}
                       <div className='lg:w-72'>
                         <h4 className='text-sm font-medium text-gray-500 mb-3'>
                           Cliente & Entrega
@@ -783,7 +746,6 @@ const Orders = () => {
                                 : `${order.address?.firstName || ''} ${order.address?.lastName || ''}`}
                             </span>
                           </div>
-
                           {(order.guestEmail || order.address?.email) && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <Mail className='w-4 h-4 text-gray-400' />
@@ -792,7 +754,6 @@ const Orders = () => {
                               </span>
                             </div>
                           )}
-
                           {(order.guestPhone || order.address?.phone) && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <Phone className='w-4 h-4 text-gray-400' />
@@ -801,14 +762,12 @@ const Orders = () => {
                               </span>
                             </div>
                           )}
-
                           {order.address?.cpf && (
                             <div className='flex items-center gap-2 text-sm text-gray-600'>
                               <FileText className='w-4 h-4 text-gray-400' />
                               <span>CPF: {order.address.cpf}</span>
                             </div>
                           )}
-
                           <div className='flex items-start gap-2 text-sm text-gray-600 pt-2 border-t border-gray-200'>
                             <MapPin className='w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0' />
                             <div>
@@ -871,7 +830,6 @@ const Orders = () => {
                           </span>
                         )}
                       </div>
-
                       <div className='flex items-center gap-4'>
                         {order.originalAmount &&
                           order.originalAmount !== order.amount && (
@@ -904,7 +862,6 @@ const Orders = () => {
             className='bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto'
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className='sticky top-0 bg-white border-b border-gray-200 p-5 flex items-center justify-between'>
               <div>
                 <h2 className='text-xl font-bold text-gray-900'>
@@ -920,23 +877,15 @@ const Orders = () => {
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className='p-5 space-y-6'>
-              {/* Status & Payment */}
               <div className='flex flex-wrap gap-3'>
                 <span
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClasses(
-                    getStatusConfig(selectedOrder.status).color,
-                  )}`}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClasses(getStatusConfig(selectedOrder.status).color)}`}
                 >
                   {getStatusConfig(selectedOrder.status).label}
                 </span>
                 <span
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                    selectedOrder.isPaid
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-orange-100 text-orange-800'
-                  }`}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${selectedOrder.isPaid ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}
                 >
                   {selectedOrder.isPaid ? '✅ Pago' : '⏳ Pendente'}
                 </span>
@@ -954,7 +903,6 @@ const Orders = () => {
                 )}
               </div>
 
-              {/* ═══ BOTÕES PIX PENDENTE NO MODAL — Confirmar + Cancelar ═══ */}
               {isPixPending(selectedOrder) && (
                 <div className='bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3'>
                   <div className='flex items-center gap-2'>
@@ -963,7 +911,6 @@ const Orders = () => {
                       Pagamento PIX ainda não confirmado
                     </span>
                   </div>
-                  {/* ✅ NEW: Botões no modal */}
                   <div className='flex items-center gap-2'>
                     <button
                       onClick={() => confirmPixPayment(selectedOrder._id)}
@@ -975,13 +922,12 @@ const Orders = () => {
                     >
                       {confirmingPixId === selectedOrder._id ? (
                         <>
-                          <Loader2 className='w-4 h-4 animate-spin' />
+                          <Loader2 className='w-4 h-4 animate-spin' />{' '}
                           Confirmando...
                         </>
                       ) : (
                         <>
-                          <CheckCircle className='w-4 h-4' />
-                          Confirmar PIX
+                          <CheckCircle className='w-4 h-4' /> Confirmar PIX
                         </>
                       )}
                     </button>
@@ -995,13 +941,12 @@ const Orders = () => {
                     >
                       {cancellingPixId === selectedOrder._id ? (
                         <>
-                          <Loader2 className='w-4 h-4 animate-spin' />
+                          <Loader2 className='w-4 h-4 animate-spin' />{' '}
                           Cancelando...
                         </>
                       ) : (
                         <>
-                          <Trash2 className='w-4 h-4' />
-                          Cancelar
+                          <Trash2 className='w-4 h-4' /> Cancelar
                         </>
                       )}
                     </button>
@@ -1009,7 +954,6 @@ const Orders = () => {
                 </div>
               )}
 
-              {/* Products */}
               <div>
                 <h3 className='font-semibold text-gray-900 mb-3'>Produtos</h3>
                 <div className='space-y-2'>
@@ -1049,7 +993,6 @@ const Orders = () => {
                 </div>
               </div>
 
-              {/* Endereço de Entrega */}
               <div>
                 <h3 className='font-semibold text-gray-900 mb-3'>
                   Endereço de Entrega
@@ -1061,7 +1004,6 @@ const Orders = () => {
                         `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`
                       : `${selectedOrder.address?.firstName || ''} ${selectedOrder.address?.lastName || ''}`}
                   </p>
-
                   {(selectedOrder.guestPhone ||
                     selectedOrder.address?.phone) && (
                     <p className='text-gray-600 mt-1'>
@@ -1081,7 +1023,6 @@ const Orders = () => {
                       🪪 CPF: {selectedOrder.address.cpf}
                     </p>
                   )}
-
                   <div className='mt-2 pt-2 border-t border-gray-200'>
                     <p className='text-gray-600'>
                       {selectedOrder.address?.street}
@@ -1111,7 +1052,6 @@ const Orders = () => {
                 </div>
               </div>
 
-              {/* Totals */}
               <div className='bg-gray-50 rounded-lg p-4'>
                 {selectedOrder.originalAmount &&
                   selectedOrder.originalAmount !== selectedOrder.amount && (
@@ -1186,7 +1126,6 @@ const Orders = () => {
         </div>
       )}
 
-      {/* Shipping Label Modal */}
       {labelOrder && (
         <ShippingLabel order={labelOrder} onClose={() => setLabelOrder(null)} />
       )}

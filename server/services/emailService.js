@@ -13,7 +13,8 @@ let createStatusUpdateTextTemplate = null;
 
 try {
   const statusModule = await import('../emails/OrderStatusUpdateEmail.js');
-  createStatusUpdateEmailTemplate = statusModule.createStatusUpdateEmailTemplate;
+  createStatusUpdateEmailTemplate =
+    statusModule.createStatusUpdateEmailTemplate;
   createStatusUpdateTextTemplate = statusModule.createStatusUpdateTextTemplate;
   console.log('✅ Template de status update carregado');
 } catch (error) {
@@ -23,8 +24,11 @@ try {
 // =============================================================================
 // FORMATAR VALOR EM BRL
 // =============================================================================
-const formatBRL = (value) => {
-  return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatBRL = value => {
+  return (value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 };
 
 // =============================================================================
@@ -33,23 +37,36 @@ const formatBRL = (value) => {
 const validateEmailConfig = () => {
   const gmailUser = process.env.GMAIL_USER;
   const gmailPassword = process.env.GMAIL_APP_PASSWORD;
-  
+
   console.log('📧 ═══════════════════════════════════════════════');
   console.log('📧 VALIDAÇÃO DE CONFIGURAÇÃO DE EMAIL');
   console.log('📧 ═══════════════════════════════════════════════');
-  console.log('📧 GMAIL_USER:', gmailUser ? `✅ ${gmailUser}` : '❌ NÃO CONFIGURADO');
-  console.log('📧 GMAIL_APP_PASSWORD:', gmailPassword ? `✅ Configurado (${gmailPassword.length} caracteres)` : '❌ NÃO CONFIGURADO');
-  
+  console.log(
+    '📧 GMAIL_USER:',
+    gmailUser ? `✅ ${gmailUser}` : '❌ NÃO CONFIGURADO',
+  );
+  console.log(
+    '📧 GMAIL_APP_PASSWORD:',
+    gmailPassword
+      ? `✅ Configurado (${gmailPassword.length} caracteres)`
+      : '❌ NÃO CONFIGURADO',
+  );
+
   if (!gmailUser || !gmailPassword) {
     console.error('❌ ERRO CRÍTICO: Variáveis de email não configuradas!');
-    console.error('❌ Adicione GMAIL_USER e GMAIL_APP_PASSWORD no .env e na Vercel');
+    console.error(
+      '❌ Adicione GMAIL_USER e GMAIL_APP_PASSWORD no .env e na Vercel',
+    );
     return false;
   }
-  
+
   if (gmailPassword.length !== 16) {
-    console.warn('⚠️ AVISO: GMAIL_APP_PASSWORD deveria ter 16 caracteres, tem', gmailPassword.length);
+    console.warn(
+      '⚠️ AVISO: GMAIL_APP_PASSWORD deveria ter 16 caracteres, tem',
+      gmailPassword.length,
+    );
   }
-  
+
   console.log('📧 ✅ Configuração de email validada!');
   return true;
 };
@@ -63,12 +80,12 @@ validateEmailConfig();
 const createGmailTransporter = () => {
   const gmailUser = process.env.GMAIL_USER;
   const gmailPassword = process.env.GMAIL_APP_PASSWORD;
-  
+
   if (!gmailUser || !gmailPassword) {
     console.error('❌ Tentativa de criar transporter sem credenciais!');
     throw new Error('GMAIL_USER ou GMAIL_APP_PASSWORD não configurado');
   }
-  
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -81,18 +98,23 @@ const createGmailTransporter = () => {
 // =============================================================================
 // ENVIAR EMAIL DE CONFIRMAÇÃO DE PEDIDO
 // =============================================================================
-export const sendOrderConfirmationEmail = async (order, user, products, address) => {
+export const sendOrderConfirmationEmail = async (
+  order,
+  user,
+  products,
+  address,
+) => {
   console.log('');
   console.log('📧 ═══════════════════════════════════════════════');
   console.log('📧 ENVIANDO EMAIL DE CONFIRMAÇÃO DE PEDIDO');
   console.log('📧 ═══════════════════════════════════════════════');
-  
+
   try {
     // Validar configuração
     if (!validateEmailConfig()) {
       return { success: false, error: 'Configuração de email inválida' };
     }
-    
+
     // Determinar qual email usar
     let emailToSend = user?.email;
 
@@ -118,7 +140,7 @@ export const sendOrderConfirmationEmail = async (order, user, products, address)
     console.log('📧 Order ID:', order?._id);
 
     const transporter = createGmailTransporter();
-    
+
     let emailHtml;
     try {
       emailHtml = createOrderEmailTemplate(order, user, products, address);
@@ -158,7 +180,7 @@ export const sendOrderConfirmationEmail = async (order, user, products, address)
 
     console.log('📧 Enviando email...');
     const result = await transporter.sendMail(mailOptions);
-    
+
     console.log('✅ EMAIL DE CONFIRMAÇÃO ENVIADO!');
     console.log('✅ Message ID:', result.messageId);
     console.log('✅ Destinatário:', emailToSend);
@@ -182,18 +204,22 @@ export const sendOrderConfirmationEmail = async (order, user, products, address)
 // =============================================================================
 // ENVIAR EMAIL DE ATUALIZAÇÃO DE STATUS
 // =============================================================================
-export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []) => {
+export const sendOrderStatusUpdateEmail = async (
+  order,
+  newStatus,
+  products = [],
+) => {
   console.log('');
   console.log('📧 ═══════════════════════════════════════════════');
   console.log('📧 ENVIANDO EMAIL DE ATUALIZAÇÃO DE STATUS');
   console.log('📧 ═══════════════════════════════════════════════');
-  
+
   try {
     // Validar configuração
     if (!validateEmailConfig()) {
       return { success: false, error: 'Configuração de email inválida' };
     }
-    
+
     // Verificar se template está disponível
     if (!createStatusUpdateEmailTemplate) {
       console.log('⚠️ Template de status não disponível, usando fallback');
@@ -258,25 +284,32 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
     let emailHtml;
     if (createStatusUpdateEmailTemplate) {
       try {
-        emailHtml = createStatusUpdateEmailTemplate(order, customerName, customerEmail, newStatus, products);
+        emailHtml = createStatusUpdateEmailTemplate(
+          order,
+          customerName,
+          customerEmail,
+          newStatus,
+          products,
+        );
       } catch (templateError) {
         console.error('❌ Erro no template:', templateError.message);
         emailHtml = null;
       }
     }
-    
+
     // Fallback template
     if (!emailHtml) {
       const statusMessages = {
         'Order Placed': 'foi recebido',
-        'Processing': 'está sendo processado',
-        'Shipped': 'foi enviado',
+        Processing: 'está sendo processado',
+        Shipped: 'foi enviado',
         'Out for Delivery': 'saiu para entrega',
-        'Delivered': 'foi entregue',
-        'Cancelled': 'foi cancelado',
+        Delivered: 'foi entregue',
+        Cancelled: 'foi cancelado',
       };
-      const statusMsg = statusMessages[newStatus] || `foi atualizado para ${newStatus}`;
-      
+      const statusMsg =
+        statusMessages[newStatus] || `foi atualizado para ${newStatus}`;
+
       emailHtml = `
         <!DOCTYPE html>
         <html>
@@ -306,17 +339,24 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
         </html>
       `;
     }
-    
+
     const emailText = `Olá ${customerName}, o status do seu pedido #${order._id.toString().slice(-8).toUpperCase()} foi atualizado para: ${newStatus}`;
 
     // Mapear status para assunto do email
     const statusSubjects = {
-      'Order Placed': '📋 Pedido Recebido',
-      'Processing': '⚙️ Pedido em Processamento',
-      'Shipped': '🚚 Pedido Enviado!',
-      'Out for Delivery': '📦 Pedido Saiu para Entrega!',
-      'Delivered': '✅ Pedido Entregue!',
-      'Cancelled': '❌ Pedido Cancelado',
+      // Novos
+      'Aguardando Pagamento': '⏳ Aguardando Pagamento',
+      'Pedido Confirmado': '✅ Pedido Confirmado',
+      Enviado: '🚚 Pedido Enviado!',
+      Entregue: '📦 Pedido Entregue!',
+      Cancelado: '❌ Pedido Cancelado',
+      // Backward compat
+      'Order Placed': '✅ Pedido Confirmado',
+      Processing: '✅ Pedido Confirmado',
+      Shipped: '🚚 Pedido Enviado!',
+      'Out for Delivery': '🚚 Pedido Enviado!',
+      Delivered: '📦 Pedido Entregue!',
+      Cancelled: '❌ Pedido Cancelado',
     };
 
     const subjectStatus = statusSubjects[newStatus] || newStatus;
@@ -334,7 +374,7 @@ export const sendOrderStatusUpdateEmail = async (order, newStatus, products = []
 
     console.log('📧 Enviando email de status...');
     const result = await transporter.sendMail(mailOptions);
-    
+
     console.log('✅ EMAIL DE STATUS ENVIADO!');
     console.log('✅ Message ID:', result.messageId);
     console.log('✅ Destinatário:', customerEmail);
@@ -365,13 +405,13 @@ export const sendSimpleEmail = async (to, subject, html, text = null) => {
   console.log('📧 ═══════════════════════════════════════════════');
   console.log('📧 Para:', to);
   console.log('📧 Assunto:', subject);
-  
+
   try {
     // Validar configuração
     if (!validateEmailConfig()) {
       return { success: false, error: 'Configuração de email inválida' };
     }
-    
+
     const transporter = createGmailTransporter();
 
     const result = await transporter.sendMail({
@@ -387,7 +427,7 @@ export const sendSimpleEmail = async (to, subject, html, text = null) => {
 
     console.log('✅ EMAIL SIMPLES ENVIADO!');
     console.log('✅ Message ID:', result.messageId);
-    
+
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('❌ ERRO no sendSimpleEmail:', error.message);
@@ -396,8 +436,8 @@ export const sendSimpleEmail = async (to, subject, html, text = null) => {
   }
 };
 
-export default { 
-  sendOrderConfirmationEmail, 
+export default {
+  sendOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
-  sendSimpleEmail 
+  sendSimpleEmail,
 };
