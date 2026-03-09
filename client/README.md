@@ -1,430 +1,227 @@
-# 🏄‍♂️ Elite Surfing - E-commerce Platform
+# Elite Surfing Brasil — Full Stack E-commerce Platform
 
-![Elite Surfing](https://img.shields.io/badge/Status-Live-success)
-![Version](https://img.shields.io/badge/Version-2.0.0-blue)
-![License](https://img.shields.io/badge/License-Private-red)
-![Node](https://img.shields.io/badge/Node.js-18.x-green)
-![React](https://img.shields.io/badge/React-19.1.0-61DAFB)
+**Live:** [www.elitesurfing.com.br](https://www.elitesurfing.com.br)
 
-## 🌊 Visão Geral
-
-**Elite Surfing** é uma plataforma de e-commerce completa especializada em produtos de surf de alta qualidade. O projeto está atualmente em produção em [www.elitesurfing.pt](https://www.elitesurfing.pt), oferecendo uma experiência de compra moderna e intuitiva para surfistas em Portugal e Europa.
-
-### 🎯 Características Principais
-
-- 🛒 **Sistema de Carrinho Persistente** - Mantém produtos mesmo após logout
-- 💳 **Pagamentos Seguros** - Integração com Stripe e opção de pagamento na entrega (COD)
-- ⭐ **Sistema de Reviews** - Clientes podem avaliar produtos após compra verificada
-- 📱 **Design Responsivo** - Otimizado para todos os dispositivos
-- 🔒 **Autenticação Segura** - JWT com cookies httpOnly
-- 👨‍💼 **Painel Administrativo** - Gestão completa de produtos e pedidos
-- 📧 **Notificações por Email** - Confirmações de pedido automatizadas
-- 🎁 **Sistema de Cupons** - Suporte para códigos promocionais
-- 🚚 **Gestão de Endereços** - Múltiplos endereços de entrega
-- 🔍 **Busca e Filtros** - Sistema avançado de pesquisa de produtos
-
-## 🛠️ Stack Tecnológica
-
-### Frontend
-
-| Tecnologia               | Versão  | Descrição                  |
-| ------------------------ | ------- | -------------------------- |
-| **React**                | 19.1.0  | Framework principal        |
-| **Vite**                 | 6.2.0   | Build tool e dev server    |
-| **React Router**         | 7.6.0   | Roteamento SPA             |
-| **Tailwind CSS**         | 4.1.6   | Estilização utility-first  |
-| **Axios**                | 1.9.0   | Cliente HTTP               |
-| **Swiper**               | 11.2.6  | Carousel de produtos       |
-| **React Hot Toast**      | 2.5.2   | Notificações               |
-| **EmailJS**              | 4.4.1   | Envio de emails do cliente |
-| **Lucide React**         | 0.510.0 | Biblioteca de ícones       |
-| **React Cookie Consent** | 9.0.0   | Banner de cookies GDPR     |
-
-### Backend
-
-| Tecnologia        | Versão | Descrição                   |
-| ----------------- | ------ | --------------------------- |
-| **Node.js**       | 18.x   | Runtime JavaScript          |
-| **Express**       | 4.21.2 | Framework web               |
-| **MongoDB**       | -      | Database NoSQL              |
-| **Mongoose**      | 8.14.2 | ODM para MongoDB            |
-| **JWT**           | 9.0.2  | Autenticação                |
-| **Bcrypt.js**     | 3.0.2  | Hash de senhas              |
-| **Stripe**        | 17.7.0 | Processamento de pagamentos |
-| **Cloudinary**    | 2.6.1  | Armazenamento de imagens    |
-| **Nodemailer**    | 7.0.4  | Envio de emails             |
-| **Multer**        | 1.4.5  | Upload de arquivos          |
-| **Cookie Parser** | 1.4.7  | Parsing de cookies          |
-| **CORS**          | 2.8.5  | Cross-origin requests       |
-
-## 📁 Estrutura do Projeto
-
-```
-elitesurfing/
-├── client/                    # Frontend React
-│   ├── src/
-│   │   ├── assets/           # Imagens e recursos estáticos
-│   │   ├── components/       # Componentes reutilizáveis
-│   │   │   ├── seller/       # Componentes do painel admin
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── Footer.jsx
-│   │   │   ├── ProductCard.jsx
-│   │   │   ├── ProductReviews.jsx
-│   │   │   └── ...
-│   │   ├── context/          # Context API
-│   │   │   └── AppContext.jsx
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── pages/            # Páginas da aplicação
-│   │   │   ├── seller/       # Páginas do admin
-│   │   │   ├── Home.jsx
-│   │   │   ├── ProductDetails.jsx
-│   │   │   ├── Cart.jsx
-│   │   │   ├── MyOrders.jsx
-│   │   │   └── ...
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── public/               # Arquivos públicos
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-│
-└── server/                   # Backend Node.js
-    ├── configs/              # Configurações
-    │   ├── cloudinary.js
-    │   ├── db.js
-    │   └── multer.js
-    ├── controllers/          # Lógica de negócio
-    │   ├── userController.js
-    │   ├── productController.js
-    │   ├── orderController.js
-    │   ├── reviewController.js
-    │   └── ...
-    ├── middlewares/          # Middleware
-    │   ├── authUser.js
-    │   └── authSeller.js
-    ├── models/               # Modelos MongoDB
-    │   ├── User.js
-    │   ├── Product.js
-    │   ├── Order.js
-    │   ├── Review.js
-    │   └── Address.js
-    ├── routes/               # Rotas da API
-    │   ├── userRoute.js
-    │   ├── productRoute.js
-    │   ├── orderRoute.js
-    │   └── ...
-    ├── services/             # Serviços
-    │   └── emailService.js
-    ├── emails/               # Templates de email
-    ├── server.js             # Entry point
-    └── package.json
-```
-
-## 🚀 Funcionalidades
-
-### Para Clientes
-
-- ✅ **Catálogo de Produtos**
-  - Visualização por categorias
-  - Sistema de busca avançado
-  - Filtros por categoria
-  - Carrossel de imagens do produto
-- ✅ **Carrinho de Compras**
-  - Adicionar/remover produtos
-  - Atualizar quantidades
-  - Persistência local e sincronização com servidor
-  - Cálculo automático de totais
-- ✅ **Sistema de Pedidos**
-  - Checkout com múltiplas etapas
-  - Pagamento via Stripe ou na entrega
-  - Códigos promocionais
-  - Histórico de pedidos
-- ✅ **Reviews e Avaliações**
-  - Escrever reviews após compra
-  - Sistema de rating com estrelas
-  - Reviews verificados
-  - Carousel de reviews recentes
-- ✅ **Gestão de Conta**
-  - Registro e login
-  - Múltiplos endereços de entrega
-  - Histórico de pedidos
-  - Perfil do usuário
-
-### Para Administradores
-
-- ✅ **Gestão de Produtos**
-  - Adicionar novos produtos
-  - Upload de múltiplas imagens
-  - Controle de estoque
-  - Edição de preços
-- ✅ **Gestão de Pedidos**
-  - Visualizar todos os pedidos
-  - Status de pagamento
-  - Detalhes de entrega
-
-## ⚙️ Configuração e Instalação
-
-### Pré-requisitos
-
-- Node.js 18.x ou superior
-- MongoDB 6.x ou superior
-- Conta Stripe (para pagamentos)
-- Conta Cloudinary (para imagens)
-- Conta Gmail (para emails)
-
-### Instalação Local
-
-1. **Clone o repositório**
-
-```bash
-git clone https://github.com/seu-usuario/elitesurfing.git
-cd elitesurfing
-```
-
-2. **Instale as dependências do Backend**
-
-```bash
-cd server
-npm install
-```
-
-3. **Instale as dependências do Frontend**
-
-```bash
-cd ../client
-npm install
-```
-
-4. **Configure as variáveis de ambiente**
-
-### 🔐 Variáveis de Ambiente
-
-#### Backend (.env)
-
-```env
-# Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net
-
-# JWT
-JWT_SECRET=sua_chave_secreta_jwt
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=seu_cloud_name
-CLOUDINARY_API_KEY=sua_api_key
-CLOUDINARY_API_SECRET=seu_api_secret
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
-
-# Email (Gmail)
-GMAIL_USER=seu_email@gmail.com
-GMAIL_APP_PASSWORD=sua_app_password
-
-# Admin
-SELLER_EMAIL=admin@elitesurfing.pt
-SELLER_PASSWORD=senha_admin_segura
-
-# Server
-PORT=4001
-NODE_ENV=production
-```
-
-#### Frontend (.env)
-
-```env
-VITE_BACKEND_URL=https://api.elitesurfing.pt
-VITE_CURRENCY=€
-
-# EmailJS
-VITE_EMAILJS_SERVICE_ID=service_xxxxx
-VITE_EMAILJS_TEMPLATE_ID=template_xxxxx
-VITE_EMAILJS_PUBLIC_KEY=public_key_xxxxx
-```
-
-### 🏃‍♂️ Executar Localmente
-
-1. **Inicie o servidor backend**
-
-```bash
-cd server
-npm run server
-```
-
-2. **Inicie o frontend**
-
-```bash
-cd client
-npm run dev
-```
-
-3. **Acesse a aplicação**
-
-- Frontend: http://localhost:5173
-- Backend: http://localhost:4001
-- Admin: http://localhost:5173/seller
-
-## 🌐 Deploy
-
-### Frontend (Vercel)
-
-O frontend está configurado para deploy automático no Vercel:
-
-1. Conecte o repositório ao Vercel
-2. Configure as variáveis de ambiente
-3. Deploy automático a cada push
-
-### Backend (Vercel/Railway)
-
-O backend pode ser deployado em:
-
-- Vercel (serverless)
-- Railway (container)
-- Heroku
-- DigitalOcean
-
-## 📊 Modelos de Dados
-
-### User
-
-```javascript
-{
-  name: String,
-  email: String,
-  password: String (hashed),
-  cartItems: Object
-}
-```
-
-### Product
-
-```javascript
-{
-  name: String,
-  description: Array,
-  price: Number,
-  offerPrice: Number,
-  image: Array,
-  category: String,
-  inStock: Boolean
-}
-```
-
-### Order
-
-```javascript
-{
-  userId: String,
-  items: Array,
-  amount: Number,
-  originalAmount: Number,
-  discountAmount: Number,
-  discountPercentage: Number,
-  promoCode: String,
-  address: String,
-  status: String,
-  paymentType: String,
-  isPaid: Boolean
-}
-```
-
-### Review
-
-```javascript
-{
-  userId: String,
-  orderId: String,
-  productId: String,
-  rating: Number (1-5),
-  title: String,
-  comment: String,
-  userName: String,
-  userLocation: String,
-  isVerifiedPurchase: Boolean,
-  isApproved: Boolean
-}
-```
-
-## 🔒 Segurança
-
-- ✅ Autenticação JWT com cookies httpOnly
-- ✅ Senhas hasheadas com bcrypt
-- ✅ Validação de dados no backend
-- ✅ Proteção CORS configurada
-- ✅ Rate limiting nas rotas críticas
-- ✅ Sanitização de inputs
-- ✅ HTTPS em produção
-- ✅ Webhooks seguros do Stripe
-- ✅ Cookies seguros com SameSite
-
-## 📈 Performance
-
-- ✅ Lazy loading de componentes
-- ✅ Otimização de imagens via Cloudinary
-- ✅ Cache de dados com React Context
-- ✅ Minificação e bundling com Vite
-- ✅ CDN para assets estáticos
-- ✅ Índices MongoDB otimizados
-
-## 🧪 Testes
-
-```bash
-# Testes unitários
-npm run test
-
-# Testes e2e
-npm run test:e2e
-
-# Coverage
-npm run test:coverage
-```
-
-## 📱 Responsividade
-
-A aplicação é totalmente responsiva:
-
-- Mobile: 320px - 768px
-- Tablet: 768px - 1024px
-- Desktop: 1024px+
-
-## 🚦 Status da API
-
-Endpoints principais:
-
-| Método | Endpoint              | Descrição                       |
-| ------ | --------------------- | ------------------------------- |
-| POST   | `/api/user/register`  | Registro de usuário             |
-| POST   | `/api/user/login`     | Login de usuário                |
-| GET    | `/api/product/list`   | Listar produtos                 |
-| POST   | `/api/cart/update`    | Atualizar carrinho              |
-| POST   | `/api/order/cod`      | Pedido com pagamento na entrega |
-| POST   | `/api/order/stripe`   | Pedido com Stripe               |
-| POST   | `/api/reviews/create` | Criar review                    |
-
-## 👥 Contribuindo
-
-Este é um projeto privado. Para contribuir:
-
-1. Entre em contato com a equipe
-2. Crie uma branch para sua feature
-3. Faça commit seguindo conventional commits
-4. Abra um Pull Request
-
-## 📝 Licença
-
-Projeto privado - Todos os direitos reservados © 2025 Elite Surfing
-
-## 📧 Contato
-
-- **Website**: [www.elitesurfing.pt](https://www.elitesurfing.pt)
-- **Email**: suporte@elitesurfing.pt
-- **Desenvolvedor**: Pedrazzoli.dev
-
-## 🏆 Agradecimentos
-
-Agradecimento especial a todos os surfistas que confiam na Elite Surfing para seus equipamentos de alta qualidade!
+A full-featured e-commerce platform I built from scratch for the Brazilian market. The store sells surf equipment and is handling real customers, real payments (credit card, boleto, and PIX), and real shipping quotes via Melhor Envio. This is the largest project I've built — over 40 components, 12 API route files, and an admin panel with direct sales, blog management, and customer CRM.
 
 ---
 
-**Desenvolvido com ❤️ para a comunidade de surf portuguesa 🏄‍♂️**
+## Context
+
+I founded Elite Surfing in 2010 as a physical surf brand in Brazil. After moving to Portugal and transitioning into development, I decided to replace the old WordPress/WooCommerce setup with a custom-built platform that I could fully control and extend.
+
+The Brazilian e-commerce landscape has specific requirements that generic platforms handle poorly: PIX payments (instant bank transfer, now the most popular payment method in Brazil), boleto bancário, shipping calculation through Melhor Envio (an aggregator that compares rates across carriers like Correios, Jadlog, and Azul Cargo), and installment pricing (parcelamento) displayed on every product. This project handles all of that.
+
+---
+
+## Tech Stack
+
+**Frontend:** React 19, Vite, React Router, Tailwind CSS, Axios, Swiper, EmailJS, Lucide React, React Hot Toast
+
+**Backend:** Node.js 18, Express, MongoDB Atlas, Mongoose, Stripe (credit cards + boleto), JWT, Bcrypt.js, Cloudinary, Resend (email delivery), Multer
+
+**Integrations:** Melhor Envio API (shipping), Stripe (payments), Cloudinary (images), WhatsApp Business API, Resend (transactional emails)
+
+**Infrastructure:** Vercel (frontend + serverless backend), MongoDB Atlas, Cloudinary CDN
+
+---
+
+## Architecture
+
+The project is a monorepo with separate `client` and `server` directories, each with their own `package.json` and Vercel deployment config.
+
+```
+client/
+├── src/
+│   ├── components/
+│   │   ├── blog/              # WSL rankings, schedule, champions
+│   │   ├── seller/            # Admin: edit products, shipping labels
+│   │   ├── seo/               # JSON-LD structured data, meta tags
+│   │   ├── Navbar.jsx
+│   │   ├── CartSidebar.jsx    # Slide-out cart drawer
+│   │   ├── ShippingCalculator.jsx
+│   │   ├── ProductReviews.jsx
+│   │   ├── ProductPriceDisplay.jsx  # Handles installment display
+│   │   ├── WhatsAppButton.jsx
+│   │   └── ... (40+ components)
+│   ├── context/
+│   │   └── AppContext.jsx     # Global state: cart, auth, products
+│   ├── pages/
+│   │   ├── seller/            # Admin panel (8 pages)
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Orders.jsx
+│   │   │   ├── ProductList.jsx
+│   │   │   ├── AddProduct.jsx
+│   │   │   ├── BlogManager.jsx
+│   │   │   ├── Clientes.jsx       # Customer CRM
+│   │   │   ├── VendasDiretas.jsx  # Direct sales / romaneio
+│   │   │   └── NovoRomaneio.jsx
+│   │   ├── Home.jsx
+│   │   ├── ProductDetails.jsx
+│   │   ├── Cart.jsx
+│   │   ├── PixPayment.jsx    # Manual PIX payment flow
+│   │   ├── Blog.jsx
+│   │   └── ... (18 pages total)
+│   └── utils/
+│       ├── installmentUtils.js  # Brazilian installment calculation
+│       ├── pixUtils.js          # PIX QR code and payment helpers
+│       └── shippingUtils.js     # Melhor Envio integration helpers
+
+server/
+├── controllers/           # 12 controllers
+│   ├── userController.js
+│   ├── productController.js
+│   ├── orderController.js
+│   ├── reviewController.js
+│   ├── shippingController.js    # Melhor Envio proxy
+│   ├── pixManualController.js   # Manual PIX verification
+│   ├── blogController.js
+│   ├── clienteController.js     # Customer management
+│   ├── romaneioController.js    # Direct sales records
+│   └── ...
+├── models/                # 8 Mongoose models
+│   ├── User.js
+│   ├── Product.js
+│   ├── Order.js
+│   ├── Review.js
+│   ├── BlogPost.js
+│   ├── Cliente.js
+│   ├── Romaneio.js
+│   └── Address.js
+├── services/
+│   ├── emailService.js              # Resend integration
+│   ├── melhorEnvioService.js        # Shipping rate calculator
+│   ├── adminNotificationService.js  # Order alerts
+│   └── whatsappService.js
+├── emails/
+│   ├── OrderConfirmationEmail.js    # HTML email templates
+│   └── OrderStatusUpdateEmail.js
+└── server.js
+```
+
+---
+
+## Key Features
+
+### Payments — three methods for the Brazilian market
+
+**Stripe (credit card):** Standard Stripe Payment Intents flow with webhook confirmation. Supports installment display on product pages (e.g., "12x de R$24,90") using a custom utility that calculates installment values with interest rates.
+
+**Boleto bancário:** Generated through Stripe's boleto payment method. The customer receives a boleto code and has a few days to pay at any bank or lottery house. The webhook confirms payment asynchronously.
+
+**PIX (manual flow):** Since Stripe's native PIX support wasn't available when I built this, I implemented a manual PIX flow. The customer sees a QR code and payment details on a dedicated `/pix-payment` page. After transferring, the admin verifies the payment manually through the admin panel. Not as automated as I'd like, but it works and PIX is essential for the Brazilian market.
+
+### Shipping — Melhor Envio integration
+
+Melhor Envio is the Brazilian equivalent of a shipping aggregator. The `ShippingCalculator` component lets customers enter their CEP (postal code) and instantly see shipping options with prices and delivery estimates from multiple carriers.
+
+On the backend, `melhorEnvioService.js` handles the API calls to Melhor Envio, calculating rates based on product weight/dimensions and the destination CEP. The admin can also generate shipping labels directly from the orders page.
+
+### Blog — WSL surf content
+
+The platform includes a blog section focused on World Surf League content. The admin can create and manage posts through `BlogManager.jsx`. The blog also has dedicated components for WSL rankings, event schedules, and champion history — this drives organic traffic from surfers searching for WSL content.
+
+### Admin panel — "Vendas Diretas" (direct sales)
+
+Beyond the standard product/order management, the admin panel includes a "Vendas Diretas" (direct sales) system. This is a romaneio system for recording in-person or off-platform sales — useful for tracking inventory and revenue that doesn't go through the website checkout. Each romaneio can be printed via `RomaneioImpressao.jsx`.
+
+There's also a basic CRM (`Clientes.jsx`) for managing customer information outside of registered website users.
+
+### SEO
+
+The project has dedicated SEO components: `JsonLd.jsx` generates structured data (Product, Organization, BreadcrumbList), `SEO.jsx` handles dynamic meta tags per page, and `seoConfig.js` centralizes all SEO settings. There's also a sitemap generator script (`scripts/generate-sitemap.js`) and the site is verified in Google Search Console.
+
+### Other notable features
+
+- **Persistent cart** — Synced between localStorage and server. On login, local items merge with the server-side cart.
+- **Verified reviews** — Only purchasers can leave reviews. Tied to order IDs.
+- **Guest checkout** — Customers can buy without creating an account.
+- **Promo codes** — Percentage discounts with server-side validation.
+- **Free shipping threshold** — Configurable minimum order value for free shipping.
+- **Product image gallery** — Modal with zoom, powered by Cloudinary CDN.
+- **Institutional pages** — FAQ, Privacy Policy, Terms of Service, Refund Policy — all required for Brazilian e-commerce compliance (Código de Defesa do Consumidor).
+- **WhatsApp floating button** — Direct link to WhatsApp Business for customer support.
+- **Announcement bar** — Configurable top banner for promotions.
+- **Email notifications** — Order confirmation and status update emails via Resend (switched from Nodemailer because Vercel blocks SMTP).
+
+---
+
+## Authentication
+
+JWT stored in httpOnly cookies. Two middleware layers:
+
+- `authUser.js` — Validates customer tokens for protected routes (cart, orders, reviews, addresses).
+- `authSeller.js` — Admin authentication using environment variable credentials. Simple approach for a single-admin setup.
+
+The frontend uses a custom `usePersistentAuth` hook that checks the auth state on mount and handles token expiration gracefully.
+
+---
+
+## Data models
+
+| Model        | Key fields                                                                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **User**     | name, email, hashed password, cart object                                                                                                 |
+| **Product**  | name, description, price, offer price, images (Cloudinary URLs), category, group, stock status, weight/dimensions (for shipping)          |
+| **Order**    | user ref, items, amounts (original/discount/final), promo code, address, payment type (stripe/cod/pix), payment status, shipping tracking |
+| **Review**   | user ref, order ref, product ref, rating 1-5, title, comment, verified purchase flag                                                      |
+| **BlogPost** | title, content, author, featured image, tags, published status                                                                            |
+| **Cliente**  | name, email, phone, notes — standalone CRM entries                                                                                        |
+| **Romaneio** | items, customer info, total, payment method, date — for direct sales tracking                                                             |
+| **Address**  | user ref, street, city, state, CEP, complement                                                                                            |
+
+---
+
+## Running locally
+
+Prerequisites: Node.js 18+, MongoDB Atlas cluster, Stripe account, Cloudinary account, Melhor Envio API key.
+
+```bash
+git clone https://github.com/Orlando-Pedrazzoli/elite-surfing-brasil.git
+
+# Backend
+cd server
+npm install
+cp .env.example .env    # Fill in credentials
+npm run server          # Port 4001
+
+# Frontend (new terminal)
+cd client
+npm install
+cp .env.example .env    # Backend URL + EmailJS + Stripe public key
+npm run dev             # Port 5173
+```
+
+Admin panel at `/seller`.
+
+---
+
+## What I'd improve
+
+Being honest about the gaps:
+
+- **TypeScript.** The entire codebase is JavaScript. As it grew past 50+ files, the lack of type safety became painful — especially when passing data between components and API responses.
+- **Testing.** Zero automated tests. For a production store processing real payments, this is a risk. Unit tests on the payment controllers and integration tests on the order flow are the priority.
+- **PIX automation.** The manual PIX verification works but doesn't scale. Integrating with a PSP that handles PIX natively (like Mercado Pago or Stripe's newer PIX support) would eliminate the manual step.
+- **State management.** Everything runs through a single Context provider. It works, but the AppContext file has grown large. Breaking it up or moving to Zustand/TanStack Query would help.
+- **Code splitting.** The admin panel components are loaded even for regular customers. Proper lazy loading with React.lazy and route-based splitting would reduce the initial bundle.
+
+---
+
+## Deployment notes
+
+Both frontend and backend deploy to Vercel. Key things I learned:
+
+- Vercel's serverless functions have a 10-second timeout on the free tier. The Melhor Envio API sometimes takes 3-4 seconds to respond, which is fine, but chaining multiple external API calls in one request can get close to the limit.
+- SMTP is blocked on Vercel. I originally used Nodemailer with Gmail, which worked locally but failed silently in production. Switched to Resend, which uses HTTP-based email delivery instead of SMTP.
+- The `vercel.json` in the server directory configures the Express app as a single serverless function with proper route rewrites.
+
+---
+
+## License
+
+Private project. Code shared for portfolio purposes. All rights reserved.
+
+---
+
+Built by [Orlando Pedrazzoli](https://www.orlandopedrazzoli.com) — Full Stack Developer, Lisbon.
