@@ -2,7 +2,7 @@
 // VERSÃO BRASIL - Elite Surfing Brasil
 // ✅ Moeda: BRL (R$)
 // ✅ Pagamentos: PIX, Boleto, Cartão (via Stripe)
-// ✅ Parcelamento: Até 10x sem juros (Cartão)
+// ✅ Parcelamento: Até 12x sem juros (Cartão)
 // ✅ Locale: pt-BR
 // ✅ Domínio: www.elitesurfing.com.br
 // ✅ Notificações: Email + WhatsApp (via adminNotificationService)

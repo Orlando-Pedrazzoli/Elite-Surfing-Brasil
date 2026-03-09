@@ -6,6 +6,7 @@ import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
 import ShippingCalculator from '../components/ShippingCalculator';
+import CreditCardForm from '../components/CreditCardForm';
 import {
   MapPin,
   Plus,
@@ -60,6 +61,9 @@ const Cart = () => {
 
   // ═══ FRETE — Melhor Envio ═══
   const [selectedShipping, setSelectedShipping] = useState(null);
+
+  // ═══ CPF para Pagar.me (cartão) ═══
+  const [customerDocument, setCustomerDocument] = useState('');
 
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
   const [appliedPromoCode, setAppliedPromoCode] = useState('');
@@ -272,11 +276,138 @@ const Cart = () => {
   };
 
   // =============================================================================
-  // HANDLE PLACE ORDER
+  // 💳 HANDLE CARD SUBMIT — PAGAR.ME (TRANSPARENT CHECKOUT)
   // =============================================================================
-  // ═══════════════════════════════════════════════════════════════
-  // handlePlaceOrder — ATUALIZADO COM PIX MANUAL
-  // ═══════════════════════════════════════════════════════════════
+  const handleCardSubmit = async ({
+    cardToken,
+    installments,
+    customerDocument,
+    cardBrand,
+  }) => {
+    const currentAddress = getCurrentAddress();
+    if (!currentAddress) {
+      return toast.error('Por favor, adicione um endereço de entrega.');
+    }
+    if (!selectedShipping) {
+      return toast.error('Por favor, calcule e selecione uma opção de frete.');
+    }
+    const stockErrors = validateStockBeforeCheckout();
+    if (stockErrors.length > 0) {
+      toast.error('Estoque insuficiente:\n' + stockErrors.join('\n'));
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const subtotal = getSubtotal();
+      const promoDisc = getPromoDiscount();
+      const shipping = getShippingCost();
+      const finalAmount = Math.max(0, subtotal - promoDisc + shipping);
+
+      const customerName =
+        user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
+      const customerEmail = user?.email || currentAddress.email;
+      const customerPhone = currentAddress.phone || '';
+
+      const orderPayload = {
+        items: cartArray.map(item => ({
+          product: item._id,
+          quantity: item.quantity,
+        })),
+        amount: finalAmount,
+        originalAmount: subtotal,
+        discountAmount: promoDisc,
+        discountPercentage: discountApplied ? 10 : 0,
+        promoCode: discountApplied ? appliedPromoCode : '',
+        installments,
+        cardToken,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerDocument,
+        // Frete
+        shippingCost: shipping,
+        shippingMethod: selectedShipping.name,
+        shippingCarrier: selectedShipping.carrier,
+        shippingDeliveryDays: selectedShipping.deliveryDays,
+        shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
+        // Billing address
+        billingAddress: {
+          street: currentAddress.street,
+          number: currentAddress.number || '',
+          complement: currentAddress.complement || '',
+          neighborhood: currentAddress.neighborhood || '',
+          city: currentAddress.city,
+          state: currentAddress.state,
+          zipcode: currentAddress.zipcode,
+        },
+      };
+
+      let endpoint;
+
+      if (user) {
+        orderPayload.userId = user._id;
+        orderPayload.address = selectedAddress._id;
+        orderPayload.isGuestOrder = false;
+        endpoint = '/api/pagarme/card/create';
+      } else {
+        // Guest: salvar endereço primeiro
+        const addressResponse = await axios.post('/api/address/guest', {
+          address: currentAddress,
+        });
+        if (!addressResponse.data.success) {
+          throw new Error(
+            addressResponse.data.message || 'Erro ao salvar endereço',
+          );
+        }
+        orderPayload.address = addressResponse.data.addressId;
+        orderPayload.isGuestOrder = true;
+        orderPayload.guestEmail = customerEmail;
+        orderPayload.guestName = customerName;
+        orderPayload.guestPhone = customerPhone;
+        endpoint = '/api/pagarme/card/guest/create';
+      }
+
+      const { data } = await axios.post(endpoint, orderPayload);
+
+      if (data.success) {
+        // Limpar carrinho
+        const emptyCart = {};
+        setCartItems(emptyCart);
+        saveCartToStorage(emptyCart);
+
+        if (!user && customerEmail) {
+          localStorage.setItem('guest_checkout_email', customerEmail);
+        }
+
+        if (data.status === 'paid') {
+          toast.success('Pagamento aprovado!');
+          navigate(
+            `/order-success/${data.orderId}?payment=pagarme&method=card${!user ? '&guest=true' : ''}`,
+          );
+        } else if (data.status === 'pending') {
+          toast.success('Pagamento em análise. Você será notificado!');
+          navigate(
+            `/order-success/${data.orderId}?payment=pagarme&method=card&pending=true${!user ? '&guest=true' : ''}`,
+          );
+        }
+      } else {
+        toast.error(data.message || 'Falha no pagamento. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro no pagamento com cartão:', error);
+      toast.error(
+        error.response?.data?.message || 'Erro ao processar pagamento.',
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // =============================================================================
+  // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (STRIPE)
+  // =============================================================================
   const handlePlaceOrder = async () => {
     const currentAddress = getCurrentAddress();
     if (!currentAddress) {
@@ -328,11 +459,9 @@ const Cart = () => {
         let pixEndpoint;
 
         if (user) {
-          // ─── User logado ───
           pixPayload.address = selectedAddress._id;
           pixEndpoint = '/api/pix/create';
         } else {
-          // ─── Guest checkout ───
           const addressResponse = await axios.post('/api/address/guest', {
             address: currentAddress,
           });
@@ -352,7 +481,6 @@ const Cart = () => {
         const { data } = await axios.post(pixEndpoint, pixPayload);
 
         if (data.success) {
-          // Salvar dados para a página PixPayment.jsx ler
           localStorage.setItem(
             'pix_manual_data',
             JSON.stringify({
@@ -364,27 +492,24 @@ const Cart = () => {
             }),
           );
 
-          // Limpar carrinho
           const emptyCart = {};
           setCartItems(emptyCart);
           saveCartToStorage(emptyCart);
 
-          // Guardar email guest (para tracking depois)
           if (!user && currentAddress.email) {
             localStorage.setItem('guest_checkout_email', currentAddress.email);
           }
 
-          // Navegar para página de pagamento PIX
           navigate(`/pix-payment/${data.order.orderId}`);
         } else {
           toast.error(data.message || 'Erro ao criar pedido PIX.');
         }
 
-        return; // Sai da função — não continua para Stripe
+        return;
       }
 
       // ═══════════════════════════════════════════════════════════
-      // 💳 FLUXO STRIPE (código existente, sem alterações)
+      // 💳 FLUXO STRIPE (BOLETO)
       // ═══════════════════════════════════════════════════════════
       const orderData = {
         items: cartArray.map(item => ({
@@ -401,7 +526,6 @@ const Cart = () => {
         paymentType: 'Online',
         paymentMethod: paymentMethod,
         isPaid: false,
-        // ═══ DADOS DE FRETE ═══
         shippingCost: shipping,
         shippingMethod: selectedShipping.name,
         shippingCarrier: selectedShipping.carrier,
@@ -1216,7 +1340,7 @@ const Cart = () => {
                               Elo
                             </span>
                             <span className='text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded'>
-                              até 10x
+                              até 12x
                             </span>
                           </div>
                         </div>
@@ -1293,6 +1417,21 @@ const Cart = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* ═══════════════════════════════════════════ */}
+                    {/* 💳 FORMULÁRIO DE CARTÃO — PAGAR.ME          */}
+                    {/* ═══════════════════════════════════════════ */}
+                    {paymentMethod === 'card' && (
+                      <div className='mt-4'>
+                        <CreditCardForm
+                          totalAmount={parseFloat(calculateTotal())}
+                          onSubmit={handleCardSubmit}
+                          isProcessing={isProcessing}
+                          customerDocument={customerDocument}
+                          setCustomerDocument={setCustomerDocument}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1366,7 +1505,7 @@ const Cart = () => {
 
                 {paymentMethod === 'card' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
-                    ou até 10x de {formatBRL(parseFloat(calculateTotal()) / 10)}{' '}
+                    ou até 12x de {formatBRL(parseFloat(calculateTotal()) / 12)}{' '}
                     sem juros
                   </p>
                 )}
@@ -1384,58 +1523,63 @@ const Cart = () => {
                 )}
               </div>
 
-              {/* Checkout Button */}
-              <button
-                onClick={handlePlaceOrder}
-                disabled={
-                  isProcessing ||
-                  !hasAddress() ||
-                  !selectedShipping ||
-                  cartArray.length === 0 ||
-                  Object.keys(stockWarnings).length > 0
-                }
-                className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white text-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2
-                  ${
+              {/* ═══════════════════════════════════════════════ */}
+              {/* BOTÃO PRINCIPAL — Só para PIX e Boleto           */}
+              {/* (Cartão usa o botão do CreditCardForm)          */}
+              {/* ═══════════════════════════════════════════════ */}
+              {paymentMethod !== 'card' && (
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={
                     isProcessing ||
                     !hasAddress() ||
                     !selectedShipping ||
                     cartArray.length === 0 ||
                     Object.keys(stockWarnings).length > 0
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-primary-dull active:scale-[0.98]'
-                  }`}
-              >
-                {isProcessing ? (
-                  <>
-                    <svg className='animate-spin h-5 w-5' viewBox='0 0 24 24'>
-                      <circle
-                        className='opacity-25'
-                        cx='12'
-                        cy='12'
-                        r='10'
-                        stroke='currentColor'
-                        strokeWidth='4'
-                        fill='none'
-                      />
-                      <path
-                        className='opacity-75'
-                        fill='currentColor'
-                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
-                      />
-                    </svg>
-                    <span>Processando...</span>
-                  </>
-                ) : !hasAddress() ? (
-                  <span>Adicione um endereço</span>
-                ) : !selectedShipping ? (
-                  <span>Calcule o frete acima</span>
-                ) : (
-                  <>
-                    {getPaymentButtonIcon()}
-                    <span>{getPaymentButtonText()}</span>
-                  </>
-                )}
-              </button>
+                  }
+                  className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white text-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2
+                    ${
+                      isProcessing ||
+                      !hasAddress() ||
+                      !selectedShipping ||
+                      cartArray.length === 0 ||
+                      Object.keys(stockWarnings).length > 0
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-primary hover:bg-primary-dull active:scale-[0.98]'
+                    }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <svg className='animate-spin h-5 w-5' viewBox='0 0 24 24'>
+                        <circle
+                          className='opacity-25'
+                          cx='12'
+                          cy='12'
+                          r='10'
+                          stroke='currentColor'
+                          strokeWidth='4'
+                          fill='none'
+                        />
+                        <path
+                          className='opacity-75'
+                          fill='currentColor'
+                          d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                        />
+                      </svg>
+                      <span>Processando...</span>
+                    </>
+                  ) : !hasAddress() ? (
+                    <span>Adicione um endereço</span>
+                  ) : !selectedShipping ? (
+                    <span>Calcule o frete acima</span>
+                  ) : (
+                    <>
+                      {getPaymentButtonIcon()}
+                      <span>{getPaymentButtonText()}</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               {/* Login prompt para guests */}
               {!user && hasAddress() && (

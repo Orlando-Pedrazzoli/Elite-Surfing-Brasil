@@ -88,7 +88,7 @@ const COMPANY = {
   payments: {
     pixDiscount: 0.05, // 5% desconto PIX
     boletoDiscount: 0.05, // 5% desconto Boleto
-    maxInstallments: 10, // Até 10x sem juros
+    maxInstallments: 12, // Até 12x sem juros
     minInstallment: 10, // Parcela mínima R$10
     freeShippingMin: 299, // Frete grátis acima de R$299
   },

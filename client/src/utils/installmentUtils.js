@@ -1,20 +1,20 @@
 // ═══════════════════════════════════════════════════════════
-// 💰 CÁLCULO DE PARCELAS — BOAS PRÁTICAS E-COMMERCE BRASIL
+// 💰 CÁLCULO DE PARCELAS — E-COMMERCE BRASIL
 // ═══════════════════════════════════════════════════════════
 // Parcela mínima: R$10,00 (padrão mercado brasileiro)
-// Máximo: 10x sem juros
+// Máximo: 12x sem juros (via Pagar.me)
 // Desconto PIX: 10%
 
 const MIN_INSTALLMENT = 10; // R$10,00 mínimo por parcela
-const MAX_INSTALLMENTS = 10; // Máximo 10x
-const PIX_DISCOUNT = 0.10; // 10% de desconto no PIX à vista
+const MAX_INSTALLMENTS = 12; // Máximo 12x sem juros
+const PIX_DISCOUNT = 0.1; // 10% de desconto no PIX à vista
 
 /**
  * Calcula as opções de parcelamento
  * @param {number} price - Preço do produto (offerPrice)
  * @returns {Object} Dados de parcelamento
  */
-export const calculateInstallments = (price) => {
+export const calculateInstallments = price => {
   if (!price || price <= 0) {
     return {
       pixPrice: 0,
@@ -28,9 +28,10 @@ export const calculateInstallments = (price) => {
   const pixPrice = price * (1 - PIX_DISCOUNT);
   const maxInstallments = Math.min(
     MAX_INSTALLMENTS,
-    Math.max(1, Math.floor(price / MIN_INSTALLMENT))
+    Math.max(1, Math.floor(price / MIN_INSTALLMENT)),
   );
-  const installmentValue = maxInstallments > 0 ? price / maxInstallments : price;
+  const installmentValue =
+    maxInstallments > 0 ? price / maxInstallments : price;
 
   // Gerar todas as opções de parcela
   const allInstallments = [];
@@ -40,9 +41,10 @@ export const calculateInstallments = (price) => {
       allInstallments.push({
         times: i,
         value: value,
-        label: i === 1 
-          ? `1x de ${formatBRL(price)} sem juros`
-          : `${i}x de ${formatBRL(value)} sem juros`,
+        label:
+          i === 1
+            ? `1x de ${formatBRL(price)} sem juros`
+            : `${i}x de ${formatBRL(value)} sem juros`,
       });
     }
   }
@@ -62,7 +64,7 @@ export const calculateInstallments = (price) => {
  * @param {number} value
  * @returns {string}
  */
-export const formatBRL = (value) => {
+export const formatBRL = value => {
   return value.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',

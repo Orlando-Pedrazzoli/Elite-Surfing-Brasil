@@ -29,12 +29,17 @@ const orderSchema = new mongoose.Schema(
     shippingServiceId: { type: String, default: '' },
     pixDiscount: { type: Number, default: 0 },
     paidAt: { type: Date, default: null },
+    // ═══ Pagar.me (Cartão de Crédito 12x) ═══
+    pagarmeOrderId: { type: String, default: null },
+    pagarmeChargeId: { type: String, default: null },
+    paymentInstallments: { type: Number, default: 1 },
   },
   { timestamps: true },
 );
 
 orderSchema.index({ guestEmail: 1 });
 orderSchema.index({ userId: 1 });
+orderSchema.index({ pagarmeOrderId: 1 });
 
 const Order = mongoose.models.order || mongoose.model('order', orderSchema);
 export default Order;

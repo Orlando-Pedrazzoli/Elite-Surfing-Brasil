@@ -15,8 +15,9 @@ import reviewRouter from './routes/reviewRoute.js';
 import { stripeWebhooks } from './controllers/orderController.js';
 import shippingRouter from './routes/shippingRoute.js';
 import pixRouter from './routes/pixManualRoute.js';
-import clienteRouter from './routes/clienteRoute.js'; // ← NOVO
-import romaneioRouter from './routes/romaneioRoute.js'; // ← NOVO
+import clienteRouter from './routes/clienteRoute.js';
+import romaneioRouter from './routes/romaneioRoute.js';
+import pagarmeRouter from './routes/pagarmeRoute.js'; // ← PAGAR.ME
 
 const app = express();
 const port = process.env.PORT || 4001;
@@ -66,8 +67,9 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '2.0.0',
+    version: '2.1.0',
     webhook: '/stripe',
+    pagarme: '✅ Cartão 12x sem juros',
   });
 });
 
@@ -81,10 +83,11 @@ app.use('/api/order', orderRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/pix', pixRouter);
-app.use('/api/clientes', clienteRouter); // ← NOVO
-app.use('/api/romaneios', romaneioRouter); // ← NOVO
+app.use('/api/clientes', clienteRouter);
+app.use('/api/romaneios', romaneioRouter);
+app.use('/api/pagarme', pagarmeRouter); // ← PAGAR.ME (Cartão 12x)
 
-console.log('✅ All routes registered');
+console.log('✅ All routes registered (including Pagar.me)');
 
 // ✅ 404 handler
 app.use('*', (req, res) => {
