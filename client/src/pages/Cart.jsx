@@ -1174,13 +1174,17 @@ const Cart = () => {
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <div className='flex items-center gap-2 mb-4'>
                     <Package className='w-5 h-5 text-primary' />
-                    <h3 className='font-semibold text-gray-700'>Frete</h3>
+                    <h3 className='font-semibold text-gray-700'>
+                      {getSubtotal() - getPromoDiscount() >= 199
+                        ? 'Frete — Confirme o método de envio'
+                        : 'Frete'}
+                    </h3>
                   </div>
 
                   <ShippingCalculator
                     cartProducts={cartArray}
                     onShippingSelect={handleShippingSelect}
-                    subtotal={getSubtotal()}
+                    subtotal={getSubtotal() - getPromoDiscount()}
                   />
 
                   {selectedShipping && (
@@ -1571,7 +1575,11 @@ const Cart = () => {
                   ) : !hasAddress() ? (
                     <span>Adicione um endereço</span>
                   ) : !selectedShipping ? (
-                    <span>Calcule o frete acima</span>
+                    <span>
+                      {getSubtotal() - getPromoDiscount() >= 199
+                        ? 'Selecione o método de envio'
+                        : 'Calcule o frete acima'}
+                    </span>
                   ) : (
                     <>
                       {getPaymentButtonIcon()}

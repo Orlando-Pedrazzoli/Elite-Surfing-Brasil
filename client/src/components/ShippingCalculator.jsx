@@ -4,7 +4,12 @@ import { formatBRL } from '../utils/installmentUtils';
 import { formatCep, isValidCep } from '../utils/shippingUtils';
 import { Truck, Gift, Package } from 'lucide-react';
 
-const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal = 0 }) => {
+const ShippingCalculator = ({
+  product,
+  cartProducts,
+  onShippingSelect,
+  subtotal = 0,
+}) => {
   const { axios } = useAppContext();
   const [cep, setCep] = useState('');
   const [results, setResults] = useState(null);
@@ -24,7 +29,10 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
   // Progresso genérico (antes de saber o CEP/região)
   const genericProgress = useMemo(() => {
     if (subtotal >= FREE_THRESHOLD_DEMAIS) {
-      return { qualifies: true, message: 'Você tem frete grátis para todo o Brasil!' };
+      return {
+        qualifies: true,
+        message: 'Você tem frete grátis para todo o Brasil!',
+      };
     }
     if (subtotal >= FREE_THRESHOLD_SUL_SUDESTE) {
       const remaining = FREE_THRESHOLD_DEMAIS - subtotal;
@@ -60,7 +68,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
     };
   }, [freeShippingInfo, subtotal]);
 
-  const handleCepChange = (e) => {
+  const handleCepChange = e => {
     const formatted = formatCep(e.target.value);
     if (formatted.replace(/\D/g, '').length <= 8) {
       setCep(formatted);
@@ -84,7 +92,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
       let body = { cep };
 
       if (cartProducts && cartProducts.length > 0) {
-        body.products = cartProducts.map((p) => ({
+        body.products = cartProducts.map(p => ({
           productId: p._id,
           quantity: p.quantity || 1,
         }));
@@ -113,13 +121,13 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
     }
   }, [cep, product, cartProducts, axios, onShippingSelect]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = e => {
     if (e.key === 'Enter') {
       handleCalculate();
     }
   };
 
-  const handleSelectOption = (option) => {
+  const handleSelectOption = option => {
     setSelectedOption(option);
     if (onShippingSelect) {
       onShippingSelect(option);
@@ -140,7 +148,10 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
     const uniqueByCarrier = new Map();
     for (const opt of regularOptions) {
       const key = opt.carrier;
-      if (!uniqueByCarrier.has(key) || opt.price < uniqueByCarrier.get(key).price) {
+      if (
+        !uniqueByCarrier.has(key) ||
+        opt.price < uniqueByCarrier.get(key).price
+      ) {
         uniqueByCarrier.set(key, opt);
       }
     }
@@ -153,12 +164,20 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
     const top5 = unique.slice(0, 5);
 
     // Identificar mais barata e mais rápida (entre as regulares)
-    const cheapest = top5.length > 0
-      ? top5.reduce((min, opt) => (opt.price < min.price ? opt : min), top5[0])
-      : null;
-    const fastest = top5.length > 0
-      ? top5.reduce((min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min), top5[0])
-      : null;
+    const cheapest =
+      top5.length > 0
+        ? top5.reduce(
+            (min, opt) => (opt.price < min.price ? opt : min),
+            top5[0],
+          )
+        : null;
+    const fastest =
+      top5.length > 0
+        ? top5.reduce(
+            (min, opt) => (opt.deliveryDays < min.deliveryDays ? opt : min),
+            top5[0],
+          )
+        : null;
 
     // Montar lista final
     const finalOptions = top5;
@@ -169,6 +188,29 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
       fastestId: fastest?.id,
     };
   }, [results]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // TÍTULO CONTEXTUAL — muda conforme frete grátis
+  // ═══════════════════════════════════════════════════════════════
+  const getTitle = () => {
+    if (
+      genericProgress.qualifies === true ||
+      genericProgress.qualifies === 'partial'
+    ) {
+      return 'Confirme o método de envio — Frete Grátis!';
+    }
+    return 'Calcular Frete e Prazo';
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEXTO DO BOTÃO — muda conforme frete grátis
+  // ═══════════════════════════════════════════════════════════════
+  const getButtonText = () => {
+    if (genericProgress.qualifies) {
+      return 'Ver prazos';
+    }
+    return 'Calcular';
+  };
 
   // ═══════════════════════════════════════════════════════════════
   // RENDER — Progress Bar de Frete Grátis
@@ -234,16 +276,21 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
             className='h-full rounded-full transition-all duration-500 ease-out'
             style={{
               width: `${percentage}%`,
-              background: percentage >= 80
-                ? 'linear-gradient(90deg, #f59e0b, #22c55e)'
-                : 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+              background:
+                percentage >= 80
+                  ? 'linear-gradient(90deg, #f59e0b, #22c55e)'
+                  : 'linear-gradient(90deg, #f59e0b, #fbbf24)',
             }}
           />
         </div>
         <div className='flex justify-between mt-1'>
-          <span className='text-[10px] text-amber-600'>{formatBRL(subtotal)}</span>
+          <span className='text-[10px] text-amber-600'>
+            {formatBRL(subtotal)}
+          </span>
           <span className='text-[10px] text-amber-600 font-semibold'>
-            {formatBRL(freeShippingInfo?.threshold || FREE_THRESHOLD_SUL_SUDESTE)}
+            {formatBRL(
+              freeShippingInfo?.threshold || FREE_THRESHOLD_SUL_SUDESTE,
+            )}
           </span>
         </div>
       </div>
@@ -253,11 +300,26 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
   return (
     <div className='bg-white border border-gray-200 rounded-lg p-4'>
       <h3 className='text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2'>
-        <svg className='w-4 h-4 text-gray-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z' />
-          <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 11a3 3 0 11-6 0 3 3 0 016 0z' />
+        <svg
+          className='w-4 h-4 text-gray-600'
+          fill='none'
+          viewBox='0 0 24 24'
+          stroke='currentColor'
+        >
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
+          />
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
+          />
         </svg>
-        Calcular Frete e Prazo
+        {getTitle()}
       </h3>
 
       {/* ═══ BARRA DE PROGRESSO FRETE GRÁTIS ═══ */}
@@ -289,7 +351,7 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
               <span>Calculando</span>
             </div>
           ) : (
-            'Calcular'
+            getButtonText()
           )}
         </button>
       </div>
@@ -314,11 +376,12 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
       {/* Resultados */}
       {results && !error && filteredOptions.length > 0 && (
         <div className='mt-3 space-y-2'>
-          {filteredOptions.map((option) => {
+          {filteredOptions.map(option => {
             const isSelected = selectedOption?.id === option.id;
             const isFree = option.freeShipping && option.price === 0;
             const isCheapest = option.id === cheapestId && !isFree;
-            const isFastest = option.id === fastestId && fastestId !== cheapestId && !isFree;
+            const isFastest =
+              option.id === fastestId && fastestId !== cheapestId && !isFree;
 
             return (
               <div
@@ -328,12 +391,12 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
                   isSelected
                     ? 'bg-primary/5 border-primary ring-1 ring-primary'
                     : isFree
-                    ? 'bg-green-50 border-green-300 hover:border-green-400'
-                    : isCheapest
-                    ? 'bg-green-50/50 border-green-200 hover:border-green-300'
-                    : isFastest
-                    ? 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
-                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                      ? 'bg-green-50 border-green-300 hover:border-green-400'
+                      : isCheapest
+                        ? 'bg-green-50/50 border-green-200 hover:border-green-300'
+                        : isFastest
+                          ? 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
+                          : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className='flex items-center gap-3'>
@@ -360,7 +423,9 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
                         </span>
                       )}
                     </div>
-                    <p className='text-xs text-gray-500'>{option.deliveryText}</p>
+                    <p className='text-xs text-gray-500'>
+                      {option.deliveryText}
+                    </p>
                   </div>
                 </div>
                 <div className='text-right flex items-center gap-2'>
@@ -370,19 +435,33 @@ const ShippingCalculator = ({ product, cartProducts, onShippingSelect, subtotal 
                       <span className='text-[11px] text-gray-400 line-through'>
                         {formatBRL(option.originalPrice)}
                       </span>
-                      <span className='text-sm font-bold text-green-700'>GRÁTIS</span>
+                      <span className='text-sm font-bold text-green-700'>
+                        GRÁTIS
+                      </span>
                     </div>
                   ) : (
-                    <span className={`text-sm font-bold ${
-                      isCheapest && !isSelected ? 'text-green-700' : 'text-gray-900'
-                    }`}>
+                    <span
+                      className={`text-sm font-bold ${
+                        isCheapest && !isSelected
+                          ? 'text-green-700'
+                          : 'text-gray-900'
+                      }`}
+                    >
                       {formatBRL(option.price)}
                     </span>
                   )}
                   {isSelected && (
                     <div className='w-5 h-5 bg-primary rounded-full flex items-center justify-center'>
-                      <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
-                        <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                      <svg
+                        className='w-3 h-3 text-white'
+                        fill='currentColor'
+                        viewBox='0 0 20 20'
+                      >
+                        <path
+                          fillRule='evenodd'
+                          d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                          clipRule='evenodd'
+                        />
                       </svg>
                     </div>
                   )}
