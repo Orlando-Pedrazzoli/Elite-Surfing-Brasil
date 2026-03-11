@@ -17,42 +17,86 @@ const ShippingCalculator = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
-  const hasAutoCalculated = useRef(false);
 
   // ═══════════════════════════════════════════════════════════════
-  // AUTO-PREENCHER CEP do endereço + AUTO-CALCULAR
-  // Mesma lógica do Mercado Livre e Amazon BR — zero fricção
+  // AUTO-PREENCHER CEP + AUTO-CALCULAR — UM ÚNICO EFEITO
+  // Quando o endereço tem CEP, preenche o campo e calcula sozinho.
   // ═══════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (addressCep) {
-      const cleanCep = addressCep.replace(/\D/g, '');
-      if (cleanCep.length === 8) {
-        setCep(formatCep(cleanCep));
-      }
-    }
-  }, [addressCep]);
+  const lastAutoCalcCep = useRef('');
 
-  // Auto-calcular quando CEP é preenchido pelo endereço
   useEffect(() => {
-    if (addressCep && !hasAutoCalculated.current) {
-      const cleanCep = addressCep.replace(/\D/g, '');
-      if (cleanCep.length === 8 && !results && !loading) {
-        hasAutoCalculated.current = true;
-        triggerCalculate(cleanCep);
-      }
+    // Sem CEP no endereço — nada a fazer
+    if (!addressCep) {
+      lastAutoCalcCep.current = '';
+      return;
     }
-  }, [addressCep, cep]);
 
-  // Reset quando endereço muda (user trocou endereço)
-  useEffect(() => {
-    hasAutoCalculated.current = false;
+    const cleanCep = addressCep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    // Mesmo CEP que já calculámos — não repetir
+    if (cleanCep === lastAutoCalcCep.current) return;
+    lastAutoCalcCep.current = cleanCep;
+
+    // 1) Preencher o campo de CEP
+    setCep(formatCep(cleanCep));
+
+    // 2) Limpar resultados anteriores
     setResults(null);
     setSelectedOption(null);
+    setError('');
     if (onShippingSelect) onShippingSelect(null);
-  }, [addressCep]);
+
+    // 3) Calcular frete automaticamente
+    const controller = new AbortController();
+
+    const autoCalculate = async () => {
+      setLoading(true);
+
+      try {
+        let body = { cep: cleanCep };
+
+        if (cartProducts && cartProducts.length > 0) {
+          body.products = cartProducts.map(p => ({
+            productId: p._id,
+            quantity: p.quantity || 1,
+          }));
+        } else if (product) {
+          body.product = {
+            _id: product._id,
+            weight: product.weight,
+            dimensions: product.dimensions,
+            offerPrice: product.offerPrice,
+            quantity: 1,
+          };
+        }
+
+        const { data } = await axios.post('/api/shipping/calculate', body, {
+          signal: controller.signal,
+        });
+
+        if (data.success) {
+          setResults(data);
+        } else {
+          setError(data.message || 'Erro ao calcular frete.');
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error('Erro no cálculo de frete:', err);
+          setError('Erro ao calcular frete. Tente novamente.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    autoCalculate();
+
+    return () => controller.abort();
+  }, [addressCep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ═══════════════════════════════════════════════════════════════
-  // FRETE GRÁTIS — thresholds e progresso (antes do cálculo)
+  // FRETE GRÁTIS — thresholds e progresso
   // ═══════════════════════════════════════════════════════════════
   const FREE_THRESHOLD_SUL_SUDESTE = 199;
   const FREE_THRESHOLD_DEMAIS = 299;
@@ -98,68 +142,65 @@ const ShippingCalculator = ({
     };
   }, [freeShippingInfo, subtotal]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // CÁLCULO MANUAL — botão "Calcular" / "Recalcular"
+  // ═══════════════════════════════════════════════════════════════
   const handleCepChange = e => {
     const formatted = formatCep(e.target.value);
     if (formatted.replace(/\D/g, '').length <= 8) {
       setCep(formatted);
       setError('');
-      hasAutoCalculated.current = false;
     }
   };
 
-  // Função de cálculo reutilizável (auto-calc e manual)
-  const triggerCalculate = useCallback(
-    async rawCep => {
-      const cleanCep = (rawCep || cep).replace(/\D/g, '');
-      if (cleanCep.length !== 8) {
-        setError('Digite um CEP válido com 8 dígitos');
-        return;
+  const handleCalculate = useCallback(async () => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      setError('Digite um CEP válido com 8 dígitos');
+      return;
+    }
+
+    // Atualizar ref para evitar que o auto-calc repita
+    lastAutoCalcCep.current = cleanCep;
+
+    setLoading(true);
+    setError('');
+    setResults(null);
+    setSelectedOption(null);
+    if (onShippingSelect) onShippingSelect(null);
+
+    try {
+      let body = { cep: cleanCep };
+
+      if (cartProducts && cartProducts.length > 0) {
+        body.products = cartProducts.map(p => ({
+          productId: p._id,
+          quantity: p.quantity || 1,
+        }));
+      } else if (product) {
+        body.product = {
+          _id: product._id,
+          weight: product.weight,
+          dimensions: product.dimensions,
+          offerPrice: product.offerPrice,
+          quantity: 1,
+        };
       }
 
-      setLoading(true);
-      setError('');
-      setResults(null);
-      setSelectedOption(null);
-      if (onShippingSelect) onShippingSelect(null);
+      const { data } = await axios.post('/api/shipping/calculate', body);
 
-      try {
-        let body = { cep: cleanCep };
-
-        if (cartProducts && cartProducts.length > 0) {
-          body.products = cartProducts.map(p => ({
-            productId: p._id,
-            quantity: p.quantity || 1,
-          }));
-        } else if (product) {
-          body.product = {
-            _id: product._id,
-            weight: product.weight,
-            dimensions: product.dimensions,
-            offerPrice: product.offerPrice,
-            quantity: 1,
-          };
-        }
-
-        const { data } = await axios.post('/api/shipping/calculate', body);
-
-        if (data.success) {
-          setResults(data);
-        } else {
-          setError(data.message || 'Erro ao calcular frete.');
-        }
-      } catch (err) {
-        console.error('Erro no cálculo de frete:', err);
-        setError('Erro ao calcular frete. Tente novamente.');
-      } finally {
-        setLoading(false);
+      if (data.success) {
+        setResults(data);
+      } else {
+        setError(data.message || 'Erro ao calcular frete.');
       }
-    },
-    [cep, product, cartProducts, axios, onShippingSelect],
-  );
-
-  const handleCalculate = useCallback(() => {
-    triggerCalculate(cep);
-  }, [triggerCalculate, cep]);
+    } catch (err) {
+      console.error('Erro no cálculo de frete:', err);
+      setError('Erro ao calcular frete. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [cep, product, cartProducts, axios, onShippingSelect]);
 
   const handleKeyDown = e => {
     if (e.key === 'Enter') {
@@ -223,7 +264,7 @@ const ShippingCalculator = ({
   }, [results]);
 
   // ═══════════════════════════════════════════════════════════════
-  // TÍTULO CONTEXTUAL — muda conforme estado do cálculo
+  // TÍTULO CONTEXTUAL
   // ═══════════════════════════════════════════════════════════════
   const getTitle = () => {
     if (results && filteredOptions.length > 0) {
@@ -251,7 +292,7 @@ const ShippingCalculator = ({
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // TEXTO DO BOTÃO — muda conforme estado
+  // TEXTO DO BOTÃO
   // ═══════════════════════════════════════════════════════════════
   const getButtonText = () => {
     if (results && filteredOptions.length > 0) {
