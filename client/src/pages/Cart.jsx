@@ -112,11 +112,6 @@ const Cart = () => {
     }
   }, [products, cartItems, user]);
 
-  // Resetar frete quando carrinho muda
-  useEffect(() => {
-    setSelectedShipping(null);
-  }, [cartItems]);
-
   // Resetar frete quando cupom é aplicado/removido (threshold pode mudar)
   useEffect(() => {
     setSelectedShipping(null);
@@ -1185,6 +1180,7 @@ const Cart = () => {
                     cartProducts={cartArray}
                     onShippingSelect={handleShippingSelect}
                     subtotal={getSubtotal() - getPromoDiscount()}
+                    addressCep={currentAddress?.zipcode || ''}
                   />
 
                   {selectedShipping && (

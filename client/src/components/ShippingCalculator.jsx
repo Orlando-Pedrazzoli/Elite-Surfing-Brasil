@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { formatBRL } from '../utils/installmentUtils';
 import { formatCep, isValidCep } from '../utils/shippingUtils';
@@ -9,6 +9,7 @@ const ShippingCalculator = ({
   cartProducts,
   onShippingSelect,
   subtotal = 0,
+  addressCep = '',
 }) => {
   const { axios } = useAppContext();
   const [cep, setCep] = useState('');
@@ -16,6 +17,39 @@ const ShippingCalculator = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
+  const hasAutoCalculated = useRef(false);
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTO-PREENCHER CEP do endereço + AUTO-CALCULAR
+  // Mesma lógica do Mercado Livre e Amazon BR — zero fricção
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (addressCep) {
+      const cleanCep = addressCep.replace(/\D/g, '');
+      if (cleanCep.length === 8) {
+        setCep(formatCep(cleanCep));
+      }
+    }
+  }, [addressCep]);
+
+  // Auto-calcular quando CEP é preenchido pelo endereço
+  useEffect(() => {
+    if (addressCep && !hasAutoCalculated.current) {
+      const cleanCep = addressCep.replace(/\D/g, '');
+      if (cleanCep.length === 8 && !results && !loading) {
+        hasAutoCalculated.current = true;
+        triggerCalculate(cleanCep);
+      }
+    }
+  }, [addressCep, cep]);
+
+  // Reset quando endereço muda (user trocou endereço)
+  useEffect(() => {
+    hasAutoCalculated.current = false;
+    setResults(null);
+    setSelectedOption(null);
+    if (onShippingSelect) onShippingSelect(null);
+  }, [addressCep]);
 
   // ═══════════════════════════════════════════════════════════════
   // FRETE GRÁTIS — thresholds e progresso (antes do cálculo)
@@ -23,10 +57,8 @@ const ShippingCalculator = ({
   const FREE_THRESHOLD_SUL_SUDESTE = 199;
   const FREE_THRESHOLD_DEMAIS = 299;
 
-  // Info de frete grátis retornada pelo backend (após cálculo)
   const freeShippingInfo = results?.freeShippingInfo || null;
 
-  // Progresso genérico (antes de saber o CEP/região)
   const genericProgress = useMemo(() => {
     if (subtotal >= FREE_THRESHOLD_DEMAIS) {
       return {
@@ -41,7 +73,6 @@ const ShippingCalculator = ({
         message: `Frete grátis para Sul e Sudeste! Faltam ${formatBRL(remaining)} para frete grátis em todo o Brasil.`,
       };
     }
-    // Abaixo de 199 — mostrar o mais próximo
     const remaining = FREE_THRESHOLD_SUL_SUDESTE - subtotal;
     return {
       qualifies: false,
@@ -51,7 +82,6 @@ const ShippingCalculator = ({
     };
   }, [subtotal]);
 
-  // Progresso específico (após saber a região via backend)
   const regionProgress = useMemo(() => {
     if (!freeShippingInfo) return null;
     const { qualifies, amountRemaining, threshold, region } = freeShippingInfo;
@@ -73,53 +103,63 @@ const ShippingCalculator = ({
     if (formatted.replace(/\D/g, '').length <= 8) {
       setCep(formatted);
       setError('');
+      hasAutoCalculated.current = false;
     }
   };
 
-  const handleCalculate = useCallback(async () => {
-    if (!isValidCep(cep)) {
-      setError('Digite um CEP válido com 8 dígitos');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setResults(null);
-    setSelectedOption(null);
-    if (onShippingSelect) onShippingSelect(null);
-
-    try {
-      let body = { cep };
-
-      if (cartProducts && cartProducts.length > 0) {
-        body.products = cartProducts.map(p => ({
-          productId: p._id,
-          quantity: p.quantity || 1,
-        }));
-      } else if (product) {
-        body.product = {
-          _id: product._id,
-          weight: product.weight,
-          dimensions: product.dimensions,
-          offerPrice: product.offerPrice,
-          quantity: 1,
-        };
+  // Função de cálculo reutilizável (auto-calc e manual)
+  const triggerCalculate = useCallback(
+    async rawCep => {
+      const cleanCep = (rawCep || cep).replace(/\D/g, '');
+      if (cleanCep.length !== 8) {
+        setError('Digite um CEP válido com 8 dígitos');
+        return;
       }
 
-      const { data } = await axios.post('/api/shipping/calculate', body);
+      setLoading(true);
+      setError('');
+      setResults(null);
+      setSelectedOption(null);
+      if (onShippingSelect) onShippingSelect(null);
 
-      if (data.success) {
-        setResults(data);
-      } else {
-        setError(data.message || 'Erro ao calcular frete.');
+      try {
+        let body = { cep: cleanCep };
+
+        if (cartProducts && cartProducts.length > 0) {
+          body.products = cartProducts.map(p => ({
+            productId: p._id,
+            quantity: p.quantity || 1,
+          }));
+        } else if (product) {
+          body.product = {
+            _id: product._id,
+            weight: product.weight,
+            dimensions: product.dimensions,
+            offerPrice: product.offerPrice,
+            quantity: 1,
+          };
+        }
+
+        const { data } = await axios.post('/api/shipping/calculate', body);
+
+        if (data.success) {
+          setResults(data);
+        } else {
+          setError(data.message || 'Erro ao calcular frete.');
+        }
+      } catch (err) {
+        console.error('Erro no cálculo de frete:', err);
+        setError('Erro ao calcular frete. Tente novamente.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Erro no cálculo de frete:', err);
-      setError('Erro ao calcular frete. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  }, [cep, product, cartProducts, axios, onShippingSelect]);
+    },
+    [cep, product, cartProducts, axios, onShippingSelect],
+  );
+
+  const handleCalculate = useCallback(() => {
+    triggerCalculate(cep);
+  }, [triggerCalculate, cep]);
 
   const handleKeyDown = e => {
     if (e.key === 'Enter') {
@@ -144,7 +184,6 @@ const ShippingCalculator = ({
 
     const regularOptions = [...results.options];
 
-    // Remover duplicatas por transportadora (manter a mais barata de cada)
     const uniqueByCarrier = new Map();
     for (const opt of regularOptions) {
       const key = opt.carrier;
@@ -157,13 +196,10 @@ const ShippingCalculator = ({
     }
     let unique = Array.from(uniqueByCarrier.values());
 
-    // Ordenar por preço (mais barata primeiro)
     unique.sort((a, b) => a.price - b.price);
 
-    // Pegar top 5
     const top5 = unique.slice(0, 5);
 
-    // Identificar mais barata e mais rápida (entre as regulares)
     const cheapest =
       top5.length > 0
         ? top5.reduce(
@@ -179,20 +215,32 @@ const ShippingCalculator = ({
           )
         : null;
 
-    // Montar lista final
-    const finalOptions = top5;
-
     return {
-      filteredOptions: finalOptions,
+      filteredOptions: top5,
       cheapestId: cheapest?.id,
       fastestId: fastest?.id,
     };
   }, [results]);
 
   // ═══════════════════════════════════════════════════════════════
-  // TÍTULO CONTEXTUAL — muda conforme frete grátis
+  // TÍTULO CONTEXTUAL — muda conforme estado do cálculo
   // ═══════════════════════════════════════════════════════════════
   const getTitle = () => {
+    if (results && filteredOptions.length > 0) {
+      if (selectedOption) {
+        return 'Método de envio selecionado';
+      }
+      if (
+        genericProgress.qualifies === true ||
+        genericProgress.qualifies === 'partial'
+      ) {
+        return 'Selecione o método de envio — Frete Grátis!';
+      }
+      return 'Selecione o método de envio';
+    }
+    if (loading) {
+      return 'Calculando opções de envio...';
+    }
     if (
       genericProgress.qualifies === true ||
       genericProgress.qualifies === 'partial'
@@ -203,9 +251,12 @@ const ShippingCalculator = ({
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // TEXTO DO BOTÃO — muda conforme frete grátis
+  // TEXTO DO BOTÃO — muda conforme estado
   // ═══════════════════════════════════════════════════════════════
   const getButtonText = () => {
+    if (results && filteredOptions.length > 0) {
+      return 'Recalcular';
+    }
     if (genericProgress.qualifies) {
       return 'Ver prazos';
     }
@@ -216,11 +267,9 @@ const ShippingCalculator = ({
   // RENDER — Progress Bar de Frete Grátis
   // ═══════════════════════════════════════════════════════════════
   const renderFreeShippingProgress = () => {
-    // Se já tem resultado do backend, usar info específica da região
     const progress = regionProgress || genericProgress;
     if (!progress) return null;
 
-    // Já qualifica para frete grátis completo
     if (progress.qualifies === true) {
       return (
         <div className='mb-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
@@ -238,7 +287,6 @@ const ShippingCalculator = ({
       );
     }
 
-    // Qualifica parcial (Sul/Sudeste sim, demais não)
     if (progress.qualifies === 'partial') {
       return (
         <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
@@ -256,7 +304,6 @@ const ShippingCalculator = ({
       );
     }
 
-    // Não qualifica — mostrar barra de progresso
     const percentage = progress.percentage || 0;
     return (
       <div className='mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg'>
@@ -270,7 +317,6 @@ const ShippingCalculator = ({
             </p>
           </div>
         </div>
-        {/* Barra de Progresso */}
         <div className='w-full bg-amber-200/60 rounded-full h-2.5 overflow-hidden'>
           <div
             className='h-full rounded-full transition-all duration-500 ease-out'
@@ -376,6 +422,15 @@ const ShippingCalculator = ({
       {/* Resultados */}
       {results && !error && filteredOptions.length > 0 && (
         <div className='mt-3 space-y-2'>
+          {/* Hint para selecionar — desaparece após seleção */}
+          {!selectedOption && (
+            <div className='p-2.5 bg-blue-50 border border-blue-200 rounded-lg'>
+              <p className='text-xs text-blue-700 font-medium text-center'>
+                👆 Clique em uma opção para selecionar o envio
+              </p>
+            </div>
+          )}
+
           {filteredOptions.map(option => {
             const isSelected = selectedOption?.id === option.id;
             const isFree = option.freeShipping && option.price === 0;
@@ -406,7 +461,6 @@ const ShippingCalculator = ({
                       <p className='text-sm font-medium text-gray-900'>
                         {option.carrier} — {option.name}
                       </p>
-                      {/* ═══ BADGE FRETE GRÁTIS ═══ */}
                       {isFree && (
                         <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800 border border-green-300 animate-pulse'>
                           🎉 FRETE GRÁTIS
@@ -429,7 +483,6 @@ const ShippingCalculator = ({
                   </div>
                 </div>
                 <div className='text-right flex items-center gap-2'>
-                  {/* Preço riscado + GRÁTIS */}
                   {isFree ? (
                     <div className='flex flex-col items-end'>
                       <span className='text-[11px] text-gray-400 line-through'>
@@ -470,7 +523,6 @@ const ShippingCalculator = ({
             );
           })}
 
-          {/* Powered by */}
           <p className='text-xs text-gray-400 text-center mt-2'>
             Cotação via Melhor Envio • Preços e prazos em tempo real
           </p>
