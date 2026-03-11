@@ -8,6 +8,11 @@
 // Tokenização: Frontend tokeniza → Backend cria pedido com card_token
 // Webhook: Pagar.me notifica mudanças de status
 // ═══════════════════════════════════════════════════════════════════════
+// ✅ FIX 11/03/2026: sendAllOrderEmails agora é importada corretamente
+//    do orderController.js (antes era const privada, agora é export)
+// ✅ FIX 11/03/2026: Removido código morto de imports no topo
+// ✅ FIX 11/03/2026: Fallback de notificação melhorado
+// ═══════════════════════════════════════════════════════════════════════
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -17,34 +22,17 @@ import Address from '../models/Address.js';
 // =============================================================================
 // IMPORTAÇÃO DOS SERVIÇOS DE NOTIFICAÇÃO
 // =============================================================================
-let sendOrderStatusUpdateEmail = null;
 let notifyAdminNewOrder = null;
-
-try {
-  const emailService = await import('../services/emailService.js');
-  sendOrderStatusUpdateEmail = emailService.sendOrderStatusUpdateEmail;
-} catch (error) {
-  console.error('❌ ERRO ao carregar emailService (pagarme):', error.message);
-}
 
 try {
   const adminService = await import('../services/adminNotificationService.js');
   notifyAdminNewOrder = adminService.notifyAdminNewOrder;
+  console.log('✅ adminNotificationService carregado (pagarme)');
 } catch (error) {
   console.error(
     '❌ ERRO ao carregar adminNotificationService (pagarme):',
     error.message,
   );
-}
-
-// Import sendAllOrderEmails from orderController
-let sendAllOrderEmails = null;
-try {
-  const orderCtrl = await import('./orderController.js');
-  // We'll reuse the email function from orderController
-  // For now, we'll implement inline notification
-} catch (error) {
-  console.error('⚠️ Não foi possível importar orderController para emails');
 }
 
 // =============================================================================
@@ -419,15 +407,19 @@ export const createCardOrder = async (req, res) => {
         await User.findByIdAndUpdate(userId, { cartItems: {} });
       }
 
-      // Enviar notificações (async, não bloqueia resposta)
-      sendNotifications(
-        updatedOrder,
-        isGuestOrder,
-        guestEmail || customerEmail,
-        userId,
-      ).catch(err => {
+      // ✅ FIX: AWAIT notificações ANTES de responder
+      // No Vercel serverless, a função morre após res.json()
+      // Se não fizer await, os emails nunca são enviados
+      try {
+        await sendNotifications(
+          updatedOrder,
+          isGuestOrder,
+          guestEmail || customerEmail,
+          userId,
+        );
+      } catch (err) {
         console.error('❌ Erro ao enviar notificações:', err.message);
-      });
+      }
 
       return res.json({
         success: true,
@@ -496,36 +488,92 @@ export const createCardOrder = async (req, res) => {
 
 // =============================================================================
 // 📧 ENVIAR NOTIFICAÇÕES (emails + WhatsApp)
+// ✅ FIX: Agora importa sendAllOrderEmails corretamente (é export)
 // =============================================================================
 const sendNotifications = async (order, isGuestOrder, email, userId) => {
+  console.log('');
+  console.log('📧 ═══════════════════════════════════════════════════');
+  console.log('📧 PAGAR.ME — ENVIANDO NOTIFICAÇÕES');
+  console.log('📧 ═══════════════════════════════════════════════════');
+  console.log('📧 isGuestOrder:', isGuestOrder);
+  console.log('📧 email:', email);
+  console.log('📧 userId:', userId);
+
   try {
-    // Importar função de emails do orderController
+    // ✅ FIX: sendAllOrderEmails agora é EXPORTADA do orderController
     const { sendAllOrderEmails } = await import('./orderController.js');
 
     if (typeof sendAllOrderEmails === 'function') {
       const recipient = isGuestOrder ? email : userId;
+      console.log('📧 Recipient para sendAllOrderEmails:', recipient);
+
       if (recipient) {
-        await sendAllOrderEmails(order, recipient);
+        const result = await sendAllOrderEmails(order, recipient);
+        console.log(
+          '📧 Resultado sendAllOrderEmails:',
+          JSON.stringify(result, null, 2),
+        );
+        return result;
+      } else {
+        console.error('❌ Nenhum recipient encontrado para emails');
       }
+    } else {
+      console.error('❌ sendAllOrderEmails não é uma função!');
+      console.error('❌ Tipo recebido:', typeof sendAllOrderEmails);
     }
   } catch (error) {
-    console.error('❌ Erro ao enviar notificações Pagar.me:', error.message);
+    console.error(
+      '❌ Erro ao importar/executar sendAllOrderEmails:',
+      error.message,
+    );
 
-    // Fallback: tentar notificação admin
+    // Fallback: tentar notificação admin diretamente
+    console.log('📧 Tentando fallback de notificação admin...');
     if (notifyAdminNewOrder) {
       try {
         const products = await Product.find({
           _id: { $in: order.items.map(i => i.product._id || i.product) },
         });
         const address = await Address.findById(order.address);
-        const userObj = {
-          name: order.guestName || 'Cliente',
-          email,
-          phone: order.guestPhone || '',
-        };
-        await notifyAdminNewOrder(order, userObj, products, address);
+
+        // Montar objeto user para adminNotificationService
+        let userObj;
+        if (isGuestOrder) {
+          userObj = {
+            name: order.guestName || 'Cliente',
+            email: email || order.guestEmail,
+            phone: order.guestPhone || '',
+          };
+        } else if (userId) {
+          const userDoc = await User.findById(userId);
+          userObj = userDoc || {
+            name: 'Cliente',
+            email: email,
+            phone: '',
+          };
+        } else {
+          userObj = {
+            name: 'Cliente',
+            email: email,
+            phone: '',
+          };
+        }
+
+        const adminResult = await notifyAdminNewOrder(
+          order,
+          userObj,
+          products,
+          address,
+        );
+        console.log(
+          '📧 Fallback admin result:',
+          JSON.stringify(adminResult, null, 2),
+        );
       } catch (e) {
-        console.error('❌ Fallback notificação admin falhou:', e.message);
+        console.error(
+          '❌ Fallback notificação admin também falhou:',
+          e.message,
+        );
       }
     }
   }
@@ -585,20 +633,16 @@ export const pagarmeWebhook = async (req, res) => {
               });
             }
 
-            // Enviar notificações
-            const recipient = updatedOrder.isGuestOrder
-              ? updatedOrder.guestEmail
-              : updatedOrder.userId;
-
-            if (recipient) {
-              sendNotifications(
+            // ✅ FIX: AWAIT notificações no webhook também
+            try {
+              await sendNotifications(
                 updatedOrder,
                 updatedOrder.isGuestOrder,
                 updatedOrder.guestEmail,
                 updatedOrder.userId,
-              ).catch(err => {
-                console.error('❌ Erro notificações webhook:', err.message);
-              });
+              );
+            } catch (err) {
+              console.error('❌ Erro notificações webhook:', err.message);
             }
           } else if (order?.isPaid) {
             console.log('⚠️ Pedido já marcado como pago, ignorando');

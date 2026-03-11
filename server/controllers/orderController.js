@@ -7,6 +7,8 @@
 // ✅ Domínio: www.elitesurfing.com.br
 // ✅ Notificações: Email + WhatsApp (via adminNotificationService)
 // ✅ FIX: getAllOrders agora inclui pedidos PIX pendentes no painel seller
+// ✅ FIX 11/03: sendAllOrderEmails agora é EXPORTADA (pagarmeController precisa)
+// ✅ FIX 11/03: getAllOrders inclui pedidos pagarme_card pendentes (antifraude)
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -348,8 +350,9 @@ const generateAdminNotificationHTML = (
 
 // =============================================================================
 // FUNÇÃO PRINCIPAL PARA ENVIAR TODOS OS EMAILS + WHATSAPP
+// ✅ FIX 11/03: Agora é EXPORT para que pagarmeController.js possa importar
 // =============================================================================
-const sendAllOrderEmails = async (order, userOrEmail) => {
+export const sendAllOrderEmails = async (order, userOrEmail) => {
   console.log('');
   console.log(
     '╔═══════════════════════════════════════════════════════════════╗',
@@ -1117,8 +1120,7 @@ export const getOrderById = async (req, res) => {
 // =============================================================================
 // GET ALL ORDERS (SELLER/ADMIN)
 // ✅ FIX CRÍTICO: Agora inclui pedidos PIX pendentes para o painel seller
-// Antes: filtrava apenas { isPaid: true } — pedidos PIX nunca apareciam
-// Agora: inclui pedidos PIX manual não pagos + todos os pagos
+// ✅ FIX 11/03: Inclui pedidos pagarme_card pendentes (análise antifraude)
 // =============================================================================
 export const getAllOrders = async (req, res) => {
   try {
@@ -1128,7 +1130,12 @@ export const getAllOrders = async (req, res) => {
         {
           paymentType: 'pix_manual',
           isPaid: false,
-          status: { $ne: 'Cancelled' },
+          status: { $nin: ['Cancelled', 'Cancelado'] },
+        },
+        {
+          paymentType: 'pagarme_card',
+          isPaid: false,
+          status: { $nin: ['Cancelled', 'Cancelado'] },
         },
       ],
     })

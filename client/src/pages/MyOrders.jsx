@@ -26,11 +26,13 @@ const MyOrders = () => {
       });
 
       if (data.success) {
-        // ✅ FILTRAR PEDIDOS: COD + Online pagos + PIX Manual pagos
+        // ✅ FIX 11/03: Filtrar pedidos — agora inclui pagarme_card
         const validOrders = data.orders.filter(order => {
           if (order.paymentType === 'COD') return true;
           if (order.paymentType === 'Online') return order.isPaid === true;
           if (order.paymentType === 'pix_manual') return order.isPaid === true;
+          if (order.paymentType === 'pagarme_card')
+            return order.isPaid === true;
           return false;
         });
 
@@ -61,7 +63,7 @@ const MyOrders = () => {
     }
   }, [user?._id, fetchMyOrders]);
 
-  // ✅ NOVO: Badge de pagamento — suporta PIX manual
+  // ✅ FIX 11/03: Badge de pagamento — agora suporta pagarme_card
   const getPaymentStatusBadge = order => {
     if (order.paymentType === 'pix_manual') {
       if (order.isPaid) {
@@ -74,6 +76,25 @@ const MyOrders = () => {
       return (
         <span className='inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium'>
           ⏳ PIX Pendente
+        </span>
+      );
+    }
+
+    // ✅ FIX 11/03: Novo bloco para Pagar.me (cartão de crédito)
+    if (order.paymentType === 'pagarme_card') {
+      if (order.isPaid) {
+        return (
+          <span className='inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium'>
+            ✅ Cartão{' '}
+            {order.paymentInstallments > 1
+              ? `${order.paymentInstallments}x`
+              : ''}
+          </span>
+        );
+      }
+      return (
+        <span className='inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium'>
+          ⏳ Cartão em Análise
         </span>
       );
     }
@@ -132,7 +153,6 @@ const MyOrders = () => {
     return Math.max(0, total).toFixed(2);
   };
 
-  // ✅ NOVO: Classificação e label do status — backward compat
   const getStatusClasses = status => {
     if (['Entregue', 'Delivered'].includes(status))
       return 'bg-green-100 text-green-800';
@@ -285,12 +305,15 @@ const MyOrders = () => {
                         <p className='text-sm text-gray-600'>
                           Método de Pagamento:
                         </p>
+                        {/* ✅ FIX 11/03: Reconhece pagarme_card */}
                         <p className='font-semibold text-gray-800'>
                           {order.paymentType === 'COD'
                             ? '💰 Pagamento na Entrega'
                             : order.paymentType === 'pix_manual'
                               ? '📱 PIX'
-                              : '💳 Pagamento Online (Stripe)'}
+                              : order.paymentType === 'pagarme_card'
+                                ? `💳 Cartão de Crédito${order.paymentInstallments > 1 ? ` (${order.paymentInstallments}x)` : ''}`
+                                : '💳 Pagamento Online (Stripe)'}
                         </p>
                       </div>
 
@@ -423,7 +446,7 @@ const MyOrders = () => {
                             </p>
                           </div>
 
-                          {/* ✅ ATUALIZADO: Order Status — backward compat */}
+                          {/* Order Status */}
                           <div className='flex-shrink-0 text-center sm:text-right mt-3 sm:mt-0'>
                             <p className='text-sm text-gray-600 mb-1'>
                               Status:
@@ -448,9 +471,11 @@ const MyOrders = () => {
                         </span>
                       </div>
 
+                      {/* ✅ FIX 11/03: Inclui pagarme_card nos badges de pagamento */}
                       <div className='flex gap-2'>
                         {(order.paymentType === 'Online' ||
-                          order.paymentType === 'pix_manual') &&
+                          order.paymentType === 'pix_manual' ||
+                          order.paymentType === 'pagarme_card') &&
                           order.isPaid && (
                             <span className='text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium'>
                               ✅ Pagamento Confirmado
