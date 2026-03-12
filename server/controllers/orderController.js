@@ -734,6 +734,7 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     const validStatuses = [
+      'Aguardando Pagamento',
       'Pedido Confirmado',
       'Enviado',
       'Entregue',

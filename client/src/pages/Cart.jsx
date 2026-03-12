@@ -1640,11 +1640,7 @@ const Cart = () => {
                   ) : !hasAddress() ? (
                     <span>Adicione um endereço</span>
                   ) : !selectedShipping ? (
-                    <span>
-                      {getSubtotal() - getPromoDiscount() >= 199
-                        ? 'Selecione o método de envio'
-                        : 'Calcule o frete acima'}
-                    </span>
+                    <span>Selecione o método de envio</span>
                   ) : (
                     <>
                       {getPaymentButtonIcon()}

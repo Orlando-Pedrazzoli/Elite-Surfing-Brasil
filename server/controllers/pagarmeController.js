@@ -606,6 +606,7 @@ export const createBoletoOrder = async (req, res) => {
       address,
       paymentType: 'pagarme_boleto',
       isPaid: false,
+      status: 'Aguardando Pagamento',
       promoCode: promoCode || '',
       discountAmount: discountAmount || 0,
       discountPercentage: discountPercentage || 0,
@@ -1295,7 +1296,7 @@ export const pagarmeWebhook = async (req, res) => {
 
             const updatedOrder = await Order.findByIdAndUpdate(
               order._id,
-              { isPaid: true, paidAt: new Date() },
+              { isPaid: true, paidAt: new Date(), status: 'Pedido Confirmado' },
               { new: true },
             ).populate('items.product');
 
