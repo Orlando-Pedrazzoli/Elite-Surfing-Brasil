@@ -1,4 +1,5 @@
 // server.js - Elite Surfing Brasil
+// ✅ MIGRAÇÃO 12/03/2026: Stripe REMOVIDO — Pagar.me é o único gateway
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
@@ -12,12 +13,11 @@ import cartRouter from './routes/cartRoute.js';
 import addressRouter from './routes/addressRoute.js';
 import orderRouter from './routes/orderRoute.js';
 import reviewRouter from './routes/reviewRoute.js';
-import { stripeWebhooks } from './controllers/orderController.js';
 import shippingRouter from './routes/shippingRoute.js';
 import pixRouter from './routes/pixManualRoute.js';
 import clienteRouter from './routes/clienteRoute.js';
 import romaneioRouter from './routes/romaneioRoute.js';
-import pagarmeRouter from './routes/pagarmeRoute.js'; // ← PAGAR.ME
+import pagarmeRouter from './routes/pagarmeRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4001;
@@ -39,9 +39,6 @@ const allowedOrigins = [
   'https://elitesurfingbr-backend.vercel.app',
 ];
 
-// ✅ Stripe webhook ANTES de express.json (precisa de raw body)
-app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
-
 // ✅ CORS PRIMEIRO - antes de qualquer body parsing
 app.use(
   cors({
@@ -57,7 +54,7 @@ app.use(
   }),
 );
 
-// ✅ Depois CORS, body parsing e cookies
+// ✅ Body parsing e cookies
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
@@ -67,9 +64,12 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '2.1.0',
-    webhook: '/stripe',
-    pagarme: '✅ Cartão 12x sem juros',
+    version: '3.0.0',
+    payments: {
+      pix: '✅ PIX Manual',
+      card: '✅ Pagar.me — Cartão 12x sem juros',
+      boleto: '✅ Pagar.me — Boleto Bancário',
+    },
   });
 });
 
@@ -85,9 +85,10 @@ app.use('/api/shipping', shippingRouter);
 app.use('/api/pix', pixRouter);
 app.use('/api/clientes', clienteRouter);
 app.use('/api/romaneios', romaneioRouter);
-app.use('/api/pagarme', pagarmeRouter); // ← PAGAR.ME (Cartão 12x)
+app.use('/api/pagarme', pagarmeRouter);
 
-console.log('✅ All routes registered (including Pagar.me)');
+console.log('✅ All routes registered');
+console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
 
 // ✅ 404 handler
 app.use('*', (req, res) => {

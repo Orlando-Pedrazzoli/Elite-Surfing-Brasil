@@ -34,6 +34,7 @@ import CartSidebar from './components/CartSidebar';
 import GroupPage from './pages/GroupPage';
 import InstitucionalPage from './pages/InstitucionalPage';
 import PixPayment from './pages/PixPayment';
+import BoletoPayment from './pages/BoletoPayment'; // ✅ MIGRAÇÃO 12/03
 
 // ✅ Blog
 import Blog from './pages/Blog';
@@ -141,6 +142,7 @@ const App = () => {
           />
           <Route path='/loader' element={<Loading />} />
           <Route path='/pix-payment/:orderId' element={<PixPayment />} />
+          <Route path='/boleto-payment/:orderId' element={<BoletoPayment />} />
 
           {/* ═══ BLOG ROUTES ═══ */}
           <Route path='/blog' element={<Blog />} />

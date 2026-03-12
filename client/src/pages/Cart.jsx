@@ -62,7 +62,7 @@ const Cart = () => {
   // ═══ FRETE — Melhor Envio ═══
   const [selectedShipping, setSelectedShipping] = useState(null);
 
-  // ═══ CPF para Pagar.me (cartão) ═══
+  // ═══ CPF para Pagar.me (cartão + boleto) ═══
   const [customerDocument, setCustomerDocument] = useState('');
 
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
@@ -270,6 +270,18 @@ const Cart = () => {
     setSelectedShipping(option);
   };
 
+  // ✅ MIGRAÇÃO 12/03: Formatação de CPF (reutilizada para boleto)
+  const formatCPF = value => {
+    const digits = value.replace(/\D/g, '');
+    const limited = digits.substring(0, 11);
+    if (limited.length <= 3) return limited;
+    if (limited.length <= 6)
+      return `${limited.slice(0, 3)}.${limited.slice(3)}`;
+    if (limited.length <= 9)
+      return `${limited.slice(0, 3)}.${limited.slice(3, 6)}.${limited.slice(6)}`;
+    return `${limited.slice(0, 3)}.${limited.slice(3, 6)}.${limited.slice(6, 9)}-${limited.slice(9)}`;
+  };
+
   // =============================================================================
   // 💳 HANDLE CARD SUBMIT — PAGAR.ME (TRANSPARENT CHECKOUT)
   // =============================================================================
@@ -401,7 +413,8 @@ const Cart = () => {
   };
 
   // =============================================================================
-  // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (STRIPE)
+  // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (PAGAR.ME)
+  // ✅ MIGRAÇÃO 12/03: Boleto agora usa Pagar.me V5 em vez de Stripe
   // =============================================================================
   const handlePlaceOrder = async () => {
     const currentAddress = getCurrentAddress();
@@ -418,6 +431,14 @@ const Cart = () => {
     if (stockErrors.length > 0) {
       toast.error('Estoque insuficiente:\n' + stockErrors.join('\n'));
       return;
+    }
+
+    // ✅ MIGRAÇÃO 12/03: Validar CPF para boleto
+    if (paymentMethod === 'boleto') {
+      const cpfDigits = customerDocument.replace(/\D/g, '');
+      if (cpfDigits.length !== 11) {
+        return toast.error('CPF é obrigatório para pagamento com boleto.');
+      }
     }
 
     setIsProcessing(true);
@@ -504,23 +525,29 @@ const Cart = () => {
       }
 
       // ═══════════════════════════════════════════════════════════
-      // 💳 FLUXO STRIPE (BOLETO)
+      // 🏦 FLUXO BOLETO — PAGAR.ME V5
+      // ✅ MIGRAÇÃO 12/03: Substituído Stripe por Pagar.me
       // ═══════════════════════════════════════════════════════════
-      const orderData = {
+      const customerName =
+        user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
+      const customerEmail = user?.email || currentAddress.email;
+      const customerPhone = currentAddress.phone || '';
+
+      const boletoPayload = {
         items: cartArray.map(item => ({
           product: item._id,
           quantity: item.quantity,
         })),
-        originalAmount: subtotal,
         amount: finalAmount,
-        discountAmount: promoDisc + pixDisc,
+        originalAmount: subtotal,
+        discountAmount: promoDisc,
         discountPercentage: discountApplied ? 10 : 0,
-        pixDiscountAmount: pixDisc,
-        pixDiscountPercentage: paymentMethod === 'pix' ? PIX_DISCOUNT * 100 : 0,
         promoCode: discountApplied ? appliedPromoCode : '',
-        paymentType: 'Online',
-        paymentMethod: paymentMethod,
-        isPaid: false,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerDocument: customerDocument.replace(/\D/g, ''),
+        // Frete
         shippingCost: shipping,
         shippingMethod: selectedShipping.name,
         shippingCarrier: selectedShipping.carrier,
@@ -531,10 +558,10 @@ const Cart = () => {
       let endpoint;
 
       if (user) {
-        orderData.userId = user._id;
-        orderData.address = selectedAddress._id;
-        orderData.isGuestOrder = false;
-        endpoint = '/api/order/stripe';
+        boletoPayload.userId = user._id;
+        boletoPayload.address = selectedAddress._id;
+        boletoPayload.isGuestOrder = false;
+        endpoint = '/api/pagarme/boleto/create';
       } else {
         const addressResponse = await axios.post('/api/address/guest', {
           address: currentAddress,
@@ -544,27 +571,40 @@ const Cart = () => {
             addressResponse.data.message || 'Erro ao salvar endereço',
           );
         }
-        const addressId = addressResponse.data.addressId;
-        orderData.isGuestOrder = true;
-        orderData.guestEmail = currentAddress.email;
-        orderData.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
-        orderData.guestPhone = currentAddress.phone;
-        orderData.address = addressId;
-        endpoint = '/api/order/guest/stripe';
+        boletoPayload.address = addressResponse.data.addressId;
+        boletoPayload.isGuestOrder = true;
+        boletoPayload.guestEmail = customerEmail;
+        boletoPayload.guestName = customerName;
+        boletoPayload.guestPhone = customerPhone;
+        endpoint = '/api/pagarme/boleto/guest/create';
       }
 
-      const response = await axios.post(endpoint, orderData);
+      const { data } = await axios.post(endpoint, boletoPayload);
 
-      if (response.data.success && response.data.url) {
+      if (data.success) {
+        // Salvar dados do boleto no localStorage (para a página BoletoPayment)
+        localStorage.setItem(
+          'boleto_payment_data',
+          JSON.stringify({
+            orderId: data.orderId,
+            amount: finalAmount,
+            boleto: data.boleto,
+            createdAt: new Date().toISOString(),
+          }),
+        );
+
         const emptyCart = {};
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
-        if (!user && currentAddress.email) {
-          localStorage.setItem('guest_checkout_email', currentAddress.email);
+
+        if (!user && customerEmail) {
+          localStorage.setItem('guest_checkout_email', customerEmail);
         }
-        window.location.replace(response.data.url);
+
+        toast.success('Boleto gerado com sucesso!');
+        navigate(`/boleto-payment/${data.orderId}`);
       } else {
-        toast.error(response.data.message || 'Falha ao iniciar o pagamento.');
+        toast.error(data.message || 'Erro ao gerar boleto. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
@@ -1404,18 +1444,43 @@ const Cart = () => {
                       )}
                     </label>
 
+                    {/* ✅ MIGRAÇÃO 12/03: Info e CPF para boleto */}
                     {paymentMethod === 'boleto' && (
-                      <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800'>
-                        <Clock className='w-4 h-4 mt-0.5 flex-shrink-0' />
-                        <div>
-                          <p className='font-medium'>Atenção:</p>
-                          <p className='text-xs mt-0.5'>
-                            O pedido será confirmado após a compensação do
-                            boleto (1-3 dias úteis). O boleto será gerado pelo
-                            Stripe.
+                      <>
+                        <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800'>
+                          <Clock className='w-4 h-4 mt-0.5 flex-shrink-0' />
+                          <div>
+                            <p className='font-medium'>Atenção:</p>
+                            <p className='text-xs mt-0.5'>
+                              O pedido será confirmado após a compensação do
+                              boleto (1-3 dias úteis). Você receberá o boleto
+                              por e-mail e poderá pagar em qualquer banco ou
+                              casa lotérica.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* CPF para Boleto */}
+                        <div className='mt-2'>
+                          <label className='block text-sm font-medium text-gray-700 mb-1.5'>
+                            CPF do Pagador
+                          </label>
+                          <input
+                            type='text'
+                            inputMode='numeric'
+                            value={customerDocument}
+                            onChange={e =>
+                              setCustomerDocument(formatCPF(e.target.value))
+                            }
+                            placeholder='000.000.000-00'
+                            maxLength={14}
+                            className='w-full px-4 py-3 border border-gray-300 rounded-lg text-base tracking-wider focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none'
+                          />
+                          <p className='text-xs text-gray-500 mt-1'>
+                            Obrigatório para gerar o boleto
                           </p>
                         </div>
-                      </div>
+                      </>
                     )}
 
                     {/* ═══════════════════════════════════════════ */}
@@ -1518,7 +1583,7 @@ const Cart = () => {
 
                 {paymentMethod === 'boleto' && (
                   <p className='text-xs text-gray-500 mt-1 text-right'>
-                    Pagamento via boleto bancário • Vence em 3 dias
+                    Pagamento via boleto bancário — Vence em 3 dias úteis
                   </p>
                 )}
               </div>
@@ -1535,7 +1600,9 @@ const Cart = () => {
                     !hasAddress() ||
                     !selectedShipping ||
                     cartArray.length === 0 ||
-                    Object.keys(stockWarnings).length > 0
+                    Object.keys(stockWarnings).length > 0 ||
+                    (paymentMethod === 'boleto' &&
+                      customerDocument.replace(/\D/g, '').length !== 11)
                   }
                   className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white text-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2
                     ${
@@ -1543,7 +1610,9 @@ const Cart = () => {
                       !hasAddress() ||
                       !selectedShipping ||
                       cartArray.length === 0 ||
-                      Object.keys(stockWarnings).length > 0
+                      Object.keys(stockWarnings).length > 0 ||
+                      (paymentMethod === 'boleto' &&
+                        customerDocument.replace(/\D/g, '').length !== 11)
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-primary hover:bg-primary-dull active:scale-[0.98]'
                     }`}

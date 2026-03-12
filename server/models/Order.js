@@ -17,6 +17,7 @@ const orderSchema = new mongoose.Schema(
     address: { type: String, required: true, ref: 'address' },
     status: { type: String, default: 'Pedido Confirmado' },
     paymentType: { type: String, required: true },
+    // paymentType values: 'pix_manual' | 'pagarme_card' | 'pagarme_boleto'
     isPaid: { type: Boolean, required: true, default: false },
     promoCode: { type: String, default: null },
     discountAmount: { type: Number, default: 0 },
@@ -29,10 +30,16 @@ const orderSchema = new mongoose.Schema(
     shippingServiceId: { type: String, default: '' },
     pixDiscount: { type: Number, default: 0 },
     paidAt: { type: Date, default: null },
-    // ═══ Pagar.me (Cartão de Crédito 12x) ═══
+
+    // ═══ Pagar.me (Cartão de Crédito 12x + Boleto) ═══
     pagarmeOrderId: { type: String, default: null },
     pagarmeChargeId: { type: String, default: null },
     paymentInstallments: { type: Number, default: 1 },
+
+    // ═══ Pagar.me Boleto Bancário ═══
+    pagarmeBoletoUrl: { type: String, default: null },
+    pagarmeBoletoBarcode: { type: String, default: null },
+    pagarmeBoletoExpiresAt: { type: String, default: null },
   },
   { timestamps: true },
 );
@@ -42,4 +49,5 @@ orderSchema.index({ userId: 1 });
 orderSchema.index({ pagarmeOrderId: 1 });
 
 const Order = mongoose.models.order || mongoose.model('order', orderSchema);
+
 export default Order;

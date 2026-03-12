@@ -1,20 +1,17 @@
 // server/controllers/orderController.js
 // VERSÃO BRASIL - Elite Surfing Brasil
 // ✅ Moeda: BRL (R$)
-// ✅ Pagamentos: PIX, Boleto, Cartão (via Stripe)
-// ✅ Parcelamento: Até 12x sem juros (Cartão)
+// ✅ Pagamentos: PIX Manual + Pagar.me (Cartão 12x + Boleto)
 // ✅ Locale: pt-BR
 // ✅ Domínio: www.elitesurfing.com.br
-// ✅ Notificações: Email + WhatsApp (via adminNotificationService)
-// ✅ FIX: getAllOrders agora inclui pedidos PIX pendentes no painel seller
-// ✅ FIX 11/03: sendAllOrderEmails agora é EXPORTADA (pagarmeController precisa)
-// ✅ FIX 11/03: getAllOrders inclui pedidos pagarme_card pendentes (antifraude)
+// ✅ Notificações: Email (Nodemailer/Gmail) + WhatsApp (via adminNotificationService)
+// ✅ MIGRAÇÃO 12/03: Stripe REMOVIDO — Pagar.me é o único gateway
+// ✅ MIGRAÇÃO 12/03: COD REMOVIDO — não existe mais
 
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Address from '../models/Address.js';
-import stripe from 'stripe';
 import nodemailer from 'nodemailer';
 
 // =============================================================================
@@ -350,7 +347,7 @@ const generateAdminNotificationHTML = (
 
 // =============================================================================
 // FUNÇÃO PRINCIPAL PARA ENVIAR TODOS OS EMAILS + WHATSAPP
-// ✅ FIX 11/03: Agora é EXPORT para que pagarmeController.js possa importar
+// ✅ EXPORTADA — pagarmeController.js e pixManualController.js importam esta função
 // =============================================================================
 export const sendAllOrderEmails = async (order, userOrEmail) => {
   console.log('');
@@ -443,7 +440,7 @@ export const sendAllOrderEmails = async (order, userOrEmail) => {
     const products = await Product.find({ _id: { $in: productIds } });
     console.log('📦 Produtos encontrados:', products.length);
 
-    // 4. CRIAR TRANSPORTER
+    // 4. CRIAR TRANSPORTER (Nodemailer + Gmail)
     console.log('');
     console.log('📧 Criando transporter...');
     console.log(
@@ -599,436 +596,6 @@ export const sendAllOrderEmails = async (order, userOrEmail) => {
 };
 
 // =============================================================================
-// PLACE ORDER STRIPE - SUPORTA PIX, BOLETO E CARTÃO COM PARCELAMENTO (BRASIL)
-// =============================================================================
-export const placeOrderStripe = async (req, res) => {
-  console.log('');
-  console.log('💳 ═══════════════════════════════════════════════════');
-  console.log('💳 NOVO PEDIDO STRIPE - BRASIL');
-  console.log('💳 ═══════════════════════════════════════════════════');
-
-  try {
-    const {
-      userId,
-      items,
-      address,
-      originalAmount,
-      amount,
-      discountAmount,
-      discountPercentage,
-      promoCode,
-      paymentMethod,
-      installments,
-      isGuestOrder,
-      guestEmail,
-      guestName,
-      guestPhone,
-      shippingCost,
-      shippingMethod,
-      shippingCarrier,
-      shippingDeliveryDays,
-      shippingServiceId,
-    } = req.body;
-
-    const { origin } = req.headers;
-
-    console.log('💳 isGuestOrder:', isGuestOrder);
-    console.log('💳 guestEmail:', guestEmail);
-    console.log('💳 userId:', userId);
-    console.log('💳 paymentMethod:', paymentMethod);
-    console.log('💳 installments:', installments || 1);
-
-    if (!address || items.length === 0) {
-      return res.json({ success: false, message: 'Dados inválidos' });
-    }
-
-    if (!userId && !isGuestOrder) {
-      return res.json({
-        success: false,
-        message: 'Usuário ou dados de visitante necessários',
-      });
-    }
-
-    if (isGuestOrder && !guestEmail) {
-      return res.json({
-        success: false,
-        message: 'Email é obrigatório para compra como visitante',
-      });
-    }
-
-    // Validar stock
-    const stockValidation = await validateOrderStock(items);
-    if (!stockValidation.valid) {
-      return res.json({
-        success: false,
-        message: 'Estoque insuficiente: ' + stockValidation.errors.join(', '),
-      });
-    }
-
-    let productData = [];
-    for (const item of items) {
-      const product = await Product.findById(item.product);
-      productData.push({
-        name: product.name,
-        price: product.offerPrice,
-        quantity: item.quantity,
-      });
-    }
-
-    // Criar pedido
-    const orderData = {
-      items,
-      amount,
-      address,
-      paymentType: 'Online',
-      isPaid: false,
-      promoCode: promoCode || '',
-      discountAmount: discountAmount || 0,
-      discountPercentage: discountPercentage || 0,
-      originalAmount,
-      shippingCost: shippingCost || 0,
-      shippingMethod: shippingMethod || '',
-      shippingCarrier: shippingCarrier || '',
-      shippingDeliveryDays: shippingDeliveryDays || 0,
-      shippingServiceId: shippingServiceId || '',
-    };
-
-    if (isGuestOrder) {
-      orderData.isGuestOrder = true;
-      orderData.guestEmail = guestEmail;
-      orderData.guestName = guestName || '';
-      orderData.guestPhone = guestPhone || '';
-      orderData.userId = null;
-    } else {
-      orderData.userId = userId;
-      orderData.isGuestOrder = false;
-    }
-
-    const order = await Order.create(orderData);
-    console.log('✅ Pedido Stripe criado:', order._id);
-
-    // Stripe Session
-    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-
-    const line_items = productData.map(item => {
-      let itemPrice = item.price;
-      if (discountPercentage > 0) {
-        itemPrice = item.price * (1 - discountPercentage / 100);
-      }
-      return {
-        price_data: {
-          currency: 'brl',
-          product_data: {
-            name:
-              discountPercentage > 0
-                ? `${item.name} (${discountPercentage}% OFF)`
-                : item.name,
-          },
-          unit_amount: Math.floor(itemPrice * 100),
-        },
-        quantity: item.quantity,
-      };
-    });
-
-    // ═══ FRETE COMO LINE ITEM NO STRIPE ═══
-    if (shippingCost && shippingCost > 0) {
-      line_items.push({
-        price_data: {
-          currency: 'brl',
-          product_data: {
-            name: `Frete — ${shippingCarrier || ''} ${shippingMethod || ''}`.trim(),
-          },
-          unit_amount: Math.round(shippingCost * 100),
-        },
-        quantity: 1,
-      });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // MÉTODOS DE PAGAMENTO BRASIL
-    // ═══════════════════════════════════════════════════════════════
-    let payment_method_types;
-    const sessionOptions = {
-      line_items,
-      mode: 'payment',
-      success_url: `${origin}/order-success/${order._id}?payment=stripe&method=${paymentMethod || 'card'}${isGuestOrder ? '&guest=true' : ''}`,
-      cancel_url: `${origin}/cart`,
-      metadata: {
-        orderId: order._id.toString(),
-        userId: userId || '',
-        paymentMethod: paymentMethod || 'card',
-        installments: String(installments || 1),
-        isGuestOrder: isGuestOrder ? 'true' : 'false',
-        guestEmail: guestEmail || '',
-        guestName: guestName || '',
-        guestPhone: guestPhone || '',
-      },
-    };
-
-    switch (paymentMethod) {
-      case 'pix':
-        payment_method_types = ['pix'];
-        sessionOptions.payment_method_options = {
-          pix: {
-            expires_after_seconds: 1800, // PIX expira em 30 minutos
-          },
-        };
-        break;
-
-      case 'boleto':
-        payment_method_types = ['boleto'];
-        sessionOptions.payment_method_options = {
-          boleto: {
-            expires_after_days: 3, // Boleto expira em 3 dias
-          },
-        };
-        break;
-
-      default:
-        // CARTÃO — sempre com opção de parcelamento
-        payment_method_types = ['card'];
-
-        sessionOptions.payment_method_options = {
-          card: {
-            installments: {
-              enabled: true,
-            },
-          },
-        };
-        console.log(
-          '💳 Parcelamento habilitado (cliente escolhe na página Stripe)',
-        );
-        break;
-    }
-
-    sessionOptions.payment_method_types = payment_method_types;
-
-    if (isGuestOrder && guestEmail) {
-      sessionOptions.customer_email = guestEmail;
-    }
-
-    const session =
-      await stripeInstance.checkout.sessions.create(sessionOptions);
-    console.log('✅ Sessão Stripe criada:', session.id);
-
-    return res.json({ success: true, url: session.url });
-  } catch (error) {
-    console.error('❌ Erro Stripe:', error);
-    return res.json({ success: false, message: error.message });
-  }
-};
-
-// =============================================================================
-// STRIPE WEBHOOKS - COM AWAIT NOS EMAILS (FIX VERCEL)
-// =============================================================================
-export const stripeWebhooks = async (request, response) => {
-  console.log('');
-  console.log('🔔 ═══════════════════════════════════════════════════');
-  console.log('🔔 STRIPE WEBHOOK RECEBIDO');
-  console.log('🔔 ═══════════════════════════════════════════════════');
-
-  const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-  const sig = request.headers['stripe-signature'];
-  let event;
-
-  try {
-    event = stripeInstance.webhooks.constructEvent(
-      request.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET,
-    );
-    console.log('🔔 Evento:', event.type);
-  } catch (error) {
-    console.error('❌ Webhook Signature Error:', error.message);
-    return response.status(400).send(`Webhook Error: ${error.message}`);
-  }
-
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object;
-      console.log('✅ Checkout Session Completed:', session.id);
-      console.log('💳 Payment Status:', session.payment_status);
-
-      const {
-        orderId,
-        userId,
-        paymentMethod,
-        isGuestOrder,
-        guestEmail,
-        guestName,
-        guestPhone,
-      } = session.metadata;
-
-      console.log('📋 Metadata:', {
-        orderId,
-        userId,
-        isGuestOrder,
-        guestEmail,
-      });
-
-      if (session.payment_status === 'paid') {
-        console.log('💰 Pagamento confirmado!');
-
-        // Atualizar pedido como pago
-        const updatedOrder = await Order.findByIdAndUpdate(
-          orderId,
-          { isPaid: true },
-          { new: true },
-        ).populate('items.product');
-
-        if (!updatedOrder) {
-          console.error('❌ Pedido não encontrado:', orderId);
-          break;
-        }
-
-        console.log('✅ Pedido marcado como pago:', orderId);
-
-        // Decrementar estoque
-        await decrementProductStock(updatedOrder.items);
-
-        // Limpar carrinho (se não for guest)
-        if (userId && isGuestOrder !== 'true') {
-          await User.findByIdAndUpdate(userId, { cartItems: {} });
-        }
-
-        // ✅ ENVIAR EMAILS + WHATSAPP COM AWAIT
-        console.log('');
-        console.log('📧 Preparando envio de emails + notificações...');
-
-        let emailRecipient;
-        if (isGuestOrder === 'true') {
-          emailRecipient = guestEmail || updatedOrder.guestEmail;
-          console.log('📧 Modo: Guest - Email:', emailRecipient);
-        } else {
-          emailRecipient = userId;
-          console.log('📧 Modo: User cadastrado - ID:', emailRecipient);
-        }
-
-        if (emailRecipient) {
-          const emailResult = await sendAllOrderEmails(
-            updatedOrder,
-            emailRecipient,
-          );
-          console.log(
-            '📧 Resultado dos emails:',
-            JSON.stringify(emailResult, null, 2),
-          );
-        } else {
-          console.error('❌ Nenhum destinatário de email encontrado!');
-        }
-      } else if (
-        session.payment_status === 'unpaid' &&
-        paymentMethod === 'boleto'
-      ) {
-        // Boleto: pagamento pendente — será confirmado via payment_intent.succeeded
-        console.log('⏳ Boleto: Aguardando pagamento');
-      }
-      break;
-    }
-
-    case 'payment_intent.succeeded': {
-      const paymentIntent = event.data.object;
-      console.log('💳 Payment Intent Succeeded:', paymentIntent.id);
-
-      try {
-        const sessions = await stripeInstance.checkout.sessions.list({
-          payment_intent: paymentIntent.id,
-        });
-
-        if (!sessions.data || sessions.data.length === 0) {
-          console.log('⚠️ Sessão não encontrada para payment_intent');
-          break;
-        }
-
-        const { orderId, userId, isGuestOrder, guestEmail } =
-          sessions.data[0].metadata;
-
-        // Verificar se já foi processado
-        const existingOrder = await Order.findById(orderId);
-        if (existingOrder?.isPaid) {
-          console.log('⚠️ Pedido já processado, ignorando duplicado');
-          break;
-        }
-
-        // Este caso cobre BOLETO pago após emissão
-        console.log(
-          '💰 Pagamento assíncrono confirmado (provavelmente Boleto)',
-        );
-
-        const updatedOrder = await Order.findByIdAndUpdate(
-          orderId,
-          { isPaid: true },
-          { new: true },
-        ).populate('items.product');
-
-        if (!updatedOrder) {
-          console.error('❌ Pedido não encontrado:', orderId);
-          break;
-        }
-
-        console.log('✅ Pedido marcado como pago (payment_intent):', orderId);
-
-        // Decrementar estoque
-        await decrementProductStock(updatedOrder.items);
-
-        // Limpar carrinho
-        if (userId && isGuestOrder !== 'true') {
-          await User.findByIdAndUpdate(userId, { cartItems: {} });
-        }
-
-        // ✅ Enviar emails para pagamentos assíncronos (Boleto pago depois)
-        let emailRecipient;
-        if (isGuestOrder === 'true') {
-          emailRecipient = guestEmail || updatedOrder.guestEmail;
-        } else {
-          emailRecipient = userId;
-        }
-
-        if (emailRecipient) {
-          console.log(
-            '📧 Enviando emails para pagamento assíncrono (Boleto)...',
-          );
-          const emailResult = await sendAllOrderEmails(
-            updatedOrder,
-            emailRecipient,
-          );
-          console.log('📧 Resultado:', JSON.stringify(emailResult, null, 2));
-        }
-      } catch (error) {
-        console.error('❌ Erro no webhook payment_intent:', error.message);
-      }
-      break;
-    }
-
-    case 'payment_intent.payment_failed': {
-      const paymentIntent = event.data.object;
-      console.log('❌ Pagamento falhou:', paymentIntent.id);
-
-      try {
-        const sessions = await stripeInstance.checkout.sessions.list({
-          payment_intent: paymentIntent.id,
-        });
-
-        if (sessions.data && sessions.data.length > 0) {
-          const { orderId } = sessions.data[0].metadata;
-          await Order.findByIdAndDelete(orderId);
-          console.log('🗑️ Pedido deletado:', orderId);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao deletar pedido:', error.message);
-      }
-      break;
-    }
-
-    default:
-      console.log('ℹ️ Evento não tratado:', event.type);
-  }
-
-  // ✅ Responder ao Stripe DEPOIS dos emails serem enviados
-  response.json({ received: true });
-};
-
-// =============================================================================
 // GET USER ORDERS
 // =============================================================================
 export const getUserOrders = async (req, res) => {
@@ -1101,8 +668,8 @@ export const getOrderById = async (req, res) => {
       return res.json({ success: false, message: 'Pedido não encontrado' });
     }
 
-    // Só mostra pedidos pagos
-    if (!order.isPaid) {
+    // Só mostra pedidos pagos (exceto boleto pendente que precisa mostrar URL)
+    if (!order.isPaid && order.paymentType !== 'pagarme_boleto') {
       return res.json({
         success: false,
         message: 'Pedido ainda não confirmado',
@@ -1119,8 +686,7 @@ export const getOrderById = async (req, res) => {
 
 // =============================================================================
 // GET ALL ORDERS (SELLER/ADMIN)
-// ✅ FIX CRÍTICO: Agora inclui pedidos PIX pendentes para o painel seller
-// ✅ FIX 11/03: Inclui pedidos pagarme_card pendentes (análise antifraude)
+// ✅ Inclui pedidos pendentes: PIX manual, Pagar.me cartão (antifraude), Pagar.me boleto
 // =============================================================================
 export const getAllOrders = async (req, res) => {
   try {
@@ -1134,6 +700,11 @@ export const getAllOrders = async (req, res) => {
         },
         {
           paymentType: 'pagarme_card',
+          isPaid: false,
+          status: { $nin: ['Cancelled', 'Cancelado'] },
+        },
+        {
+          paymentType: 'pagarme_boleto',
           isPaid: false,
           status: { $nin: ['Cancelled', 'Cancelado'] },
         },
@@ -1228,15 +799,4 @@ export const updateOrderStatus = async (req, res) => {
     console.error('❌ Erro ao atualizar status:', error);
     res.json({ success: false, message: error.message });
   }
-};
-
-// =============================================================================
-// COD DESATIVADO
-// =============================================================================
-export const placeOrderCOD = async (req, res) => {
-  return res.json({
-    success: false,
-    message:
-      'Pagamento na entrega não está disponível. Por favor, use pagamento online (PIX, Boleto ou Cartão).',
-  });
 };
