@@ -21,6 +21,9 @@ import {
   FileText,
   Clock,
   Package,
+  Check,
+  X,
+  Tag,
 } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
@@ -112,10 +115,10 @@ const Cart = () => {
     }
   }, [products, cartItems, user]);
 
-  // Resetar frete quando cupom é aplicado/removido (threshold pode mudar)
-  useEffect(() => {
-    setSelectedShipping(null);
-  }, [discountApplied]);
+  // ✅ REMOVIDO: useEffect que resetava selectedShipping quando discountApplied mudava.
+  // O ShippingCalculator recebe o subtotal atualizado via prop e a barra de progresso
+  // de frete grátis recalcula automaticamente. O preço da transportadora já veio
+  // calculado do backend e não muda com cupom — o cliente não precisa re-selecionar.
 
   const updateCartArray = () => {
     const tempArray = Object.keys(cartItems)
@@ -1263,36 +1266,70 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* Promo Code */}
+              {/* ═══════════════════════════════════════════════ */}
+              {/* CUPOM DE DESCONTO — UX melhorado                */}
+              {/* ═══════════════════════════════════════════════ */}
               <div className='mb-6 border-b pb-6 border-gray-200'>
-                <h3 className='font-semibold text-gray-700 mb-3'>
-                  Cupom de Desconto
-                </h3>
-                <div className='flex w-full'>
-                  <input
-                    type='text'
-                    value={promoCode}
-                    onChange={e => setPromoCode(e.target.value)}
-                    placeholder='Digite o cupom'
-                    disabled={discountApplied}
-                    className='flex-1 min-w-0 border border-gray-300 rounded-l-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 disabled:bg-gray-100'
-                  />
-                  {discountApplied ? (
+                <div className='flex items-center gap-2 mb-3'>
+                  <Tag className='w-5 h-5 text-primary' />
+                  <h3 className='font-semibold text-gray-700'>
+                    Cupom de Desconto
+                  </h3>
+                </div>
+
+                {discountApplied ? (
+                  /* ── Estado aplicado: tag de confirmação verde ── */
+                  <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg'>
+                    <div className='flex items-center gap-2.5'>
+                      <div className='w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                        <Check className='w-4 h-4 text-green-600' />
+                      </div>
+                      <div>
+                        <div className='flex items-center gap-2'>
+                          <span className='text-sm font-bold text-green-800 tracking-wide'>
+                            {appliedPromoCode}
+                          </span>
+                          <span className='text-xs bg-green-200 text-green-700 px-1.5 py-0.5 rounded font-semibold'>
+                            -10%
+                          </span>
+                        </div>
+                        <p className='text-xs text-green-600 mt-0.5'>
+                          Economia de {formatBRL(getPromoDiscount())}
+                        </p>
+                      </div>
+                    </div>
                     <button
                       onClick={handleRemovePromo}
-                      className='bg-red-500 text-white px-5 py-2.5 rounded-r-lg hover:bg-red-600 transition-all duration-300 font-medium active:scale-95 flex-shrink-0'
+                      className='p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors'
+                      title='Remover cupom'
                     >
-                      Remover
+                      <X className='w-4 h-4' />
                     </button>
-                  ) : (
+                  </div>
+                ) : (
+                  /* ── Estado inicial: input + botão aplicar ── */
+                  <div className='flex w-full'>
+                    <input
+                      type='text'
+                      value={promoCode}
+                      onChange={e => setPromoCode(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handlePromoCode()}
+                      placeholder='Digite o cupom'
+                      className='flex-1 min-w-0 border border-gray-300 rounded-l-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700'
+                    />
                     <button
                       onClick={handlePromoCode}
-                      className='bg-primary text-white px-5 py-2.5 rounded-r-lg hover:bg-primary-dull transition-all duration-300 font-medium active:scale-95 flex-shrink-0'
+                      disabled={!promoCode.trim()}
+                      className={`px-5 py-2.5 rounded-r-lg transition-all duration-300 font-medium active:scale-95 flex-shrink-0 ${
+                        promoCode.trim()
+                          ? 'bg-primary text-white hover:bg-primary-dull'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
                     >
                       Aplicar
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* ═══════════════════════════════════════════════ */}
