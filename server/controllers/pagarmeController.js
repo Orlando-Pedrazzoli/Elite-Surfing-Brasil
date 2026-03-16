@@ -722,7 +722,7 @@ export const createBoletoOrder = async (req, res) => {
 
     const boletoUrl = lastTransaction?.url || lastTransaction?.pdf || '';
     const boletoBarcode =
-      lastTransaction?.barcode || lastTransaction?.line || '';
+      lastTransaction?.line || lastTransaction?.barcode || '';
     const boletoExpiresAt = lastTransaction?.due_at || dueDateISO;
 
     console.log('🏦 Boleto URL:', boletoUrl ? '✅' : '❌');
