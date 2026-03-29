@@ -7,6 +7,7 @@ import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
 import ShippingCalculator from '../components/ShippingCalculator';
 import CreditCardForm from '../components/CreditCardForm';
+import OtpVerificationModal from '../components/OtpVerificationModal';
 import {
   MapPin,
   Plus,
@@ -68,11 +69,76 @@ const Cart = () => {
   // ═══ CPF para Pagar.me (cartão + boleto) ═══
   const [customerDocument, setCustomerDocument] = useState('');
 
+  // ═══ OTP Email Verification (Guest Checkout) ═══
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [emailVerificationToken, setEmailVerificationToken] = useState(null);
+  const [verifiedEmail, setVerifiedEmail] = useState(null);
+  // Guardar referência de qual ação disparou o OTP (para retomar após verificação)
+  const [pendingAction, setPendingAction] = useState(null);
+  // Para cartão, guardar o payload do card submit enquanto aguarda OTP
+  const [pendingCardPayload, setPendingCardPayload] = useState(null);
+
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
   const [appliedPromoCode, setAppliedPromoCode] = useState('');
 
   const isCartEmpty =
     !products.length || !cartItems || Object.keys(cartItems).length === 0;
+
+  // ═══════════════════════════════════════════════
+  // HELPERS — Verificação de email para guest
+  // ═══════════════════════════════════════════════
+
+  // Verificar se guest precisa de OTP
+  const guestNeedsVerification = () => {
+    if (user) return false; // User logado não precisa
+    if (emailVerificationToken && verifiedEmail) {
+      // Verificar se o email verificado é o mesmo do endereço atual
+      const currentEmail = guestAddress?.email?.toLowerCase()?.trim();
+      if (currentEmail && currentEmail === verifiedEmail) {
+        return false; // Já verificado para este email
+      }
+    }
+    return true; // Precisa verificar
+  };
+
+  // Obter email do guest para verificação
+  const getGuestEmail = () => {
+    return guestAddress?.email || '';
+  };
+
+  // Callback quando OTP é verificado com sucesso
+  const handleOtpVerified = token => {
+    setEmailVerificationToken(token);
+    setVerifiedEmail(getGuestEmail().toLowerCase().trim());
+    setShowOtpModal(false);
+
+    // Retomar ação pendente
+    if (pendingAction === 'placeOrder') {
+      // Pequeno delay para fechar o modal antes de processar
+      setTimeout(() => {
+        executeHandlePlaceOrder(token);
+      }, 300);
+    } else if (pendingAction === 'cardSubmit' && pendingCardPayload) {
+      setTimeout(() => {
+        executeHandleCardSubmit(pendingCardPayload, token);
+      }, 300);
+    }
+
+    setPendingAction(null);
+    setPendingCardPayload(null);
+  };
+
+  // Reset verificação quando email do guest muda
+  useEffect(() => {
+    if (!user && guestAddress?.email) {
+      const currentEmail = guestAddress.email.toLowerCase().trim();
+      if (verifiedEmail && currentEmail !== verifiedEmail) {
+        // Email mudou — resetar verificação
+        setEmailVerificationToken(null);
+        setVerifiedEmail(null);
+      }
+    }
+  }, [guestAddress?.email]);
 
   // Redirecionamento automático quando carrinho está vazio
   useEffect(() => {
@@ -114,11 +180,6 @@ const Cart = () => {
       loadUserAddresses();
     }
   }, [products, cartItems, user]);
-
-  // ✅ REMOVIDO: useEffect que resetava selectedShipping quando discountApplied mudava.
-  // O ShippingCalculator recebe o subtotal atualizado via prop e a barra de progresso
-  // de frete grátis recalcula automaticamente. O preço da transportadora já veio
-  // calculado do backend e não muda com cupom — o cliente não precisa re-selecionar.
 
   const updateCartArray = () => {
     const tempArray = Object.keys(cartItems)
@@ -287,13 +348,27 @@ const Cart = () => {
 
   // =============================================================================
   // 💳 HANDLE CARD SUBMIT — PAGAR.ME (TRANSPARENT CHECKOUT)
+  // ✅ 29/03/2026: Adicionada verificação OTP para guest
   // =============================================================================
-  const handleCardSubmit = async ({
-    cardToken,
-    installments,
-    customerDocument,
-    cardBrand,
-  }) => {
+  const handleCardSubmit = async cardPayload => {
+    // Se é guest e precisa de verificação OTP
+    if (guestNeedsVerification()) {
+      if (!getGuestEmail()) {
+        return toast.error('Por favor, adicione um endereço com email válido.');
+      }
+      setPendingAction('cardSubmit');
+      setPendingCardPayload(cardPayload);
+      setShowOtpModal(true);
+      return;
+    }
+
+    // Já verificado ou user logado — prosseguir
+    executeHandleCardSubmit(cardPayload, emailVerificationToken);
+  };
+
+  const executeHandleCardSubmit = async (cardPayload, token) => {
+    const { cardToken, installments, customerDocument, cardBrand } =
+      cardPayload;
     const currentAddress = getCurrentAddress();
     if (!currentAddress) {
       return toast.error('Por favor, adicione um endereço de entrega.');
@@ -362,9 +437,15 @@ const Cart = () => {
         orderPayload.isGuestOrder = false;
         endpoint = '/api/pagarme/card/create';
       } else {
+        // ✅ OTP: Incluir verificationToken no payload guest
+        orderPayload.verificationToken = token;
+        orderPayload.guestEmail = customerEmail;
+
         // Guest: salvar endereço primeiro
         const addressResponse = await axios.post('/api/address/guest', {
           address: currentAddress,
+          verificationToken: token,
+          guestEmail: customerEmail,
         });
         if (!addressResponse.data.success) {
           throw new Error(
@@ -373,7 +454,6 @@ const Cart = () => {
         }
         orderPayload.address = addressResponse.data.addressId;
         orderPayload.isGuestOrder = true;
-        orderPayload.guestEmail = customerEmail;
         orderPayload.guestName = customerName;
         orderPayload.guestPhone = customerPhone;
         endpoint = '/api/pagarme/card/guest/create';
@@ -407,6 +487,15 @@ const Cart = () => {
       }
     } catch (error) {
       console.error('Erro no pagamento com cartão:', error);
+      // ✅ OTP: Tratar erro de verificação expirada
+      if (error.response?.data?.requiresVerification) {
+        setEmailVerificationToken(null);
+        setVerifiedEmail(null);
+        toast.error(
+          'Verificação expirada. Por favor, verifique seu email novamente.',
+        );
+        return;
+      }
       toast.error(
         error.response?.data?.message || 'Erro ao processar pagamento.',
       );
@@ -417,9 +506,24 @@ const Cart = () => {
 
   // =============================================================================
   // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (PAGAR.ME)
-  // ✅ MIGRAÇÃO 12/03: Boleto agora usa Pagar.me V5 em vez de Stripe
+  // ✅ 29/03/2026: Adicionada verificação OTP para guest
   // =============================================================================
   const handlePlaceOrder = async () => {
+    // ✅ OTP: Se é guest e precisa de verificação, abrir modal
+    if (guestNeedsVerification()) {
+      if (!getGuestEmail()) {
+        return toast.error('Por favor, adicione um endereço com email válido.');
+      }
+      setPendingAction('placeOrder');
+      setShowOtpModal(true);
+      return;
+    }
+
+    // Já verificado ou user logado — prosseguir
+    executeHandlePlaceOrder(emailVerificationToken);
+  };
+
+  const executeHandlePlaceOrder = async token => {
     const currentAddress = getCurrentAddress();
     if (!currentAddress) {
       return toast.error('Por favor, adicione um endereço de entrega.');
@@ -481,8 +585,14 @@ const Cart = () => {
           pixPayload.address = selectedAddress._id;
           pixEndpoint = '/api/pix/create';
         } else {
+          // ✅ OTP: Incluir verificationToken no payload guest
+          pixPayload.verificationToken = token;
+          pixPayload.guestEmail = currentAddress.email;
+
           const addressResponse = await axios.post('/api/address/guest', {
             address: currentAddress,
+            verificationToken: token,
+            guestEmail: currentAddress.email,
           });
           if (!addressResponse.data.success) {
             throw new Error(
@@ -492,7 +602,6 @@ const Cart = () => {
 
           pixPayload.address = addressResponse.data.addressId;
           pixPayload.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
-          pixPayload.guestEmail = currentAddress.email;
           pixPayload.guestPhone = currentAddress.phone || '';
           pixEndpoint = '/api/pix/guest/create';
         }
@@ -529,7 +638,6 @@ const Cart = () => {
 
       // ═══════════════════════════════════════════════════════════
       // 🏦 FLUXO BOLETO — PAGAR.ME V5
-      // ✅ MIGRAÇÃO 12/03: Substituído Stripe por Pagar.me
       // ═══════════════════════════════════════════════════════════
       const customerName =
         user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
@@ -566,8 +674,14 @@ const Cart = () => {
         boletoPayload.isGuestOrder = false;
         endpoint = '/api/pagarme/boleto/create';
       } else {
+        // ✅ OTP: Incluir verificationToken no payload guest
+        boletoPayload.verificationToken = token;
+        boletoPayload.guestEmail = customerEmail;
+
         const addressResponse = await axios.post('/api/address/guest', {
           address: currentAddress,
+          verificationToken: token,
+          guestEmail: customerEmail,
         });
         if (!addressResponse.data.success) {
           throw new Error(
@@ -576,7 +690,6 @@ const Cart = () => {
         }
         boletoPayload.address = addressResponse.data.addressId;
         boletoPayload.isGuestOrder = true;
-        boletoPayload.guestEmail = customerEmail;
         boletoPayload.guestName = customerName;
         boletoPayload.guestPhone = customerPhone;
         endpoint = '/api/pagarme/boleto/guest/create';
@@ -611,6 +724,15 @@ const Cart = () => {
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
+      // ✅ OTP: Tratar erro de verificação expirada
+      if (error.response?.data?.requiresVerification) {
+        setEmailVerificationToken(null);
+        setVerifiedEmail(null);
+        toast.error(
+          'Verificação expirada. Por favor, verifique seu email novamente.',
+        );
+        return;
+      }
       if (error.response?.status === 401 && user) {
         toast.error('Sessão expirada. Por favor, faça login novamente.');
         if (isMobile) localStorage.removeItem('mobile_auth_token');
@@ -877,6 +999,18 @@ const Cart = () => {
         isLoading={isAddressLoading}
       />
 
+      {/* ✅ OTP Verification Modal */}
+      <OtpVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => {
+          setShowOtpModal(false);
+          setPendingAction(null);
+          setPendingCardPayload(null);
+        }}
+        email={getGuestEmail()}
+        onVerified={handleOtpVerified}
+      />
+
       <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 min-h-[calc(100vh-60px)]'>
         {/* Progress Steps */}
         <div className='max-w-2xl mx-auto mb-8'>
@@ -1094,6 +1228,18 @@ const Cart = () => {
                     Finalize sua compra rapidamente. Você pode criar conta
                     depois.
                   </p>
+                </div>
+              )}
+
+              {/* ✅ OTP: Indicador de email verificado (guest) */}
+              {!user && verifiedEmail && (
+                <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <div className='flex items-center gap-2 text-blue-800'>
+                    <Check className='w-4 h-4' />
+                    <span className='text-sm font-medium'>
+                      Email verificado: {verifiedEmail}
+                    </span>
+                  </div>
                 </div>
               )}
 
