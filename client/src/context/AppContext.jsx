@@ -95,12 +95,10 @@ export const AppContextProvider = ({ children }) => {
   // Clear all stored data
   const clearStoredData = () => {
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('cart_items');
     localStorage.removeItem('user_data');
     localStorage.removeItem('guest_checkout_email');
     localStorage.removeItem('guest_checkout_address');
     delete axios.defaults.headers.common['Authorization'];
-    // ⚠️ NÃO limpa sellerToken aqui — só no logoutSeller
   };
 
   // Save user data to localStorage
