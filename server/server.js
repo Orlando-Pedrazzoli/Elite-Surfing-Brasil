@@ -23,7 +23,7 @@ import otpRouter from './routes/otpRoute.js';
 import blogRouter from './routes/blogRoute.js';
 
 const app = express();
-const port = process.env.PORT || 4001;
+const port = process.env.PORT || 4000;
 
 // ✅ Conexões
 await connectDB();
