@@ -416,7 +416,7 @@ const CreditCardForm = ({
               </button>
 
               {showInstallments && (
-                <div className='absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto'>
+                <div className='absolute z-20 w-full bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto'>
                   {availableInstallments.map(inst => (
                     <button
                       key={inst.times}
