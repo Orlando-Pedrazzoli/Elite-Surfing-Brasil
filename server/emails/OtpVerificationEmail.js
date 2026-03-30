@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 // URL pública do logo — substitua se necessário
-const LOGO_URL = 'https://www.elitesurfing.com.br/logo.png';
+const LOGO_URL = 'https://www.elitesurfing.com.br/logo-branco.png';
 
 export const createOtpEmailTemplate = (otp, email) => {
   // Separar dígitos para exibição individual
