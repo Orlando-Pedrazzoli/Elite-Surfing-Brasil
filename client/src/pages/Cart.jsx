@@ -1552,17 +1552,116 @@ const Cart = () => {
                           <span className='font-medium text-gray-800'>
                             Cartão de Crédito
                           </span>
-                          <div className='flex gap-1 mt-0.5'>
-                            <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded'>
-                              Visa
-                            </span>
-                            <span className='text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded'>
-                              MC
-                            </span>
-                            <span className='text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded'>
-                              Elo
-                            </span>
-                            <span className='text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded'>
+                          <div className='flex items-center gap-1.5 mt-0.5'>
+                            <svg
+                              width='32'
+                              height='20'
+                              viewBox='0 0 48 30'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <rect
+                                width='48'
+                                height='30'
+                                rx='4'
+                                fill='#1A1F71'
+                              />
+                              <path
+                                d='M19.5 20.5h-3.2L18.4 9.5h3.2L19.5 20.5zM15 9.5l-3 7.5-.35-1.8-.01.03L10.5 10.2s-.15-.7-.95-.7H5.1l-.06.2s.9.19 1.95.78L9.7 20.5H13L18.3 9.5H15zM35.5 20.5H38.5L36 9.5h-2.6c-.7 0-1.2.4-1.45 1l-5.1 10h3.6l.7-2h4.35l.4 2zM32 16.5l1.8-4.9 1 4.9H32zM29 12.2l.5-2.9s-1.5-.6-3.1-.6c-1.7 0-5.7.75-5.7 4.4 0 3.4 4.8 3.5 4.8 5.3 0 1.8-4.3 1.5-5.7.35l-.5 3s1.6.75 4 .75c2.4 0 5.9-1.25 5.9-4.55 0-3.45-4.85-3.8-4.85-5.3 0-1.5 3.35-1.3 4.65-.4z'
+                                fill='#fff'
+                              />
+                            </svg>
+                            <svg
+                              width='32'
+                              height='20'
+                              viewBox='0 0 48 30'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <rect
+                                width='48'
+                                height='30'
+                                rx='4'
+                                fill='#252525'
+                              />
+                              <circle cx='19' cy='15' r='8' fill='#EB001B' />
+                              <circle cx='29' cy='15' r='8' fill='#F79E1B' />
+                              <path
+                                d='M24 9.06a8 8 0 010 11.88 8 8 0 000-11.88z'
+                                fill='#FF5F00'
+                              />
+                            </svg>
+                            <svg
+                              width='32'
+                              height='20'
+                              viewBox='0 0 48 30'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <rect width='48' height='30' rx='4' fill='#000' />
+                              <text
+                                x='24'
+                                y='18'
+                                textAnchor='middle'
+                                fill='#FFCB05'
+                                fontWeight='bold'
+                                fontSize='11'
+                                fontFamily='Arial'
+                              >
+                                elo
+                              </text>
+                            </svg>
+                            <svg
+                              width='32'
+                              height='20'
+                              viewBox='0 0 48 30'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <rect
+                                width='48'
+                                height='30'
+                                rx='4'
+                                fill='#2E77BC'
+                              />
+                              <text
+                                x='24'
+                                y='18'
+                                textAnchor='middle'
+                                fill='#fff'
+                                fontWeight='bold'
+                                fontSize='8'
+                                fontFamily='Arial'
+                              >
+                                AMEX
+                              </text>
+                            </svg>
+                            <svg
+                              width='32'
+                              height='20'
+                              viewBox='0 0 48 30'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <rect
+                                width='48'
+                                height='30'
+                                rx='4'
+                                fill='#822124'
+                              />
+                              <text
+                                x='24'
+                                y='18'
+                                textAnchor='middle'
+                                fill='#fff'
+                                fontWeight='bold'
+                                fontSize='7'
+                                fontFamily='Arial'
+                              >
+                                HIPER
+                              </text>
+                            </svg>
+                            <span className='text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium'>
                               até 12x
                             </span>
                           </div>
