@@ -241,9 +241,11 @@ const OtpVerificationModal = ({ isOpen, onClose, email, onVerified }) => {
           </button>
 
           <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center'>
-              <Shield className='w-6 h-6' />
-            </div>
+            <img
+              src='/logo.png'
+              alt='Elite Surfing'
+              className='w-12 h-12 object-contain'
+            />
             <div>
               <h2 className='text-xl font-bold'>Verificação de Email</h2>
               <p className='text-white/80 text-sm'>

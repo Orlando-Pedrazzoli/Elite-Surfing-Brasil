@@ -49,7 +49,7 @@ const ProductDetails = () => {
 
   // Estado para produto carregado via API (quando não está no products)
   const [apiProduct, setApiProduct] = useState(null);
-  
+
   const productFromContext = products.find(item => item._id === id);
   const product = productFromContext || apiProduct;
 
@@ -102,19 +102,21 @@ const ProductDetails = () => {
   }, [product?.productFamily, product?._id, getProductFamily]);
 
   // Verificar se produto está inativo
-  const isInactive = !displayProduct?.inStock || (displayProduct?.stock || 0) <= 0;
+  const isInactive =
+    !displayProduct?.inStock || (displayProduct?.stock || 0) <= 0;
   const currentStock = displayProduct?.stock || 0;
   const isLowStock = currentStock > 0 && currentStock <= 3;
 
   // Calcular quantidade disponível para adicionar
-  const cartQuantity = displayProduct ? (cartItems[displayProduct._id] || 0) : 0;
+  const cartQuantity = displayProduct ? cartItems[displayProduct._id] || 0 : 0;
   const availableToAdd = currentStock - cartQuantity;
   const hasItemsInCart = cartQuantity > 0;
 
   // 🆕 Detectar tipo de variante da família
-  const familyVariantType = familyProducts.length > 0 
-    ? (familyProducts[0].variantType || 'color') 
-    : 'color';
+  const familyVariantType =
+    familyProducts.length > 0
+      ? familyProducts[0].variantType || 'color'
+      : 'color';
 
   // 🆕 Tags e badges
   const tags = displayProduct?.tags || [];
@@ -124,18 +126,25 @@ const ProductDetails = () => {
   const isBestseller = tags.includes('bestseller');
 
   // 🆕 Percentagem de desconto
-  const discountPercent = displayProduct && displayProduct.price > displayProduct.offerPrice
-    ? Math.round(((displayProduct.price - displayProduct.offerPrice) / displayProduct.price) * 100)
-    : 0;
+  const discountPercent =
+    displayProduct && displayProduct.price > displayProduct.offerPrice
+      ? Math.round(
+          ((displayProduct.price - displayProduct.offerPrice) /
+            displayProduct.price) *
+            100,
+        )
+      : 0;
 
   // SEO
-  const generateProductDescription = (product) => {
+  const generateProductDescription = product => {
     if (!product) return '';
-    const desc = Array.isArray(product.description) 
-      ? product.description[0] 
+    const desc = Array.isArray(product.description)
+      ? product.description[0]
       : product.description;
-    return desc?.substring(0, 155) + (desc?.length > 155 ? '...' : '') || 
-      `${product.name} - Compre na Elite Surfing.`;
+    return (
+      desc?.substring(0, 155) + (desc?.length > 155 ? '...' : '') ||
+      `${product.name} - Compre na Elite Surfing.`
+    );
   };
 
   const getBreadcrumbs = () => {
@@ -143,8 +152,11 @@ const ProductDetails = () => {
     return [
       { name: 'Início', url: '/' },
       { name: 'Produtos', url: '/products' },
-      { name: displayProduct.category, url: `/products/${displayProduct.category?.toLowerCase()}` },
-      { name: displayProduct.name }
+      {
+        name: displayProduct.category,
+        url: `/products/${displayProduct.category?.toLowerCase()}`,
+      },
+      { name: displayProduct.name },
     ];
   };
 
@@ -161,7 +173,9 @@ const ProductDetails = () => {
           product.category === item.category &&
           item._id !== product._id &&
           item.inStock &&
-          (product.productFamily ? item.productFamily !== product.productFamily : true)
+          (product.productFamily
+            ? item.productFamily !== product.productFamily
+            : true),
       );
       setRelatedProducts(productsCopy);
     }
@@ -178,7 +192,7 @@ const ProductDetails = () => {
     try {
       setReviewStats(prev => ({ ...prev, loading: true }));
       const response = await axios.get(
-        `/api/reviews/product/${product._id}?page=1&limit=1`
+        `/api/reviews/product/${product._id}?page=1&limit=1`,
       );
       if (response.data.success) {
         setReviewStats({
@@ -195,26 +209,26 @@ const ProductDetails = () => {
   };
 
   // Handler para trocar cor/tamanho
-  const handleColorClick = (familyProductId) => {
+  const handleColorClick = familyProductId => {
     if (familyProductId === displayProduct?._id) return;
-    
+
     const newProduct = familyProducts.find(p => p._id === familyProductId);
     if (!newProduct) return;
 
     setIsColorTransitioning(true);
-    
+
     setTimeout(() => {
       setDisplayProduct(newProduct);
       setCurrentImageIndex(0);
       setThumbStartIndex(0);
       setQuantity(1);
-      
+
       window.history.replaceState(
-        null, 
-        '', 
-        `/products/${newProduct.category.toLowerCase()}/${familyProductId}`
+        null,
+        '',
+        `/products/${newProduct.category.toLowerCase()}/${familyProductId}`,
       );
-      
+
       setTimeout(() => {
         setIsColorTransitioning(false);
       }, 50);
@@ -224,13 +238,10 @@ const ProductDetails = () => {
   // ═══════════════════════════════════════════════
   // MODAL — agora usa ImageGalleryModal
   // ═══════════════════════════════════════════════
-  const openModal = useCallback(
-    (index) => {
-      setCurrentImageIndex(index);
-      setIsModalOpen(true);
-    },
-    []
-  );
+  const openModal = useCallback(index => {
+    setCurrentImageIndex(index);
+    setIsModalOpen(true);
+  }, []);
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -267,16 +278,18 @@ const ProductDetails = () => {
   // ✅ ADICIONAR AO CARRINHO
   const handleAddToCart = () => {
     if (isInactive || !displayProduct || availableToAdd <= 0) return;
-    
+
     const newTotal = cartQuantity + quantity;
-    
+
     if (newTotal > currentStock) {
       toast.error(`Apenas ${currentStock} unidade(s) disponível(eis)`);
       return;
     }
-    
+
     updateCartItem(displayProduct._id, newTotal);
-    toast.success(`${quantity} ${quantity === 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho!`);
+    toast.success(
+      `${quantity} ${quantity === 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho!`,
+    );
     setQuantity(1);
     setShowCartSidebar(true);
   };
@@ -284,24 +297,26 @@ const ProductDetails = () => {
   // ✅ COMPRAR AGORA
   const handleBuyNow = () => {
     if (isInactive || !displayProduct) return;
-    
+
     if (availableToAdd > 0 && quantity > 0) {
       const newTotal = cartQuantity + quantity;
       if (newTotal <= currentStock) {
         updateCartItem(displayProduct._id, newTotal);
       }
     }
-    
+
     navigate('/cart');
   };
 
-  const changeImage = (newIndex) => {
+  const changeImage = newIndex => {
     setIsTransitioning(true);
     setCurrentImageIndex(newIndex);
 
     if (window.innerWidth >= 640 && displayProduct) {
       if (newIndex >= thumbStartIndex + 5) {
-        setThumbStartIndex(prev => Math.min(prev + 1, Math.max(0, displayProduct.image.length - 5)));
+        setThumbStartIndex(prev =>
+          Math.min(prev + 1, Math.max(0, displayProduct.image.length - 5)),
+        );
       } else if (newIndex < thumbStartIndex) {
         setThumbStartIndex(prev => Math.max(prev - 1, 0));
       }
@@ -318,27 +333,33 @@ const ProductDetails = () => {
 
   const prevImage = () => {
     if (!displayProduct) return;
-    const newIndex = (currentImageIndex - 1 + displayProduct.image.length) % displayProduct.image.length;
+    const newIndex =
+      (currentImageIndex - 1 + displayProduct.image.length) %
+      displayProduct.image.length;
     changeImage(newIndex);
   };
 
   const scrollThumbsLeft = () => {
     if (!displayProduct) return;
     const newIndex = thumbStartIndex - 1;
-    setThumbStartIndex(newIndex < 0 ? Math.max(0, displayProduct.image.length - 5) : newIndex);
+    setThumbStartIndex(
+      newIndex < 0 ? Math.max(0, displayProduct.image.length - 5) : newIndex,
+    );
   };
 
   const scrollThumbsRight = () => {
     if (!displayProduct) return;
     const newIndex = thumbStartIndex + 1;
-    setThumbStartIndex(newIndex > displayProduct.image.length - 5 ? 0 : newIndex);
+    setThumbStartIndex(
+      newIndex > displayProduct.image.length - 5 ? 0 : newIndex,
+    );
   };
 
-  const selectThumbnail = (index) => {
+  const selectThumbnail = index => {
     changeImage(index);
   };
 
-  const handleImageScroll = (ref) => {
+  const handleImageScroll = ref => {
     if (ref.current) {
       const scrollContainer = ref.current;
       const imageWidth = scrollContainer.offsetWidth;
@@ -350,7 +371,7 @@ const ProductDetails = () => {
   };
 
   // Helper: verificar se cor é clara
-  const isLightColor = (color) => {
+  const isLightColor = color => {
     if (!color) return false;
     const hex = color.replace('#', '');
     if (hex.length !== 6) return false;
@@ -365,7 +386,8 @@ const ProductDetails = () => {
   const getStockText = () => {
     if (isInactive) return 'Produto Indisponível';
     if (availableToAdd <= 0) return 'Estoque máximo no carrinho';
-    if (isLowStock || availableToAdd <= 3) return `Últimas ${availableToAdd} unidades!`;
+    if (isLowStock || availableToAdd <= 3)
+      return `Últimas ${availableToAdd} unidades!`;
     return `Em Estoque — ${availableToAdd} disponíveis`;
   };
 
@@ -376,18 +398,28 @@ const ProductDetails = () => {
   };
 
   const getStockIndicatorColor = () => {
-    if (isInactive) return 'bg-red-500 animate-pulse shadow-lg shadow-red-500/50';
-    if (availableToAdd <= 0) return 'bg-orange-500 shadow-lg shadow-orange-500/50';
+    if (isInactive)
+      return 'bg-red-500 animate-pulse shadow-lg shadow-red-500/50';
+    if (availableToAdd <= 0)
+      return 'bg-orange-500 shadow-lg shadow-orange-500/50';
     return 'bg-green-500 shadow-lg shadow-green-500/50';
   };
 
   // Componente ColorBall (inline)
-  const ColorBall = ({ code1, code2, size = 40, isSelected = false, isOutOfStock = false, onClick, title }) => {
+  const ColorBall = ({
+    code1,
+    code2,
+    size = 40,
+    isSelected = false,
+    isOutOfStock = false,
+    onClick,
+    title,
+  }) => {
     const isDual = code2 && code2 !== code1;
     const isLight1 = isLightColor(code1);
     const isLight2 = isLightColor(code2);
     const needsBorder = isLight1 || (isDual && isLight2);
-    
+
     return (
       <button
         onClick={onClick}
@@ -404,29 +436,47 @@ const ProductDetails = () => {
         style={{ width: size, height: size }}
       >
         {isDual ? (
-          <div 
+          <div
             className='w-full h-full rounded-full overflow-hidden'
-            style={{ background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)` }}
+            style={{
+              background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
+            }}
           />
         ) : (
-          <div 
+          <div
             className='w-full h-full rounded-full'
             style={{ backgroundColor: code1 || '#ccc' }}
           />
         )}
-        
+
         {isOutOfStock && (
           <span className='absolute inset-0 flex items-center justify-center'>
-            <svg className='w-5 h-5 text-gray-600 drop-shadow' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
+            <svg
+              className='w-5 h-5 text-gray-600 drop-shadow'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='3'
+            >
               <path d='M18 6L6 18M6 6l12 12' />
             </svg>
           </span>
         )}
-        
+
         {isSelected && !isOutOfStock && (
           <span className='absolute inset-0 flex items-center justify-center'>
-            <svg className={`w-5 h-5 drop-shadow ${(isLight1 && !isDual) || (isDual && isLight1 && isLight2) ? 'text-gray-800' : 'text-white'}`} viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='3'>
-              <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
+            <svg
+              className={`w-5 h-5 drop-shadow ${(isLight1 && !isDual) || (isDual && isLight1 && isLight2) ? 'text-gray-800' : 'text-white'}`}
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='3'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                d='M5 13l4 4L19 7'
+              />
             </svg>
           </span>
         )}
@@ -435,7 +485,13 @@ const ProductDetails = () => {
   };
 
   // 🆕 Componente SizeBadge (inline — para variantes por tamanho)
-  const SizeBadge = ({ label, isSelected = false, isOutOfStock = false, onClick, title }) => {
+  const SizeBadge = ({
+    label,
+    isSelected = false,
+    isOutOfStock = false,
+    onClick,
+    title,
+  }) => {
     return (
       <button
         onClick={onClick}
@@ -444,9 +500,10 @@ const ProductDetails = () => {
         className={`
           relative text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200
           transform hover:scale-105 active:scale-95
-          ${isSelected 
-            ? 'bg-gray-800 text-white ring-2 ring-gray-800 ring-offset-1 scale-105' 
-            : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
+          ${
+            isSelected
+              ? 'bg-gray-800 text-white ring-2 ring-gray-800 ring-offset-1 scale-105'
+              : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
           }
           ${isOutOfStock && !isSelected ? 'opacity-50 line-through' : ''}
           ${isColorTransitioning ? 'pointer-events-none' : ''}
@@ -471,25 +528,24 @@ const ProductDetails = () => {
   return (
     <>
       {/* SEO */}
-      <SEO 
+      <SEO
         title={displayProduct.name}
         description={generateProductDescription(displayProduct)}
         image={displayProduct.image?.[0]}
         url={`/products/${category || displayProduct.category?.toLowerCase()}/${displayProduct._id}`}
-        type="product"
+        type='product'
       >
-        <ProductSchema 
+        <ProductSchema
           product={{
             ...displayProduct,
             averageRating: reviewStats.averageRating,
-            reviewCount: reviewStats.totalReviews
-          }} 
+            reviewCount: reviewStats.totalReviews,
+          }}
         />
         <BreadcrumbSchema items={getBreadcrumbs()} />
       </SEO>
 
       <div className='mt-12 px-4 sm:px-6 md:px-16 lg:px-24 xl:px-32'>
-
         {/* ═══════════════════════════════════════════════ */}
         {/* IMAGE GALLERY MODAL (componente reutilizável)  */}
         {/* ═══════════════════════════════════════════════ */}
@@ -509,15 +565,30 @@ const ProductDetails = () => {
         {/* BREADCRUMBS                                     */}
         {/* ═══════════════════════════════════════════════ */}
         <nav className='text-sm md:text-base mb-6'>
-          <Link to='/' className='hover:text-primary transition-colors duration-200'>Início</Link>
+          <Link
+            to='/'
+            className='hover:text-primary transition-colors duration-200'
+          >
+            Início
+          </Link>
           <span className='mx-2 text-gray-400'>/</span>
-          <Link to='/products' className='hover:text-primary transition-colors duration-200'>Produtos</Link>
+          <Link
+            to='/products'
+            className='hover:text-primary transition-colors duration-200'
+          >
+            Produtos
+          </Link>
           <span className='mx-2 text-gray-400'>/</span>
-          <Link to={`/products/${displayProduct.category.toLowerCase()}`} className='hover:text-primary transition-colors duration-200'>
+          <Link
+            to={`/products/${displayProduct.category.toLowerCase()}`}
+            className='hover:text-primary transition-colors duration-200'
+          >
             {displayProduct.category}
           </Link>
           <span className='mx-2 text-gray-400'>/</span>
-          <span className='text-primary font-medium'>{displayProduct.name}</span>
+          <span className='text-primary font-medium'>
+            {displayProduct.name}
+          </span>
         </nav>
 
         {/* Product Content */}
@@ -545,7 +616,10 @@ const ProductDetails = () => {
                   </div>
                 )}
                 {displayProduct.image.map((image, index) => (
-                  <div key={index} className='relative w-full h-full flex-shrink-0 snap-center'>
+                  <div
+                    key={index}
+                    className='relative w-full h-full flex-shrink-0 snap-center'
+                  >
                     <img
                       src={image}
                       alt={`Imagem ${index + 1}`}
@@ -594,13 +668,19 @@ const ProductDetails = () => {
                 {displayProduct.image.length > 1 && (
                   <>
                     <button
-                      onClick={e => { e.stopPropagation(); prevImage(); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        prevImage();
+                      }}
                       className='absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                     >
-                     <ChevronLeft className='w-4 h-4 text-gray-700' />
+                      <ChevronLeft className='w-4 h-4 text-gray-700' />
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); nextImage(); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        nextImage();
+                      }}
                       className='absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-3 shadow-lg hover:bg-white transition-all duration-300 active:scale-90'
                     >
                       <ChevronRight className='w-4 h-4 text-gray-700' />
@@ -615,7 +695,10 @@ const ProductDetails = () => {
                   <button
                     onClick={() => {
                       if (imageScrollRef.current) {
-                        imageScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+                        imageScrollRef.current.scrollTo({
+                          left: 0,
+                          behavior: 'smooth',
+                        });
                       }
                     }}
                     className='w-2.5 h-2.5 rounded-full bg-red-500 transition-all duration-300 hover:scale-110'
@@ -627,7 +710,9 @@ const ProductDetails = () => {
                     key={index}
                     onClick={() => changeImage(index)}
                     className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                      currentImageIndex === index ? 'bg-primary scale-110' : 'bg-gray-300 hover:bg-gray-400'
+                      currentImageIndex === index
+                        ? 'bg-primary scale-110'
+                        : 'bg-gray-300 hover:bg-gray-400'
                     }`}
                   />
                 ))}
@@ -638,15 +723,20 @@ const ProductDetails = () => {
             <div className='hidden sm:flex justify-center'>
               <div className='flex items-center gap-2 max-w-[550px]'>
                 {displayProduct.image.length > 5 && (
-                  <button onClick={scrollThumbsLeft} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
-                   <ChevronLeft className='w-4 h-4 text-gray-700' />
+                  <button
+                    onClick={scrollThumbsLeft}
+                    className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'
+                  >
+                    <ChevronLeft className='w-4 h-4 text-gray-700' />
                   </button>
                 )}
 
                 <div className='flex gap-3 overflow-hidden'>
                   {displayProduct.video && (
                     <div
-                      onClick={() => { setShowVideo(true); }}
+                      onClick={() => {
+                        setShowVideo(true);
+                      }}
                       className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 relative ${
                         showVideo
                           ? 'border-primary scale-105 shadow-lg'
@@ -654,32 +744,54 @@ const ProductDetails = () => {
                       }`}
                     >
                       <div className='w-full h-full bg-gray-900 flex items-center justify-center'>
-                        <svg className='w-8 h-8 text-white' fill='currentColor' viewBox='0 0 24 24'>
+                        <svg
+                          className='w-8 h-8 text-white'
+                          fill='currentColor'
+                          viewBox='0 0 24 24'
+                        >
                           <path d='M8 5v14l11-7z' />
                         </svg>
                       </div>
                       <div className='absolute bottom-1 left-1 right-1 text-center'>
-                        <span className='text-[10px] text-white bg-black/60 px-1 rounded'>Vídeo</span>
+                        <span className='text-[10px] text-white bg-black/60 px-1 rounded'>
+                          Vídeo
+                        </span>
                       </div>
                     </div>
                   )}
-                  {displayProduct.image.slice(thumbStartIndex, thumbStartIndex + (displayProduct.video ? 4 : 5)).map((image, index) => (
-                    <div
-                      key={thumbStartIndex + index}
-                      onClick={() => { setShowVideo(false); selectThumbnail(thumbStartIndex + index); }}
-                      className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 ${
-                        !showVideo && currentImageIndex === thumbStartIndex + index
-                          ? 'border-primary scale-105 shadow-lg'
-                          : 'border-gray-300 hover:scale-105 hover:border-gray-400'
-                      }`}
-                    >
-                      <img src={image} alt={`Miniatura ${thumbStartIndex + index + 1}`} className='w-full h-full object-cover transition-transform duration-300' />
-                    </div>
-                  ))}
+                  {displayProduct.image
+                    .slice(
+                      thumbStartIndex,
+                      thumbStartIndex + (displayProduct.video ? 4 : 5),
+                    )
+                    .map((image, index) => (
+                      <div
+                        key={thumbStartIndex + index}
+                        onClick={() => {
+                          setShowVideo(false);
+                          selectThumbnail(thumbStartIndex + index);
+                        }}
+                        className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 ${
+                          !showVideo &&
+                          currentImageIndex === thumbStartIndex + index
+                            ? 'border-primary scale-105 shadow-lg'
+                            : 'border-gray-300 hover:scale-105 hover:border-gray-400'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`Miniatura ${thumbStartIndex + index + 1}`}
+                          className='w-full h-full object-cover transition-transform duration-300'
+                        />
+                      </div>
+                    ))}
                 </div>
 
                 {displayProduct.image.length > 5 && (
-                  <button onClick={scrollThumbsRight} className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'>
+                  <button
+                    onClick={scrollThumbsRight}
+                    className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'
+                  >
                     <ChevronRight className='w-4 h-4 text-gray-700' />
                   </button>
                 )}
@@ -701,35 +813,41 @@ const ProductDetails = () => {
           {/* ═══════════════════════════════════════════════ */}
           <div className='space-y-4'>
             {/* Título + SKU + Compartilhar */}
-            <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}>
+            <div
+              className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0 translate-x-2' : 'opacity-100 translate-x-0'}`}
+            >
               <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1'>
                   {/* Badges inline acima do título */}
-                  {(isOutlet || isLancamento || isBestseller || hasFreeShipping) && !isInactive && (
-                    <div className='flex flex-wrap gap-1.5 mb-2'>
-                      {isOutlet && discountPercent > 0 && (
-                        <span className='bg-red-100 text-red-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
-                          -{discountPercent}% OFF
-                        </span>
-                      )}
-                      {isLancamento && (
-                        <span className='bg-gray-800 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
-                          Lançamento
-                        </span>
-                      )}
-                      {isBestseller && (
-                        <span className='bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
-                          ⭐ Mais Vendido
-                        </span>
-                      )}
-                      {hasFreeShipping && (
-                        <span className='inline-flex items-center gap-1 bg-green-100 text-green-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
-                          <Truck className='w-3 h-3' />
-                          Frete Grátis
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {(isOutlet ||
+                    isLancamento ||
+                    isBestseller ||
+                    hasFreeShipping) &&
+                    !isInactive && (
+                      <div className='flex flex-wrap gap-1.5 mb-2'>
+                        {isOutlet && discountPercent > 0 && (
+                          <span className='bg-red-100 text-red-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
+                            -{discountPercent}% OFF
+                          </span>
+                        )}
+                        {isLancamento && (
+                          <span className='bg-gray-800 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
+                            Lançamento
+                          </span>
+                        )}
+                        {isBestseller && (
+                          <span className='bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded-full font-semibold uppercase'>
+                            ⭐ Mais Vendido
+                          </span>
+                        )}
+                        {hasFreeShipping && (
+                          <span className='inline-flex items-center gap-1 bg-green-100 text-green-700 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase'>
+                            <Truck className='w-3 h-3' />
+                            Frete Grátis
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                   <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight'>
                     {displayProduct.name}
@@ -741,9 +859,12 @@ const ProductDetails = () => {
                     </p>
                   )}
                 </div>
-                
+
                 {/* Botão de Compartilhar */}
-                <ShareProduct product={displayProduct} className="flex-shrink-0 mt-1" />
+                <ShareProduct
+                  product={displayProduct}
+                  className='flex-shrink-0 mt-1'
+                />
               </div>
 
               {/* Rating */}
@@ -751,17 +872,29 @@ const ProductDetails = () => {
                 <div className='flex items-center gap-1'>
                   {reviewStats.loading ? (
                     <div className='flex gap-1'>
-                      {Array(5).fill('').map((_, i) => (
-                        <div key={i} className='w-4 h-4 bg-gray-200 rounded animate-pulse'></div>
-                      ))}
+                      {Array(5)
+                        .fill('')
+                        .map((_, i) => (
+                          <div
+                            key={i}
+                            className='w-4 h-4 bg-gray-200 rounded animate-pulse'
+                          ></div>
+                        ))}
                     </div>
                   ) : (
                     <div className='flex text-yellow-500 text-lg'>
-                      {Array(5).fill('').map((_, i) => (
-                        <span key={i} className='transition-transform duration-200 hover:scale-110'>
-                          {i < Math.round(reviewStats.averageRating) ? '★' : '☆'}
-                        </span>
-                      ))}
+                      {Array(5)
+                        .fill('')
+                        .map((_, i) => (
+                          <span
+                            key={i}
+                            className='transition-transform duration-200 hover:scale-110'
+                          >
+                            {i < Math.round(reviewStats.averageRating)
+                              ? '★'
+                              : '☆'}
+                          </span>
+                        ))}
                     </div>
                   )}
                 </div>
@@ -779,52 +912,67 @@ const ProductDetails = () => {
             {familyProducts.length > 1 && (
               <div className='bg-white border border-gray-200 p-4 rounded-lg'>
                 <div className='flex items-center justify-between mb-3'>
-                  <h3 className={`text-sm font-semibold text-gray-900 transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-                    {familyVariantType === 'size' 
-                      ? <>Tamanho: <span className='font-normal'>{displayProduct.size || 'Selecione'}</span></>
-                      : <>Cor: <span className='font-normal'>{displayProduct.color || 'Selecione'}</span></>
-                    }
+                  <h3
+                    className={`text-sm font-semibold text-gray-900 transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
+                  >
+                    {familyVariantType === 'size' ? (
+                      <>
+                        Tamanho:{' '}
+                        <span className='font-normal'>
+                          {displayProduct.size || 'Selecione'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        Cor:{' '}
+                        <span className='font-normal'>
+                          {displayProduct.color || 'Selecione'}
+                        </span>
+                      </>
+                    )}
                   </h3>
                 </div>
-                
-                <div className={`flex items-center flex-wrap ${familyVariantType === 'size' ? 'gap-2' : 'gap-3'}`}>
-                  {familyVariantType === 'size' ? (
-                    familyProducts.map((familyProduct) => {
-                      const fpStock = familyProduct.stock || 0;
-                      const fpOutOfStock = fpStock <= 0;
-                      const isSelected = familyProduct._id === displayProduct._id;
-                      
-                      return (
-                        <SizeBadge
-                          key={familyProduct._id}
-                          label={familyProduct.size || '?'}
-                          isSelected={isSelected}
-                          isOutOfStock={fpOutOfStock}
-                          onClick={() => handleColorClick(familyProduct._id)}
-                          title={`${familyProduct.size || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
-                        />
-                      );
-                    })
-                  ) : (
-                    familyProducts.map((familyProduct) => {
-                      const fpStock = familyProduct.stock || 0;
-                      const fpOutOfStock = fpStock <= 0;
-                      const isSelected = familyProduct._id === displayProduct._id;
-                      
-                      return (
-                        <ColorBall
-                          key={familyProduct._id}
-                          code1={familyProduct.colorCode}
-                          code2={familyProduct.colorCode2}
-                          size={44}
-                          isSelected={isSelected}
-                          isOutOfStock={fpOutOfStock}
-                          onClick={() => handleColorClick(familyProduct._id)}
-                          title={`${familyProduct.color || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
-                        />
-                      );
-                    })
-                  )}
+
+                <div
+                  className={`flex items-center flex-wrap ${familyVariantType === 'size' ? 'gap-2' : 'gap-3'}`}
+                >
+                  {familyVariantType === 'size'
+                    ? familyProducts.map(familyProduct => {
+                        const fpStock = familyProduct.stock || 0;
+                        const fpOutOfStock = fpStock <= 0;
+                        const isSelected =
+                          familyProduct._id === displayProduct._id;
+
+                        return (
+                          <SizeBadge
+                            key={familyProduct._id}
+                            label={familyProduct.size || '?'}
+                            isSelected={isSelected}
+                            isOutOfStock={fpOutOfStock}
+                            onClick={() => handleColorClick(familyProduct._id)}
+                            title={`${familyProduct.size || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
+                          />
+                        );
+                      })
+                    : familyProducts.map(familyProduct => {
+                        const fpStock = familyProduct.stock || 0;
+                        const fpOutOfStock = fpStock <= 0;
+                        const isSelected =
+                          familyProduct._id === displayProduct._id;
+
+                        return (
+                          <ColorBall
+                            key={familyProduct._id}
+                            code1={familyProduct.colorCode}
+                            code2={familyProduct.colorCode2}
+                            size={44}
+                            isSelected={isSelected}
+                            isOutOfStock={fpOutOfStock}
+                            onClick={() => handleColorClick(familyProduct._id)}
+                            title={`${familyProduct.color || familyProduct.name}${fpOutOfStock ? ' (Esgotado)' : ` - ${fpStock} disponíveis`}`}
+                          />
+                        );
+                      })}
                 </div>
               </div>
             )}
@@ -832,8 +980,10 @@ const ProductDetails = () => {
             {/* ═══════════════════════════════════════════════ */}
             {/* PREÇO — PIX + Cartão + Parcelas                */}
             {/* ═══════════════════════════════════════════════ */}
-            <div className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-              <ProductPriceDisplay 
+            <div
+              className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
+            >
+              <ProductPriceDisplay
                 price={displayProduct.price}
                 offerPrice={displayProduct.offerPrice}
                 currency={currency}
@@ -850,8 +1000,12 @@ const ProductDetails = () => {
               <div className='space-y-3'>
                 {/* Status de Stock */}
                 <div className='flex items-center gap-2'>
-                  <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${getStockIndicatorColor()}`}></div>
-                  <span className={`text-sm font-medium transition-colors duration-300 ${getStockStatusColor()}`}>
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${getStockIndicatorColor()}`}
+                  ></div>
+                  <span
+                    className={`text-sm font-medium transition-colors duration-300 ${getStockStatusColor()}`}
+                  >
                     {getStockText()}
                   </span>
                 </div>
@@ -859,7 +1013,9 @@ const ProductDetails = () => {
                 {/* Seletor de Quantidade */}
                 {!isInactive && availableToAdd > 0 && (
                   <div>
-                    <label className='block text-sm font-semibold text-gray-900 mb-2'>Quantidade</label>
+                    <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                      Quantidade
+                    </label>
                     <div className='flex items-center w-fit'>
                       <button
                         onClick={decreaseQuantity}
@@ -886,35 +1042,43 @@ const ProductDetails = () => {
 
             {/* Botões de Ação */}
             <div className='space-y-3'>
-              <button 
-                onClick={handleAddToCart} 
+              <button
+                onClick={handleAddToCart}
                 disabled={isInactive || availableToAdd <= 0}
                 className={`w-full py-3 px-4 text-base font-semibold rounded-lg transition-all duration-300 active:scale-[0.98] border ${
-                  isInactive || availableToAdd <= 0 
-                    ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' 
+                  isInactive || availableToAdd <= 0
+                    ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200'
                 }`}
               >
-                {isInactive ? 'Produto Indisponível' : availableToAdd <= 0 ? 'Estoque Máximo no Carrinho' : `Adicionar ${quantity} ao Carrinho`}
+                {isInactive
+                  ? 'Produto Indisponível'
+                  : availableToAdd <= 0
+                    ? 'Estoque Máximo no Carrinho'
+                    : 'Adicionar ao Carrinho'}
               </button>
-              
-              <button 
-                onClick={handleBuyNow} 
-                disabled={isInactive || (!hasItemsInCart && availableToAdd <= 0)}
+
+              <button
+                onClick={handleBuyNow}
+                disabled={
+                  isInactive || (!hasItemsInCart && availableToAdd <= 0)
+                }
                 className={`w-full py-3 px-4 text-base font-semibold rounded-lg transition-all duration-300 active:scale-[0.98] shadow-lg hover:shadow-xl ${
                   isInactive || (!hasItemsInCart && availableToAdd <= 0)
-                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
                     : 'bg-primary text-white hover:bg-primary-dull'
                 }`}
               >
-                {hasItemsInCart && availableToAdd <= 0 ? 'Ir para o Carrinho' : 'Comprar Agora'}
+                {hasItemsInCart && availableToAdd <= 0
+                  ? 'Ir para o Carrinho'
+                  : 'Comprar Agora'}
               </button>
             </div>
 
             {/* ═══════════════════════════════════════════════ */}
             {/* CALCULADORA DE FRETE                            */}
             {/* ═══════════════════════════════════════════════ */}
-            <ShippingCalculator 
+            <ShippingCalculator
               product={displayProduct}
               orderTotal={displayProduct.offerPrice * quantity}
             />
@@ -922,7 +1086,9 @@ const ProductDetails = () => {
             {/* ═══════════════════════════════════════════════ */}
             {/* 🆕 INFO ADICIONAL — Benefícios (dinâmico)      */}
             {/* ═══════════════════════════════════════════════ */}
-            <div className={`p-3 md:p-4 rounded-lg border ${hasFreeShipping ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div
+              className={`p-3 md:p-4 rounded-lg border ${hasFreeShipping ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}
+            >
               <div className='space-y-2'>
                 {/* 🆕 Frete Grátis — dinâmico baseado em freeShipping */}
                 {hasFreeShipping ? (
@@ -940,28 +1106,35 @@ const ProductDetails = () => {
                       <span className='text-white text-xs'>✓</span>
                     </div>
                     <span className='text-xs md:text-sm text-gray-700'>
-                      Frete grátis a partir de R$ 199 (Sul/Sudeste) e R$ 299 (demais regiões)
+                      Frete grátis a partir de R$ 199 (Sul/Sudeste) e R$ 299
+                      (demais regiões)
                     </span>
                   </div>
                 )}
-                
+
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Parcele em até 10x sem juros no cartão</span>
+                  <span className='text-xs md:text-sm text-gray-700'>
+                    Parcele em até 12x sem juros no cartão
+                  </span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700 font-medium'>10% de desconto no PIX à vista</span>
+                  <span className='text-xs md:text-sm text-gray-700 font-medium'>
+                    10% de desconto no PIX à vista
+                  </span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0'>
                     <span className='text-white text-xs'>✓</span>
                   </div>
-                  <span className='text-xs md:text-sm text-gray-700'>Troca ou devolução em até 7 dias</span>
+                  <span className='text-xs md:text-sm text-gray-700'>
+                    Troca ou devolução em até 7 dias
+                  </span>
                 </div>
               </div>
             </div>
@@ -976,7 +1149,9 @@ const ProductDetails = () => {
         {/* Produtos Relacionados */}
         <div className='mt-20'>
           <div className='text-center mb-12'>
-            <h2 className='text-2xl md:text-3xl font-bold text-gray-900 mb-4'>Produtos Relacionados</h2>
+            <h2 className='text-2xl md:text-3xl font-bold text-gray-900 mb-4'>
+              Produtos Relacionados
+            </h2>
             <div className='w-20 h-1 bg-primary rounded-full mx-auto'></div>
           </div>
 
@@ -989,7 +1164,10 @@ const ProductDetails = () => {
           {relatedProducts.length > 10 && (
             <div className='text-center mt-12'>
               <button
-                onClick={() => { navigate('/products'); window.scrollTo(0, 0); }}
+                onClick={() => {
+                  navigate('/products');
+                  window.scrollTo(0, 0);
+                }}
                 className='inline-flex items-center px-8 py-3 border border-primary text-primary rounded-xl hover:bg-primary hover:text-white transition-all duration-300 font-medium'
               >
                 Ver Mais Produtos

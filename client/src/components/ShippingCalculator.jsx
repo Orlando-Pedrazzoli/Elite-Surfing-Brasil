@@ -18,6 +18,10 @@ const ShippingCalculator = ({
   const [error, setError] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
 
+  // Modo: se onShippingSelect existe, permite seleção (Cart)
+  // Se não existe, é só visualização (ProductDetails)
+  const isSelectable = typeof onShippingSelect === 'function';
+
   // ═══════════════════════════════════════════════════════════════
   // AUTO-PREENCHER CEP + AUTO-CALCULAR — UM ÚNICO EFEITO
   // Quando o endereço tem CEP, preenche o campo e calcula sozinho.
@@ -209,10 +213,9 @@ const ShippingCalculator = ({
   };
 
   const handleSelectOption = option => {
+    if (!isSelectable) return; // Modo visualização — não selecionar
     setSelectedOption(option);
-    if (onShippingSelect) {
-      onShippingSelect(option);
-    }
+    onShippingSelect(option);
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -268,6 +271,9 @@ const ShippingCalculator = ({
   // ═══════════════════════════════════════════════════════════════
   const getTitle = () => {
     if (results && filteredOptions.length > 0) {
+      if (!isSelectable) {
+        return 'Opções de envio disponíveis';
+      }
       if (selectedOption) {
         return 'Método de envio selecionado';
       }
@@ -282,11 +288,13 @@ const ShippingCalculator = ({
     if (loading) {
       return 'Calculando opções de envio...';
     }
-    if (
-      genericProgress.qualifies === true ||
-      genericProgress.qualifies === 'partial'
-    ) {
-      return 'Confirme o método de envio — Frete Grátis!';
+    if (isSelectable) {
+      if (
+        genericProgress.qualifies === true ||
+        genericProgress.qualifies === 'partial'
+      ) {
+        return 'Confirme o método de envio — Frete Grátis!';
+      }
     }
     return 'Calcular Frete e Prazo';
   };
@@ -320,7 +328,7 @@ const ShippingCalculator = ({
             </div>
             <div className='flex-1'>
               <p className='text-sm font-semibold text-green-800'>
-                🎉 {progress.message}
+                {progress.message}
               </p>
             </div>
           </div>
@@ -337,7 +345,7 @@ const ShippingCalculator = ({
             </div>
             <div className='flex-1'>
               <p className='text-sm font-medium text-blue-800'>
-                ✅ {progress.message}
+                {progress.message}
               </p>
             </div>
           </div>
@@ -463,11 +471,11 @@ const ShippingCalculator = ({
       {/* Resultados */}
       {results && !error && filteredOptions.length > 0 && (
         <div className='mt-3 space-y-2'>
-          {/* Hint para selecionar — desaparece após seleção */}
-          {!selectedOption && (
+          {/* Hint para selecionar — só aparece no modo Cart (isSelectable) */}
+          {isSelectable && !selectedOption && (
             <div className='p-2.5 bg-blue-50 border border-blue-200 rounded-lg'>
               <p className='text-xs text-blue-700 font-medium text-center'>
-                👆 Clique em uma opção para selecionar o envio
+                Clique em uma opção para selecionar o envio
               </p>
             </div>
           )}
@@ -483,7 +491,9 @@ const ShippingCalculator = ({
               <div
                 key={option.id}
                 onClick={() => handleSelectOption(option)}
-                className={`relative flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                className={`relative flex items-center justify-between p-3 rounded-lg border transition-all ${
+                  isSelectable ? 'cursor-pointer' : 'cursor-default'
+                } ${
                   isSelected
                     ? 'bg-primary/5 border-primary ring-1 ring-primary'
                     : isFree
@@ -496,25 +506,27 @@ const ShippingCalculator = ({
                 }`}
               >
                 <div className='flex items-center gap-3'>
-                  <span className='text-lg'>{option.icon}</span>
+                  <div className='w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                    <Package className='w-4 h-4 text-gray-500' />
+                  </div>
                   <div>
                     <div className='flex items-center gap-2 flex-wrap'>
                       <p className='text-sm font-medium text-gray-900'>
                         {option.carrier} — {option.name}
                       </p>
                       {isFree && (
-                        <span className='inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800 border border-green-300 animate-pulse'>
-                          🎉 FRETE GRÁTIS
+                        <span className='inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800 border border-green-300'>
+                          FRETE GRÁTIS
                         </span>
                       )}
                       {isCheapest && !isFree && (
-                        <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200'>
-                          💰 Mais barata
+                        <span className='inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200'>
+                          Mais barata
                         </span>
                       )}
                       {isFastest && !isFree && (
-                        <span className='inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200'>
-                          ⚡ Mais rápida
+                        <span className='inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200'>
+                          Mais rápida
                         </span>
                       )}
                     </div>

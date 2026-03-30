@@ -20,6 +20,7 @@ import clienteRouter from './routes/clienteRoute.js';
 import romaneioRouter from './routes/romaneioRoute.js';
 import pagarmeRouter from './routes/pagarmeRoute.js';
 import otpRouter from './routes/otpRoute.js';
+import blogRouter from './routes/blogRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4001;
@@ -92,6 +93,7 @@ app.use('/api/clientes', clienteRouter);
 app.use('/api/romaneios', romaneioRouter);
 app.use('/api/pagarme', pagarmeRouter);
 app.use('/api/otp', otpRouter);
+app.use('/api/blog', blogRouter);
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
