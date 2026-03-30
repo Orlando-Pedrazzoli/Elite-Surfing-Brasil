@@ -50,6 +50,11 @@ const SellerLayout = () => {
       path: '/seller/blog',
       icon: FileText,
     },
+    {
+      name: 'WSL Blog',
+      path: '/seller/wsl',
+      icon: FileText,
+    },
     // ─── Separador ───
     { divider: true, label: 'VENDAS DIRETAS' },
     {

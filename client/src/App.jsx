@@ -40,6 +40,7 @@ import BoletoPayment from './pages/BoletoPayment'; // ✅ MIGRAÇÃO 12/03
 import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
 import BlogManager from './pages/seller/BlogManager';
+import WslManager from './pages/seller/WslManager';
 
 // ✅ Vendas Diretas
 import Clientes from './pages/seller/Clientes';
@@ -158,6 +159,7 @@ const App = () => {
             <Route path='product-list' element={<ProductList />} />
             <Route path='orders' element={<Orders />} />
             <Route path='blog' element={<BlogManager />} />
+            <Route path='/seller/wsl' element={<WslManager />} />
             {/* ─── Vendas Diretas ─── */}
             <Route path='clientes' element={<Clientes />} />
             <Route path='vendas-diretas' element={<VendasDiretas />} />
