@@ -66,7 +66,9 @@ export const AppContextProvider = ({ children }) => {
       url.includes('/api/product/add') ||
       url.includes('/api/product/update') ||
       url.includes('/api/product/delete') ||
-      url.includes('/api/product/stock')
+      url.includes('/api/product/stock') ||
+      url.includes('/api/wsl/admin') ||
+      url.includes('/api/blog/admin')
     );
   };
 

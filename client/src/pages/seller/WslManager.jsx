@@ -163,7 +163,7 @@ const WslManager = () => {
   const token = localStorage.getItem('sellerToken');
   const headers = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
+    'x-seller-token': token,
   };
 
   // ── Fetch data ──
