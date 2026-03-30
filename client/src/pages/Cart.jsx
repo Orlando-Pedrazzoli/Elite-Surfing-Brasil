@@ -180,6 +180,14 @@ const Cart = () => {
     }
   }, [products, cartItems, user]);
 
+  // Auto-preencher CPF do endereço no campo de pagamento
+  useEffect(() => {
+    const addr = getCurrentAddress();
+    if (addr?.cpf && !customerDocument) {
+      setCustomerDocument(addr.cpf);
+    }
+  }, [selectedAddress, guestAddress]);
+
   const updateCartArray = () => {
     const tempArray = Object.keys(cartItems)
       .map(key => {
