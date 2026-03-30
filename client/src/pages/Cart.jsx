@@ -81,8 +81,7 @@ const Cart = () => {
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
   const [appliedPromoCode, setAppliedPromoCode] = useState('');
 
-  const isCartEmpty =
-    !products.length || !cartItems || Object.keys(cartItems).length === 0;
+  const isCartEmpty = !cartItems || Object.keys(cartItems).length === 0;
 
   // ═══════════════════════════════════════════════
   // HELPERS — Verificação de email para guest
@@ -142,7 +141,7 @@ const Cart = () => {
 
   // Redirecionamento automático quando carrinho está vazio
   useEffect(() => {
-    if (isCartEmpty) {
+    if (isCartEmpty && products.length > 0) {
       const timer = setInterval(() => {
         setRedirectCountdown(prev => {
           if (prev <= 1) {
