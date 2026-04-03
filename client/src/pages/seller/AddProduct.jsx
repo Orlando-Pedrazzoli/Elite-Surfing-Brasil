@@ -1,5 +1,12 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { assets, categories, groups, getCategoriesByGroup, getFiltersByGroup, AVAILABLE_TAGS } from '../../assets/assets';
+import {
+  assets,
+  categories,
+  groups,
+  getCategoriesByGroup,
+  getFiltersByGroup,
+  AVAILABLE_TAGS,
+} from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
@@ -19,6 +26,8 @@ const PRESET_COLORS = [
   { name: 'Castanho', code: '#78350F' },
   { name: 'Bege', code: '#D4B896' },
   { name: 'Turquesa', code: '#14B8A6' },
+  { name: 'Vinho', code: '#792F48' },
+  { name: 'Salmão', code: '#D86546' },
 ];
 
 // 🆕 CORES DUPLAS PRÉ-DEFINIDAS
@@ -35,49 +44,75 @@ const PRESET_DUAL_COLORS = [
 
 // 🆕 TAMANHOS PRÉ-DEFINIDOS (para capas, sarcófagos e acessórios)
 const PRESET_SIZES = [
-  "P", "M", "G",
-  "5'10", "6'0", "6'2", "6'3", "6'4", "6'6", "6'8",
-  "7'0", "7'2", "7'6",
-  "8'0", "8'5",
-  "9'0", "9'2", "9'6", "9'8",
-  "10'0", "10'5",
-  "11'0", "11'6",
-  "12'6", "14'0",
+  'P',
+  'M',
+  'G',
+  "5'10",
+  "6'0",
+  "6'2",
+  "6'3",
+  "6'4",
+  "6'6",
+  "6'8",
+  "7'0",
+  "7'2",
+  "7'6",
+  "8'0",
+  "8'5",
+  "9'0",
+  "9'2",
+  "9'6",
+  "9'8",
+  "10'0",
+  "10'5",
+  "11'0",
+  "11'6",
+  "12'6",
+  "14'0",
 ];
 
 const MAX_IMAGES = 8;
 
 // 🆕 Componente para renderizar bolinha de cor (simples ou dupla)
-const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }) => {
+const ColorBall = ({
+  code1,
+  code2,
+  size = 32,
+  selected = false,
+  onClick,
+  title,
+}) => {
   const isDual = code2 && code2 !== code1;
-  const isLight = (code) => ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA'].includes(code);
-  
+  const isLight = code =>
+    ['#FFFFFF', '#FFF', '#ffffff', '#fff', '#F5F5F5', '#FAFAFA'].includes(code);
+
   return (
     <button
       type='button'
       onClick={onClick}
       className={`rounded-full transition-all hover:scale-110 ${
-        selected 
-          ? 'ring-2 ring-primary ring-offset-2' 
+        selected
+          ? 'ring-2 ring-primary ring-offset-2'
           : 'border-2 border-gray-300'
       }`}
       style={{ width: size, height: size }}
       title={title}
     >
       {isDual ? (
-        <div 
+        <div
           className='w-full h-full rounded-full overflow-hidden'
           style={{
             background: `linear-gradient(135deg, ${code1} 50%, ${code2} 50%)`,
-            border: (isLight(code1) || isLight(code2)) ? '1px solid #d1d5db' : 'none'
+            border:
+              isLight(code1) || isLight(code2) ? '1px solid #d1d5db' : 'none',
           }}
         />
       ) : (
-        <div 
+        <div
           className='w-full h-full rounded-full'
-          style={{ 
+          style={{
             backgroundColor: code1,
-            border: isLight(code1) ? '1px solid #d1d5db' : 'none'
+            border: isLight(code1) ? '1px solid #d1d5db' : 'none',
           }}
         />
       )}
@@ -86,7 +121,13 @@ const ColorBall = ({ code1, code2, size = 32, selected = false, onClick, title }
 };
 
 // 🆕 Componente SizeBadge para preview de tamanho
-const SizeBadge = ({ label, size = 'md', selected = false, onClick, title }) => {
+const SizeBadge = ({
+  label,
+  size = 'md',
+  selected = false,
+  onClick,
+  title,
+}) => {
   const sizeClasses = {
     sm: 'text-xs px-2 py-1',
     md: 'text-sm px-3 py-1.5',
@@ -119,47 +160,56 @@ const ImageUploadZone = ({ files, setFiles }) => {
   const dragCounter = useRef(0);
 
   // Adicionar ficheiros (validação + limite)
-  const addFiles = useCallback((newFiles) => {
-    const imageFiles = Array.from(newFiles).filter(file => {
-      if (!file.type.startsWith('image/')) {
-        toast.error(`"${file.name}" não é uma imagem`);
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`"${file.name}" excede 10MB`);
-        return false;
-      }
-      return true;
-    });
+  const addFiles = useCallback(
+    newFiles => {
+      const imageFiles = Array.from(newFiles).filter(file => {
+        if (!file.type.startsWith('image/')) {
+          toast.error(`"${file.name}" não é uma imagem`);
+          return false;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`"${file.name}" excede 10MB`);
+          return false;
+        }
+        return true;
+      });
 
-    if (imageFiles.length === 0) return;
+      if (imageFiles.length === 0) return;
 
-    setFiles(prev => {
-      const current = prev.filter(Boolean);
-      const available = MAX_IMAGES - current.length;
+      setFiles(prev => {
+        const current = prev.filter(Boolean);
+        const available = MAX_IMAGES - current.length;
 
-      if (available <= 0) {
-        toast.error(`Máximo de ${MAX_IMAGES} imagens`);
-        return prev;
-      }
+        if (available <= 0) {
+          toast.error(`Máximo de ${MAX_IMAGES} imagens`);
+          return prev;
+        }
 
-      const toAdd = imageFiles.slice(0, available);
-      if (imageFiles.length > available) {
-        toast(`Apenas ${available} imagem(ns) adicionada(s) (limite: ${MAX_IMAGES})`, { icon: 'ℹ️' });
-      }
+        const toAdd = imageFiles.slice(0, available);
+        if (imageFiles.length > available) {
+          toast(
+            `Apenas ${available} imagem(ns) adicionada(s) (limite: ${MAX_IMAGES})`,
+            { icon: 'ℹ️' },
+          );
+        }
 
-      const updated = [...current, ...toAdd];
-      return updated;
-    });
-  }, [setFiles]);
+        const updated = [...current, ...toAdd];
+        return updated;
+      });
+    },
+    [setFiles],
+  );
 
   // Remover imagem
-  const removeFile = useCallback((index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  }, [setFiles]);
+  const removeFile = useCallback(
+    index => {
+      setFiles(prev => prev.filter((_, i) => i !== index));
+    },
+    [setFiles],
+  );
 
   // Drag & Drop — zona de upload
-  const handleDragEnter = (e) => {
+  const handleDragEnter = e => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current++;
@@ -168,7 +218,7 @@ const ImageUploadZone = ({ files, setFiles }) => {
     }
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = e => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current--;
@@ -177,12 +227,12 @@ const ImageUploadZone = ({ files, setFiles }) => {
     }
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = e => {
     e.preventDefault();
     e.stopPropagation();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = e => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -198,7 +248,7 @@ const ImageUploadZone = ({ files, setFiles }) => {
     fileInputRef.current?.click();
   };
 
-  const handleFileInput = (e) => {
+  const handleFileInput = e => {
     if (e.target.files && e.target.files.length > 0) {
       addFiles(e.target.files);
       e.target.value = '';
@@ -275,7 +325,9 @@ const ImageUploadZone = ({ files, setFiles }) => {
         {isDragging ? (
           <div className='py-4'>
             <Upload className='w-10 h-10 text-primary mx-auto mb-2 animate-bounce' />
-            <p className='text-primary font-semibold text-lg'>Solte as imagens aqui</p>
+            <p className='text-primary font-semibold text-lg'>
+              Solte as imagens aqui
+            </p>
           </div>
         ) : slotsLeft > 0 ? (
           <div className='py-2'>
@@ -285,16 +337,24 @@ const ImageUploadZone = ({ files, setFiles }) => {
               </div>
             </div>
             <p className='text-gray-700 font-medium'>
-              Arraste imagens aqui ou <span className='text-primary underline'>clique para selecionar</span>
+              Arraste imagens aqui ou{' '}
+              <span className='text-primary underline'>
+                clique para selecionar
+              </span>
             </p>
             <p className='text-xs text-gray-400 mt-1.5'>
-              PNG, JPG ou WEBP • Máx. 10MB por imagem • {slotsLeft} de {MAX_IMAGES} disponíveis
+              PNG, JPG ou WEBP • Máx. 10MB por imagem • {slotsLeft} de{' '}
+              {MAX_IMAGES} disponíveis
             </p>
           </div>
         ) : (
           <div className='py-2'>
-            <p className='text-gray-500 font-medium'>Limite de {MAX_IMAGES} imagens atingido</p>
-            <p className='text-xs text-gray-400 mt-1'>Remova uma imagem para adicionar outra</p>
+            <p className='text-gray-500 font-medium'>
+              Limite de {MAX_IMAGES} imagens atingido
+            </p>
+            <p className='text-xs text-gray-400 mt-1'>
+              Remova uma imagem para adicionar outra
+            </p>
           </div>
         )}
       </div>
@@ -304,10 +364,13 @@ const ImageUploadZone = ({ files, setFiles }) => {
         <div className='mt-4'>
           <div className='flex items-center justify-between mb-2'>
             <p className='text-sm font-medium text-gray-600'>
-              {activeFiles.length} imagem{activeFiles.length !== 1 ? 's' : ''} adicionada{activeFiles.length !== 1 ? 's' : ''}
+              {activeFiles.length} imagem{activeFiles.length !== 1 ? 's' : ''}{' '}
+              adicionada{activeFiles.length !== 1 ? 's' : ''}
             </p>
             {activeFiles.length > 1 && (
-              <p className='text-xs text-gray-400'>Arraste para reordenar • A primeira é a imagem principal</p>
+              <p className='text-xs text-gray-400'>
+                Arraste para reordenar • A primeira é a imagem principal
+              </p>
             )}
           </div>
 
@@ -316,9 +379,9 @@ const ImageUploadZone = ({ files, setFiles }) => {
               <div
                 key={`${file.name}-${file.size}-${index}`}
                 draggable
-                onDragStart={(e) => handleThumbDragStart(e, index)}
-                onDragOver={(e) => handleThumbDragOver(e, index)}
-                onDrop={(e) => handleThumbDrop(e, index)}
+                onDragStart={e => handleThumbDragStart(e, index)}
+                onDragOver={e => handleThumbDragOver(e, index)}
+                onDrop={e => handleThumbDrop(e, index)}
                 onDragEnd={handleThumbDragEnd}
                 className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-150 aspect-square ${
                   dragOverIndex === index
@@ -341,7 +404,10 @@ const ImageUploadZone = ({ files, setFiles }) => {
                   {/* Botão remover */}
                   <button
                     type='button'
-                    onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      removeFile(index);
+                    }}
                     className='absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm'
                     title='Remover imagem'
                   >
@@ -387,22 +453,26 @@ const AddProduct = () => {
   const [files, setFiles] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  
+
   // GROUP + CATEGORY
   const [selectedGroup, setSelectedGroup] = useState('');
   const [category, setCategory] = useState('');
-  
+
   const [price, setPrice] = useState('');
   const [offerPrice, setOfferPrice] = useState('');
-  
+
   // STOCK
   const [stock, setStock] = useState('');
 
   // 🆕 SKU + PESO + DIMENSÕES
   const [sku, setSku] = useState('');
   const [weight, setWeight] = useState('');
-  const [dimensions, setDimensions] = useState({ length: '', width: '', height: '' });
-  
+  const [dimensions, setDimensions] = useState({
+    length: '',
+    width: '',
+    height: '',
+  });
+
   // 🆕 FILTROS DINÂMICOS (baseados no grupo selecionado)
   const [productFilters, setProductFilters] = useState({});
 
@@ -411,11 +481,11 @@ const AddProduct = () => {
   const [hasColor, setHasColor] = useState(false);
   const [color, setColor] = useState('');
   const [colorCode, setColorCode] = useState('#000000');
-  
+
   // COR DUPLA
   const [isDualColor, setIsDualColor] = useState(false);
   const [colorCode2, setColorCode2] = useState('#2563EB');
-  
+
   const [isMainVariant, setIsMainVariant] = useState(true);
 
   // 🆕 SISTEMA DE VARIANTE POR TAMANHO
@@ -475,16 +545,16 @@ const AddProduct = () => {
   }, [productFilters, selectedTags, price, offerPrice]);
 
   // Toggle de tag
-  const toggleTag = (tagValue) => {
-    setSelectedTags(prev => 
-      prev.includes(tagValue) 
-        ? prev.filter(t => t !== tagValue) 
-        : [...prev, tagValue]
+  const toggleTag = tagValue => {
+    setSelectedTags(prev =>
+      prev.includes(tagValue)
+        ? prev.filter(t => t !== tagValue)
+        : [...prev, tagValue],
     );
   };
 
   // Quando o grupo muda, limpar a categoria e filtros
-  const handleGroupChange = (e) => {
+  const handleGroupChange = e => {
     const newGroup = e.target.value;
     setSelectedGroup(newGroup);
     setCategory('');
@@ -524,7 +594,7 @@ const AddProduct = () => {
   };
 
   // GERAR SLUG PARA FAMÍLIA
-  const generateFamilySlug = (text) => {
+  const generateFamilySlug = text => {
     return text
       .toLowerCase()
       .normalize('NFD')
@@ -534,14 +604,14 @@ const AddProduct = () => {
   };
 
   // SELECIONAR COR SIMPLES
-  const selectPresetColor = (preset) => {
+  const selectPresetColor = preset => {
     setColor(preset.name);
     setColorCode(preset.code);
     setIsDualColor(false);
   };
 
   // SELECIONAR COR DUPLA
-  const selectPresetDualColor = (preset) => {
+  const selectPresetDualColor = preset => {
     setColor(preset.name);
     setColorCode(preset.code1);
     setColorCode2(preset.code2);
@@ -549,7 +619,7 @@ const AddProduct = () => {
   };
 
   // 🆕 Handler para trocar tipo de variante
-  const handleVariantTypeChange = (type) => {
+  const handleVariantTypeChange = type => {
     setVariantType(type);
     if (type === 'color') {
       setHasSize(false);
@@ -610,13 +680,14 @@ const AddProduct = () => {
         isMainVariant,
         sku: sku.trim() || undefined,
         weight: weight ? Number(weight) : undefined,
-        dimensions: (dimensions.length || dimensions.width || dimensions.height)
-          ? {
-              length: Number(dimensions.length) || 0,
-              width: Number(dimensions.width) || 0,
-              height: Number(dimensions.height) || 0,
-            }
-          : undefined,
+        dimensions:
+          dimensions.length || dimensions.width || dimensions.height
+            ? {
+                length: Number(dimensions.length) || 0,
+                width: Number(dimensions.width) || 0,
+                height: Number(dimensions.height) || 0,
+              }
+            : undefined,
         // 🆕 Tags transversais
         tags: selectedTags,
         // 🆕 Frete grátis
@@ -636,16 +707,16 @@ const AddProduct = () => {
       if (productFamily.trim()) {
         productData.productFamily = generateFamilySlug(productFamily);
       }
-      
+
       if (hasColor && color.trim()) {
         productData.variantType = 'color';
         productData.color = color;
         productData.colorCode = colorCode;
-        
+
         if (isDualColor && colorCode2) {
           productData.colorCode2 = colorCode2;
         }
-        
+
         if (!productFamily.trim()) {
           const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
           if (baseName) {
@@ -657,9 +728,17 @@ const AddProduct = () => {
       if (hasSize && sizeValue.trim()) {
         productData.variantType = 'size';
         productData.size = sizeValue.trim();
-        
+
         if (!productFamily.trim()) {
-          const baseName = name.replace(new RegExp(sizeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '').trim();
+          const baseName = name
+            .replace(
+              new RegExp(
+                sizeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+                'gi',
+              ),
+              '',
+            )
+            .trim();
           if (baseName) {
             productData.productFamily = generateFamilySlug(baseName);
           }
@@ -676,9 +755,9 @@ const AddProduct = () => {
 
       if (data.success) {
         toast.success('Produto adicionado com sucesso!');
-        
+
         await fetchProducts();
-        
+
         // Reset form
         setName('');
         setDescription('');
@@ -715,9 +794,13 @@ const AddProduct = () => {
 
   return (
     <div className='flex-1 h-[95vh] overflow-y-auto'>
-      <form onSubmit={onSubmitHandler} className='p-6 md:p-8 space-y-5 max-w-2xl'>
-        
-        <h2 className='text-2xl font-bold text-gray-800 mb-6'>Adicionar Produto</h2>
+      <form
+        onSubmit={onSubmitHandler}
+        className='p-6 md:p-8 space-y-5 max-w-2xl'
+      >
+        <h2 className='text-2xl font-bold text-gray-800 mb-6'>
+          Adicionar Produto
+        </h2>
 
         {/* ═══════════════════════════════════════════════════════ */}
         {/* 🆕 DRAG & DROP IMAGE UPLOAD                           */}
@@ -742,7 +825,10 @@ const AddProduct = () => {
 
         {/* Descrição */}
         <div className='flex flex-col gap-1'>
-          <label className='text-base font-medium' htmlFor='product-description'>
+          <label
+            className='text-base font-medium'
+            htmlFor='product-description'
+          >
             Descrição / Especificações
           </label>
           <textarea
@@ -753,7 +839,9 @@ const AddProduct = () => {
             className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors resize-none'
             placeholder='Escreva cada especificação numa linha separada'
           ></textarea>
-          <p className='text-xs text-gray-500'>Cada linha será um item da lista</p>
+          <p className='text-xs text-gray-500'>
+            Cada linha será um item da lista
+          </p>
         </div>
 
         {/* GROUP + CATEGORIA em linha */}
@@ -771,11 +859,13 @@ const AddProduct = () => {
               required
             >
               <option value=''>Selecionar Grupo</option>
-              {groups.filter(g => !g.isTagGroup).map((group) => (
-                <option key={group.id} value={group.slug}>
-                  {group.name}
-                </option>
-              ))}
+              {groups
+                .filter(g => !g.isTagGroup)
+                .map(group => (
+                  <option key={group.id} value={group.slug}>
+                    {group.name}
+                  </option>
+                ))}
             </select>
             <p className='text-xs text-gray-500'>Selecione primeiro o grupo</p>
           </div>
@@ -790,15 +880,17 @@ const AddProduct = () => {
               value={category}
               id='category'
               className={`outline-none py-2.5 px-3 rounded-lg border transition-colors ${
-                !selectedGroup 
-                  ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' 
+                !selectedGroup
+                  ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : 'border-gray-300 focus:border-primary'
               }`}
               disabled={!selectedGroup}
               required
             >
               <option value=''>
-                {selectedGroup ? 'Selecionar Categoria' : 'Selecione um grupo primeiro'}
+                {selectedGroup
+                  ? 'Selecionar Categoria'
+                  : 'Selecione um grupo primeiro'}
               </option>
               {filteredCategories.map((item, index) => (
                 <option key={index} value={item.path}>
@@ -807,7 +899,9 @@ const AddProduct = () => {
               ))}
             </select>
             {selectedGroup && filteredCategories.length === 0 && (
-              <p className='text-xs text-amber-600'>Nenhuma categoria neste grupo ainda</p>
+              <p className='text-xs text-amber-600'>
+                Nenhuma categoria neste grupo ainda
+              </p>
             )}
           </div>
         </div>
@@ -818,19 +912,30 @@ const AddProduct = () => {
         {selectedGroup && visibleFilters.length > 0 && (
           <div className='border border-blue-200 bg-blue-50/50 rounded-lg p-4 space-y-4'>
             <div className='flex items-center gap-2 mb-1'>
-              <svg className='w-5 h-5 text-blue-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' />
+              <svg
+                className='w-5 h-5 text-blue-600'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'
+                />
               </svg>
               <h3 className='text-base font-semibold text-blue-800'>
                 Filtros do Produto
               </h3>
             </div>
             <p className='text-xs text-blue-600 -mt-2'>
-              Esses filtros permitem que o cliente encontre o produto na página da coleção
+              Esses filtros permitem que o cliente encontre o produto na página
+              da coleção
             </p>
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              {visibleFilters.map((filterDef) => {
+              {visibleFilters.map(filterDef => {
                 // 🆕 Não mostrar filtros com fieldPath no AddProduct (sourceGroup é automático)
                 if (filterDef.fieldPath) return null;
                 return (
@@ -840,11 +945,13 @@ const AddProduct = () => {
                     </label>
                     <select
                       value={productFilters[filterDef.key] || ''}
-                      onChange={e => handleFilterChange(filterDef.key, e.target.value)}
+                      onChange={e =>
+                        handleFilterChange(filterDef.key, e.target.value)
+                      }
                       className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors text-sm bg-white'
                     >
                       <option value=''>— Selecionar —</option>
-                      {filterDef.options.map((opt) => (
+                      {filterDef.options.map(opt => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
@@ -856,14 +963,17 @@ const AddProduct = () => {
             </div>
 
             {/* Preview dos filtros preenchidos */}
-            {Object.keys(productFilters).filter(k => productFilters[k]).length > 0 && (
+            {Object.keys(productFilters).filter(k => productFilters[k]).length >
+              0 && (
               <div className='flex flex-wrap gap-2 pt-2 border-t border-blue-200'>
                 {Object.entries(productFilters).map(([key, value]) => {
                   if (!value) return null;
                   const filterDef = groupFilterDefs.find(f => f.key === key);
-                  const option = filterDef?.options.find(o => o.value === value);
+                  const option = filterDef?.options.find(
+                    o => o.value === value,
+                  );
                   return (
-                    <span 
+                    <span
                       key={key}
                       className='inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium'
                     >
@@ -932,7 +1042,9 @@ const AddProduct = () => {
             className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors max-w-[200px]'
             required
           />
-          <p className='text-xs text-gray-500'>Defina 0 para produto esgotado</p>
+          <p className='text-xs text-gray-500'>
+            Defina 0 para produto esgotado
+          </p>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════ */}
@@ -940,21 +1052,36 @@ const AddProduct = () => {
         {/* ═══════════════════════════════════════════════════════════ */}
         <div className='border border-green-200 bg-green-50/50 rounded-lg p-4 space-y-4'>
           <div className='flex items-center gap-2 mb-1'>
-            <svg className='w-5 h-5 text-green-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' />
+            <svg
+              className='w-5 h-5 text-green-600'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke='currentColor'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'
+              />
             </svg>
             <h3 className='text-base font-semibold text-green-800'>
               Tags e Destaques
             </h3>
           </div>
           <p className='text-xs text-green-600 -mt-2'>
-            Tags permitem que o produto apareça em coleções transversais (SUP, Bodyboard, Outlet)
+            Tags permitem que o produto apareça em coleções transversais (SUP,
+            Bodyboard, Outlet)
           </p>
 
           {/* Frete Grátis — Toggle destacado */}
-          <div className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-            freeShipping ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'
-          }`}>
+          <div
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              freeShipping
+                ? 'bg-green-100 border-green-300'
+                : 'bg-white border-gray-200'
+            }`}
+          >
             <input
               type='checkbox'
               id='freeShipping'
@@ -963,11 +1090,23 @@ const AddProduct = () => {
               className='w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer'
             />
             <div className='flex items-center gap-2'>
-              <svg className={`w-5 h-5 ${freeShipping ? 'text-green-600' : 'text-gray-400'}`} fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' />
+              <svg
+                className={`w-5 h-5 ${freeShipping ? 'text-green-600' : 'text-gray-400'}`}
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4'
+                />
               </svg>
               <label htmlFor='freeShipping' className='cursor-pointer'>
-                <span className={`text-base font-medium ${freeShipping ? 'text-green-700' : 'text-gray-700'}`}>
+                <span
+                  className={`text-base font-medium ${freeShipping ? 'text-green-700' : 'text-gray-700'}`}
+                >
                   Frete Grátis
                 </span>
                 <p className='text-xs text-gray-500'>
@@ -979,9 +1118,11 @@ const AddProduct = () => {
 
           {/* Tags de Coleção */}
           <div>
-            <p className='text-sm font-medium text-gray-700 mb-2'>Tags de Coleção:</p>
+            <p className='text-sm font-medium text-gray-700 mb-2'>
+              Tags de Coleção:
+            </p>
             <div className='flex flex-wrap gap-2'>
-              {AVAILABLE_TAGS.map((tag) => {
+              {AVAILABLE_TAGS.map(tag => {
                 const isSelected = selectedTags.includes(tag.value);
                 const isSuggested = suggestedTags.includes(tag.value);
                 return (
@@ -1011,13 +1152,22 @@ const AddProduct = () => {
               <div className='mt-2 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg'>
                 <span className='text-amber-600 text-xs'>💡</span>
                 <p className='text-xs text-amber-700'>
-                  Sugestão baseada nos filtros: <strong>{suggestedTags.map(t => 
-                    AVAILABLE_TAGS.find(at => at.value === t)?.label
-                  ).join(', ')}</strong>
+                  Sugestão baseada nos filtros:{' '}
+                  <strong>
+                    {suggestedTags
+                      .map(
+                        t => AVAILABLE_TAGS.find(at => at.value === t)?.label,
+                      )
+                      .join(', ')}
+                  </strong>
                 </p>
                 <button
                   type='button'
-                  onClick={() => setSelectedTags(prev => [...new Set([...prev, ...suggestedTags])])}
+                  onClick={() =>
+                    setSelectedTags(prev => [
+                      ...new Set([...prev, ...suggestedTags]),
+                    ])
+                  }
                   className='ml-auto text-xs font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap'
                 >
                   Adicionar
@@ -1037,7 +1187,7 @@ const AddProduct = () => {
               {selectedTags.map(tagValue => {
                 const tag = AVAILABLE_TAGS.find(t => t.value === tagValue);
                 return (
-                  <span 
+                  <span
                     key={tagValue}
                     className='inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium'
                   >
@@ -1061,8 +1211,18 @@ const AddProduct = () => {
         {/* ═══════════════════════════════════════════════════════════ */}
         <div className='border border-gray-200 bg-gray-50/50 rounded-lg p-4 space-y-5'>
           <div className='flex items-center gap-2'>
-            <svg className='w-5 h-5 text-gray-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' />
+            <svg
+              className='w-5 h-5 text-gray-600'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke='currentColor'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'
+              />
             </svg>
             <h3 className='text-base font-semibold text-gray-800'>
               Código, Peso e Dimensões
@@ -1076,7 +1236,10 @@ const AddProduct = () => {
           <div className='flex items-start gap-4 flex-wrap'>
             {/* SKU */}
             <div className='flex-1 flex flex-col gap-1 min-w-[200px]'>
-              <label className='text-sm font-medium text-gray-700' htmlFor='sku'>
+              <label
+                className='text-sm font-medium text-gray-700'
+                htmlFor='sku'
+              >
                 Código do Produto (SKU)
               </label>
               <div className='flex gap-2'>
@@ -1109,7 +1272,10 @@ const AddProduct = () => {
 
             {/* Peso */}
             <div className='flex flex-col gap-1 min-w-[160px]'>
-              <label className='text-sm font-medium text-gray-700' htmlFor='weight'>
+              <label
+                className='text-sm font-medium text-gray-700'
+                htmlFor='weight'
+              >
                 Peso Líquido (gramas)
               </label>
               <input
@@ -1144,11 +1310,15 @@ const AddProduct = () => {
                   min='0'
                   step='0.1'
                   value={dimensions.length}
-                  onChange={e => setDimensions(prev => ({ ...prev, length: e.target.value }))}
+                  onChange={e =>
+                    setDimensions(prev => ({ ...prev, length: e.target.value }))
+                  }
                   placeholder='0'
                   className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
                 />
-                <p className='text-xs text-gray-400 mt-1 text-center'>Comprimento</p>
+                <p className='text-xs text-gray-400 mt-1 text-center'>
+                  Comprimento
+                </p>
               </div>
               <span className='text-gray-300 font-bold text-lg'>×</span>
               <div className='flex-1'>
@@ -1157,11 +1327,15 @@ const AddProduct = () => {
                   min='0'
                   step='0.1'
                   value={dimensions.width}
-                  onChange={e => setDimensions(prev => ({ ...prev, width: e.target.value }))}
+                  onChange={e =>
+                    setDimensions(prev => ({ ...prev, width: e.target.value }))
+                  }
                   placeholder='0'
                   className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
                 />
-                <p className='text-xs text-gray-400 mt-1 text-center'>Largura</p>
+                <p className='text-xs text-gray-400 mt-1 text-center'>
+                  Largura
+                </p>
               </div>
               <span className='text-gray-300 font-bold text-lg'>×</span>
               <div className='flex-1'>
@@ -1170,14 +1344,18 @@ const AddProduct = () => {
                   min='0'
                   step='0.1'
                   value={dimensions.height}
-                  onChange={e => setDimensions(prev => ({ ...prev, height: e.target.value }))}
+                  onChange={e =>
+                    setDimensions(prev => ({ ...prev, height: e.target.value }))
+                  }
                   placeholder='0'
                   className='w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors bg-white'
                 />
                 <p className='text-xs text-gray-400 mt-1 text-center'>Altura</p>
               </div>
             </div>
-            <p className='text-xs text-gray-500'>Necessário para cálculo de frete (Correios / transportadoras)</p>
+            <p className='text-xs text-gray-500'>
+              Necessário para cálculo de frete (Correios / transportadoras)
+            </p>
           </div>
         </div>
 
@@ -1189,8 +1367,9 @@ const AddProduct = () => {
             Família de Produtos (Variantes)
           </h3>
           <p className='text-sm text-gray-600 mb-4'>
-            Se este produto faz parte de uma família com várias cores ou tamanhos, 
-            defina a família abaixo. Produtos da mesma família permitem alternar entre variantes na página do produto.
+            Se este produto faz parte de uma família com várias cores ou
+            tamanhos, defina a família abaixo. Produtos da mesma família
+            permitem alternar entre variantes na página do produto.
           </p>
 
           {/* Nome da Família */}
@@ -1207,13 +1386,16 @@ const AddProduct = () => {
               className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
             />
             <p className='text-xs text-gray-500'>
-              Produtos com o mesmo nome de família serão agrupados (gera slug automático)
+              Produtos com o mesmo nome de família serão agrupados (gera slug
+              automático)
             </p>
           </div>
 
           {/* Toggle Tipo de Variante */}
           <div className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4'>
-            <span className='text-sm font-medium text-gray-700'>Tipo de Variante:</span>
+            <span className='text-sm font-medium text-gray-700'>
+              Tipo de Variante:
+            </span>
             <label className='flex items-center gap-2 cursor-pointer'>
               <input
                 type='radio'
@@ -1234,7 +1416,9 @@ const AddProduct = () => {
                 className='w-4 h-4 text-primary focus:ring-primary'
               />
               <span className='text-sm font-medium'>Tamanho</span>
-              <span className='text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium'>6'0</span>
+              <span className='text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium'>
+                6'0
+              </span>
             </label>
           </div>
 
@@ -1249,14 +1433,16 @@ const AddProduct = () => {
                   onChange={e => setHasColor(e.target.checked)}
                   className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                 />
-                <label htmlFor='hasColor' className='text-base font-medium cursor-pointer'>
+                <label
+                  htmlFor='hasColor'
+                  className='text-base font-medium cursor-pointer'
+                >
                   Este produto tem uma cor específica
                 </label>
               </div>
 
               {hasColor && (
                 <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
-                  
                   <div className='flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-200'>
                     <label className='flex items-center gap-2 cursor-pointer'>
                       <input
@@ -1278,9 +1464,12 @@ const AddProduct = () => {
                         className='w-4 h-4 text-primary focus:ring-primary'
                       />
                       <span className='text-sm font-medium'>Duas Cores</span>
-                      <div 
+                      <div
                         className='w-5 h-5 rounded-full'
-                        style={{ background: 'linear-gradient(135deg, #2563EB 50%, #000000 50%)' }}
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #2563EB 50%, #000000 50%)',
+                        }}
                       ></div>
                     </label>
                   </div>
@@ -1291,7 +1480,11 @@ const AddProduct = () => {
                       type='text'
                       value={color}
                       onChange={e => setColor(e.target.value)}
-                      placeholder={isDualColor ? 'Ex: Preto/Azul' : 'Ex: Preto, Azul Marinho'}
+                      placeholder={
+                        isDualColor
+                          ? 'Ex: Preto/Azul'
+                          : 'Ex: Preto, Azul Marinho'
+                      }
                       className='outline-none py-2 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
                     />
                   </div>
@@ -1299,7 +1492,9 @@ const AddProduct = () => {
                   {!isDualColor ? (
                     <>
                       <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium'>Código da Cor</label>
+                        <label className='text-sm font-medium'>
+                          Código da Cor
+                        </label>
                         <div className='flex items-center gap-3'>
                           <input
                             type='color'
@@ -1318,14 +1513,18 @@ const AddProduct = () => {
                       </div>
 
                       <div>
-                        <p className='text-sm font-medium mb-2'>Cores Rápidas:</p>
+                        <p className='text-sm font-medium mb-2'>
+                          Cores Rápidas:
+                        </p>
                         <div className='flex flex-wrap gap-2'>
                           {PRESET_COLORS.map((preset, index) => (
                             <ColorBall
                               key={index}
                               code1={preset.code}
                               size={32}
-                              selected={colorCode === preset.code && !isDualColor}
+                              selected={
+                                colorCode === preset.code && !isDualColor
+                              }
                               onClick={() => selectPresetColor(preset)}
                               title={preset.name}
                             />
@@ -1337,7 +1536,9 @@ const AddProduct = () => {
                     <>
                       <div className='grid grid-cols-2 gap-4'>
                         <div className='flex flex-col gap-1'>
-                          <label className='text-sm font-medium'>Cor 1 (Esquerda)</label>
+                          <label className='text-sm font-medium'>
+                            Cor 1 (Esquerda)
+                          </label>
                           <div className='flex items-center gap-2'>
                             <input
                               type='color'
@@ -1354,9 +1555,11 @@ const AddProduct = () => {
                             />
                           </div>
                         </div>
-                        
+
                         <div className='flex flex-col gap-1'>
-                          <label className='text-sm font-medium'>Cor 2 (Direita)</label>
+                          <label className='text-sm font-medium'>
+                            Cor 2 (Direita)
+                          </label>
                           <div className='flex items-center gap-2'>
                             <input
                               type='color'
@@ -1376,7 +1579,9 @@ const AddProduct = () => {
                       </div>
 
                       <div>
-                        <p className='text-sm font-medium mb-2'>Combinações Rápidas:</p>
+                        <p className='text-sm font-medium mb-2'>
+                          Combinações Rápidas:
+                        </p>
                         <div className='flex flex-wrap gap-2'>
                           {PRESET_DUAL_COLORS.map((preset, index) => (
                             <ColorBall
@@ -1384,7 +1589,11 @@ const AddProduct = () => {
                               code1={preset.code1}
                               code2={preset.code2}
                               size={32}
-                              selected={isDualColor && colorCode === preset.code1 && colorCode2 === preset.code2}
+                              selected={
+                                isDualColor &&
+                                colorCode === preset.code1 &&
+                                colorCode2 === preset.code2
+                              }
                               onClick={() => selectPresetDualColor(preset)}
                               title={preset.name}
                             />
@@ -1396,15 +1605,17 @@ const AddProduct = () => {
 
                   {color && (
                     <div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200'>
-                      <ColorBall 
-                        code1={colorCode} 
-                        code2={isDualColor ? colorCode2 : null} 
+                      <ColorBall
+                        code1={colorCode}
+                        code2={isDualColor ? colorCode2 : null}
                         size={40}
                       />
                       <div>
                         <p className='font-medium'>{color}</p>
                         <p className='text-xs text-gray-500 font-mono'>
-                          {isDualColor ? `${colorCode} / ${colorCode2}` : colorCode}
+                          {isDualColor
+                            ? `${colorCode} / ${colorCode2}`
+                            : colorCode}
                         </p>
                       </div>
                     </div>
@@ -1425,14 +1636,16 @@ const AddProduct = () => {
                   onChange={e => setHasSize(e.target.checked)}
                   className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
                 />
-                <label htmlFor='hasSize' className='text-base font-medium cursor-pointer'>
+                <label
+                  htmlFor='hasSize'
+                  className='text-base font-medium cursor-pointer'
+                >
                   Este produto tem um tamanho específico
                 </label>
               </div>
 
               {hasSize && (
                 <div className='bg-gray-50 p-4 rounded-lg space-y-4 border border-gray-200'>
-                  
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium'>Tamanho</label>
                     <input
@@ -1445,9 +1658,11 @@ const AddProduct = () => {
                   </div>
 
                   <div>
-                    <p className='text-sm font-medium mb-2'>Tamanhos Rápidos:</p>
+                    <p className='text-sm font-medium mb-2'>
+                      Tamanhos Rápidos:
+                    </p>
                     <div className='flex flex-wrap gap-2'>
-                      {PRESET_SIZES.map((preset) => (
+                      {PRESET_SIZES.map(preset => (
                         <SizeBadge
                           key={preset}
                           label={preset}
@@ -1468,7 +1683,8 @@ const AddProduct = () => {
                       <div>
                         <p className='font-medium'>Tamanho: {sizeValue}</p>
                         <p className='text-xs text-gray-500'>
-                          Este tamanho será exibido como badge na página do produto
+                          Este tamanho será exibido como badge na página do
+                          produto
                         </p>
                       </div>
                     </div>
@@ -1488,18 +1704,22 @@ const AddProduct = () => {
               className='w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer'
             />
             <div>
-              <label htmlFor='isMainVariant' className='text-base font-medium cursor-pointer'>
+              <label
+                htmlFor='isMainVariant'
+                className='text-base font-medium cursor-pointer'
+              >
                 Produto Principal da Família
               </label>
               <p className='text-xs text-gray-600 mt-0.5'>
-                Se marcado, este produto aparece na listagem. Apenas um por família deve ser principal.
+                Se marcado, este produto aparece na listagem. Apenas um por
+                família deve ser principal.
               </p>
             </div>
           </div>
         </div>
 
         {/* Botão Submit */}
-        <button 
+        <button
           type='submit'
           className='w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dull transition-colors mt-6'
         >
