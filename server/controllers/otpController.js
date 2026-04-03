@@ -3,6 +3,8 @@
 // OTP VERIFICATION CONTROLLER — Elite Surfing Brasil
 // Envio e verificação de código OTP por email
 // ═══════════════════════════════════════════════════════════════
+// ✅ 31/03/2026: Lista de emails descartáveis movida para utils/disposableEmails.js
+// ═══════════════════════════════════════════════════════════════
 
 import OtpVerification from '../models/OtpVerification.js';
 import { sendSimpleEmail } from '../services/emailService.js';
@@ -11,6 +13,7 @@ import {
   createOtpTextTemplate,
 } from '../emails/OtpVerificationEmail.js';
 import jwt from 'jsonwebtoken';
+import { isDisposableEmail } from '../utils/disposableEmails.js';
 
 // =============================================================================
 // Rate limiting em memória (por IP + email)
@@ -108,29 +111,8 @@ export const sendOtp = async (req, res) => {
       });
     }
 
-    // Bloquear domínios descartáveis conhecidos
-    const disposableDomains = [
-      'tempmail.com',
-      'throwaway.email',
-      'guerrillamail.com',
-      'mailinator.com',
-      'yopmail.com',
-      'trashmail.com',
-      'fakeinbox.com',
-      'sharklasers.com',
-      'guerrillamailblock.com',
-      'grr.la',
-      'dispostable.com',
-      'maildrop.cc',
-      'temp-mail.org',
-      'tempail.com',
-      'tempr.email',
-      '10minutemail.com',
-      'mohmal.com',
-    ];
-
-    const emailDomain = normalizedEmail.split('@')[1];
-    if (disposableDomains.includes(emailDomain)) {
+    // ✅ Bloquear domínios descartáveis (lista expandida em utils/disposableEmails.js)
+    if (isDisposableEmail(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Emails temporários não são permitidos. Use um email válido.',

@@ -15,9 +15,42 @@ import { calculateInstallments, formatBRL } from '../utils/installmentUtils';
 // ═══════════════════════════════════════════════════════════════
 // Tokeniza os dados do cartão diretamente com a API Pagar.me
 // Nunca envia dados do cartão ao nosso servidor
+// ✅ 31/03/2026: Adicionada validação algorítmica de CPF + honeypot
 // ═══════════════════════════════════════════════════════════════
 
 const PAGARME_PUBLIC_KEY = import.meta.env.VITE_PAGARME_PUBLIC_KEY;
+
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ VALIDAÇÃO ALGORÍTMICA DE CPF (CHECK DIGITS)
+// ═══════════════════════════════════════════════════════════════
+const validateCPFAlgorithm = cpf => {
+  if (!cpf) return false;
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return false;
+
+  // Bloquear CPFs com todos os dígitos iguais
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+
+  // Primeiro dígito verificador
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(digits.charAt(i)) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(digits.charAt(9))) return false;
+
+  // Segundo dígito verificador
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(digits.charAt(i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(digits.charAt(10))) return false;
+
+  return true;
+};
 
 const CreditCardForm = ({
   totalAmount,
@@ -36,6 +69,9 @@ const CreditCardForm = ({
   const [errors, setErrors] = useState({});
   const [cardBrand, setCardBrand] = useState('');
   const [isTokenizing, setIsTokenizing] = useState(false);
+
+  // 🛡️ Honeypot — campo invisível para detectar bots
+  const [honeypot, setHoneypot] = useState('');
 
   const installmentRef = useRef(null);
 
@@ -137,8 +173,11 @@ const CreditCardForm = ({
       newErrors.cardCVV = 'CVV inválido';
     }
 
+    // ✅ Validação algorítmica de CPF (check digits)
     if (cpfDigits.length !== 11) {
-      newErrors.cpf = 'CPF inválido';
+      newErrors.cpf = 'CPF deve ter 11 dígitos';
+    } else if (!validateCPFAlgorithm(cpfDigits)) {
+      newErrors.cpf = 'CPF inválido. Verifique o número.';
     }
 
     setErrors(newErrors);
@@ -195,11 +234,13 @@ const CreditCardForm = ({
       console.log('✅ Card tokenizado:', cardToken.substring(0, 15) + '...');
 
       // 2. Enviar token + dados para o nosso backend
+      // ✅ Inclui honeypot para detecção de bots no backend
       onSubmit({
         cardToken,
         installments,
         customerDocument: customerDocument.replace(/\D/g, ''),
         cardBrand,
+        _hp_website: honeypot,
       });
     } catch (error) {
       console.error('❌ Erro na tokenização:', error);
@@ -389,6 +430,33 @@ const CreditCardForm = ({
           {errors.cpf && (
             <p className='text-xs text-red-600 mt-1'>{errors.cpf}</p>
           )}
+        </div>
+
+        {/* 🛡️ HONEYPOT — Campo invisível para detectar bots */}
+        {/* Bots preenchem todos os campos; humanos nunca veem este campo */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: '-9999px',
+            opacity: 0,
+            height: 0,
+            width: 0,
+            overflow: 'hidden',
+            tabIndex: -1,
+          }}
+          aria-hidden='true'
+        >
+          <label htmlFor='_hp_website'>Website</label>
+          <input
+            type='text'
+            id='_hp_website'
+            name='_hp_website'
+            value={honeypot}
+            onChange={e => setHoneypot(e.target.value)}
+            autoComplete='off'
+            tabIndex={-1}
+          />
         </div>
 
         {/* Selector de Parcelas */}
