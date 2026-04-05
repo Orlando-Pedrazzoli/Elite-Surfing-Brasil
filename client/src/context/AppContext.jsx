@@ -421,6 +421,21 @@ export const AppContextProvider = ({ children }) => {
     saveCartToStorage(newCartItems);
     toast.success('Adicionado ao carrinho');
 
+    // Meta Pixel — AddToCart
+    if (typeof window.fbq === 'function') {
+      const product = findProduct(itemId);
+      if (product) {
+        window.fbq('track', 'AddToCart', {
+          content_name: product.name,
+          content_ids: [product._id],
+          content_type: 'product',
+          value: product.offerPrice || product.price || 0,
+          currency: 'BRL',
+          num_items: 1,
+        });
+      }
+    }
+
     setShowCartSidebar(true);
 
     if (user) {

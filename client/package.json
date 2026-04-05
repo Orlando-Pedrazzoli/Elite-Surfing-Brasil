@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run sitemap && vite build",
+    "build": "npm run sitemap && npm run feed && vite build",
     "sitemap": "node scripts/generate-sitemap.js",
+    "feed": "node scripts/generate-product-feed.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

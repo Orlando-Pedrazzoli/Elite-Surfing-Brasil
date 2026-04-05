@@ -9,11 +9,14 @@ import ShareProduct from '../components/ShareProduct';
 import { SEO, ProductSchema, BreadcrumbSchema } from '../components/seo';
 import toast from 'react-hot-toast';
 
-// 🆕 NOVOS COMPONENTES
+// Componentes
 import ProductPriceDisplay from '../components/ProductPriceDisplay';
 import ProductInfoTabs from '../components/ProductInfoTabs';
 import ShippingCalculator from '../components/ShippingCalculator';
 import ImageGalleryModal from '../components/ImageGalleryModal';
+
+// Meta Pixel
+import useMetaPixel from '../hooks/useMetaPixel';
 
 const ProductDetails = () => {
   const {
@@ -27,6 +30,8 @@ const ProductDetails = () => {
     getProductFamily,
   } = useAppContext();
   const { id, category } = useParams();
+  const { trackViewContent } = useMetaPixel();
+
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [thumbStartIndex, setThumbStartIndex] = useState(0);
@@ -78,6 +83,13 @@ const ProductDetails = () => {
     }
   }, [product?._id]);
 
+  // Meta Pixel — ViewContent
+  useEffect(() => {
+    if (displayProduct) {
+      trackViewContent(displayProduct);
+    }
+  }, [displayProduct?._id]);
+
   // Buscar produtos da mesma família via API (com cache)
   useEffect(() => {
     const fetchFamily = async () => {
@@ -112,20 +124,20 @@ const ProductDetails = () => {
   const availableToAdd = currentStock - cartQuantity;
   const hasItemsInCart = cartQuantity > 0;
 
-  // 🆕 Detectar tipo de variante da família
+  // Detectar tipo de variante da família
   const familyVariantType =
     familyProducts.length > 0
       ? familyProducts[0].variantType || 'color'
       : 'color';
 
-  // 🆕 Tags e badges
+  // Tags e badges
   const tags = displayProduct?.tags || [];
   const hasFreeShipping = displayProduct?.freeShipping === true;
   const isOutlet = tags.includes('outlet');
   const isLancamento = tags.includes('lancamento');
   const isBestseller = tags.includes('bestseller');
 
-  // 🆕 Percentagem de desconto
+  // Percentagem de desconto
   const discountPercent =
     displayProduct && displayProduct.price > displayProduct.offerPrice
       ? Math.round(
@@ -235,9 +247,7 @@ const ProductDetails = () => {
     }, 200);
   };
 
-  // ═══════════════════════════════════════════════
-  // MODAL — agora usa ImageGalleryModal
-  // ═══════════════════════════════════════════════
+  // Modal
   const openModal = useCallback(index => {
     setCurrentImageIndex(index);
     setIsModalOpen(true);
@@ -246,10 +256,6 @@ const ProductDetails = () => {
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
   }, []);
-
-  // ═══════════════════════════════════════════════
-  // IMAGE NAVIGATION (page-level, fora do modal)
-  // ═══════════════════════════════════════════════
 
   // Scroll mobile
   useEffect(() => {
@@ -260,7 +266,7 @@ const ProductDetails = () => {
     }
   }, [currentImageIndex]);
 
-  // ✅ HANDLERS DE QUANTIDADE
+  // Handlers de quantidade
   const increaseQuantity = () => {
     if (quantity >= availableToAdd) {
       toast.error(`Apenas ${availableToAdd} unidade(s) disponível(eis)`);
@@ -275,7 +281,7 @@ const ProductDetails = () => {
     }
   };
 
-  // ✅ ADICIONAR AO CARRINHO
+  // Adicionar ao carrinho
   const handleAddToCart = () => {
     if (isInactive || !displayProduct || availableToAdd <= 0) return;
 
@@ -294,7 +300,7 @@ const ProductDetails = () => {
     setShowCartSidebar(true);
   };
 
-  // ✅ COMPRAR AGORA
+  // Comprar agora
   const handleBuyNow = () => {
     if (isInactive || !displayProduct) return;
 
@@ -484,7 +490,7 @@ const ProductDetails = () => {
     );
   };
 
-  // 🆕 Componente SizeBadge (inline — para variantes por tamanho)
+  // Componente SizeBadge (inline — para variantes por tamanho)
   const SizeBadge = ({
     label,
     isSelected = false,
@@ -546,9 +552,7 @@ const ProductDetails = () => {
       </SEO>
 
       <div className='mt-12 px-4 sm:px-6 md:px-16 lg:px-24 xl:px-32'>
-        {/* ═══════════════════════════════════════════════ */}
-        {/* IMAGE GALLERY MODAL (componente reutilizável)  */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* Image Gallery Modal */}
         <ImageGalleryModal
           images={displayProduct.image}
           isOpen={isModalOpen}
@@ -561,9 +565,7 @@ const ProductDetails = () => {
           enableSwipe={true}
         />
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* BREADCRUMBS                                     */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* Breadcrumbs */}
         <nav className='text-sm md:text-base mb-6'>
           <Link
             to='/'
@@ -593,9 +595,7 @@ const ProductDetails = () => {
 
         {/* Product Content */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16'>
-          {/* ═══════════════════════════════════════════════ */}
-          {/* IMAGES SECTION                                  */}
-          {/* ═══════════════════════════════════════════════ */}
+          {/* IMAGES SECTION */}
           <div className='flex flex-col gap-4'>
             {/* Main Image Container */}
             <div className='relative w-full max-w-[450px] h-[350px] sm:h-[450px] mx-auto'>
@@ -651,7 +651,7 @@ const ProductDetails = () => {
                   />
                 )}
 
-                {/* 🆕 Badge Frete Grátis — canto superior direito */}
+                {/* Badge Frete Grátis */}
                 {hasFreeShipping && !isInactive && (
                   <div className='absolute top-3 right-3 z-10'>
                     <span className='inline-flex items-center gap-1 bg-green-600 text-white text-xs px-3 py-1 rounded-lg font-bold uppercase tracking-wider shadow-sm'>
@@ -798,9 +798,7 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════ */}
-            {/* TABS: Especificações + Informações — Desktop    */}
-            {/* ═══════════════════════════════════════════════ */}
+            {/* Tabs Desktop */}
             <div className='hidden sm:flex justify-center'>
               <div className='w-full max-w-[550px]'>
                 <ProductInfoTabs product={displayProduct} />
@@ -808,9 +806,7 @@ const ProductDetails = () => {
             </div>
           </div>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* PRODUCT DETAILS SECTION                         */}
-          {/* ═══════════════════════════════════════════════ */}
+          {/* PRODUCT DETAILS SECTION */}
           <div className='space-y-4'>
             {/* Título + SKU + Compartilhar */}
             <div
@@ -818,7 +814,7 @@ const ProductDetails = () => {
             >
               <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1'>
-                  {/* Badges inline acima do título */}
+                  {/* Badges */}
                   {(isOutlet ||
                     isLancamento ||
                     isBestseller ||
@@ -852,7 +848,6 @@ const ProductDetails = () => {
                   <h1 className='text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight'>
                     {displayProduct.name}
                   </h1>
-                  {/* SKU / Código do produto */}
                   {displayProduct.sku && (
                     <p className='text-xs text-gray-400 mt-1 font-mono'>
                       Cód: {displayProduct.sku}
@@ -860,7 +855,6 @@ const ProductDetails = () => {
                   )}
                 </div>
 
-                {/* Botão de Compartilhar */}
                 <ShareProduct
                   product={displayProduct}
                   className='flex-shrink-0 mt-1'
@@ -908,7 +902,7 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* 🆕 Seletor de Variantes — Cor (bolinhas) ou Tamanho (badges) */}
+            {/* Seletor de Variantes */}
             {familyProducts.length > 1 && (
               <div className='bg-white border border-gray-200 p-4 rounded-lg'>
                 <div className='flex items-center justify-between mb-3'>
@@ -977,9 +971,7 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {/* ═══════════════════════════════════════════════ */}
-            {/* PREÇO — PIX + Cartão + Parcelas                */}
-            {/* ═══════════════════════════════════════════════ */}
+            {/* Preço */}
             <div
               className={`transition-all duration-200 ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
             >
@@ -990,7 +982,7 @@ const ProductDetails = () => {
               />
             </div>
 
-            {/* TABS: Especificações + Info — Mobile */}
+            {/* Tabs Mobile */}
             <div className='sm:hidden'>
               <ProductInfoTabs product={displayProduct} />
             </div>
@@ -998,7 +990,6 @@ const ProductDetails = () => {
             {/* Stock e Quantidade */}
             <div className='bg-white border p-3 md:p-4 rounded-lg transition-all duration-300 border-gray-200'>
               <div className='space-y-3'>
-                {/* Status de Stock */}
                 <div className='flex items-center gap-2'>
                   <div
                     className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${getStockIndicatorColor()}`}
@@ -1010,7 +1001,6 @@ const ProductDetails = () => {
                   </span>
                 </div>
 
-                {/* Seletor de Quantidade */}
                 {!isInactive && availableToAdd > 0 && (
                   <div>
                     <label className='block text-sm font-semibold text-gray-900 mb-2'>
@@ -1075,22 +1065,17 @@ const ProductDetails = () => {
               </button>
             </div>
 
-            {/* ═══════════════════════════════════════════════ */}
-            {/* CALCULADORA DE FRETE                            */}
-            {/* ═══════════════════════════════════════════════ */}
+            {/* Calculadora de Frete */}
             <ShippingCalculator
               product={displayProduct}
               orderTotal={displayProduct.offerPrice * quantity}
             />
 
-            {/* ═══════════════════════════════════════════════ */}
-            {/* 🆕 INFO ADICIONAL — Benefícios (dinâmico)      */}
-            {/* ═══════════════════════════════════════════════ */}
+            {/* Info Adicional — Benefícios */}
             <div
               className={`p-3 md:p-4 rounded-lg border ${hasFreeShipping ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}
             >
               <div className='space-y-2'>
-                {/* 🆕 Frete Grátis — dinâmico baseado em freeShipping */}
                 {hasFreeShipping ? (
                   <div className='flex items-center gap-2'>
                     <div className='w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0'>

@@ -1,3 +1,4 @@
+import useMetaPixel from '../hooks/useMetaPixel';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
@@ -47,6 +48,7 @@ const Cart = () => {
     findProduct,
   } = useAppContext();
 
+  const { trackInitiateCheckout } = useMetaPixel();
   const [cartArray, setCartArray] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [showAddressList, setShowAddressList] = useState(false);
@@ -387,7 +389,7 @@ const Cart = () => {
       toast.error('Estoque insuficiente:\n' + stockErrors.join('\n'));
       return;
     }
-
+    trackInitiateCheckout(cartItems, parseFloat(calculateTotal()));
     setIsProcessing(true);
 
     try {
@@ -553,7 +555,7 @@ const Cart = () => {
         return toast.error('CPF é obrigatório para pagamento com boleto.');
       }
     }
-
+    trackInitiateCheckout(cartItems, parseFloat(calculateTotal()));
     setIsProcessing(true);
 
     try {

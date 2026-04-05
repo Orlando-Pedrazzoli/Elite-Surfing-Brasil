@@ -9,7 +9,7 @@
 
     <!-- =====================================================
          Elite Surfing Brasil - SEO Optimizado para o Brasil
-         Última atualização: 2026-03-05
+         Última atualização: 2026-04-05
          ===================================================== -->
 
     <!-- Favicon - Completo para todos os dispositivos -->
@@ -152,6 +152,7 @@
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
     <!-- Meta/Facebook -->
+    <link rel="preconnect" href="https://connect.facebook.net" crossorigin />
     <link rel="dns-prefetch" href="https://connect.facebook.net" />
 
     <!-- =====================================================
@@ -173,26 +174,45 @@
 
     <!-- =====================================================
          Meta Pixel (Facebook/Instagram)
+         ✅ ATIVO — Substituir SEU_PIXEL_ID_AQUI pelo Pixel ID real
+         Obter em: https://business.facebook.com/events_manager
          ===================================================== -->
 
-    <!--
     <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', 'XXXXXXXXXXXXXXX');
+      !(function (f, b, e, v, n, t, s) {
+        if (f.fbq) return;
+        n = f.fbq = function () {
+          n.callMethod
+            ? n.callMethod.apply(n, arguments)
+            : n.queue.push(arguments);
+        };
+        if (!f._fbq) f._fbq = n;
+        n.push = n;
+        n.loaded = !0;
+        n.version = '2.0';
+        n.queue = [];
+        t = b.createElement(e);
+        t.async = !0;
+        t.src = v;
+        s = b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t, s);
+      })(
+        window,
+        document,
+        'script',
+        'https://connect.facebook.net/en_US/fbevents.js',
+      );
+      fbq('init', 'SEU_PIXEL_ID_AQUI');
       fbq('track', 'PageView');
     </script>
     <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXX&ev=PageView&noscript=1"/>
+      <img
+        height="1"
+        width="1"
+        style="display: none"
+        src="https://www.facebook.com/tr?id=SEU_PIXEL_ID_AQUI&ev=PageView&noscript=1"
+      />
     </noscript>
-    -->
 
     <!-- Google Search Console -->
     <meta
