@@ -12,6 +12,7 @@ import OtpVerificationModal from '../components/OtpVerificationModal';
 import {
   MapPin,
   Plus,
+  Minus,
   Edit3,
   ChevronDown,
   ChevronUp,
@@ -26,6 +27,7 @@ import {
   Check,
   X,
   Tag,
+  Trash2,
 } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
@@ -75,9 +77,7 @@ const Cart = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [emailVerificationToken, setEmailVerificationToken] = useState(null);
   const [verifiedEmail, setVerifiedEmail] = useState(null);
-  // Guardar referência de qual ação disparou o OTP (para retomar após verificação)
   const [pendingAction, setPendingAction] = useState(null);
-  // Para cartão, guardar o payload do card submit enquanto aguarda OTP
   const [pendingCardPayload, setPendingCardPayload] = useState(null);
 
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
@@ -89,33 +89,27 @@ const Cart = () => {
   // HELPERS — Verificação de email para guest
   // ═══════════════════════════════════════════════
 
-  // Verificar se guest precisa de OTP
   const guestNeedsVerification = () => {
-    if (user) return false; // User logado não precisa
+    if (user) return false;
     if (emailVerificationToken && verifiedEmail) {
-      // Verificar se o email verificado é o mesmo do endereço atual
       const currentEmail = guestAddress?.email?.toLowerCase()?.trim();
       if (currentEmail && currentEmail === verifiedEmail) {
-        return false; // Já verificado para este email
+        return false;
       }
     }
-    return true; // Precisa verificar
+    return true;
   };
 
-  // Obter email do guest para verificação
   const getGuestEmail = () => {
     return guestAddress?.email || '';
   };
 
-  // Callback quando OTP é verificado com sucesso
   const handleOtpVerified = token => {
     setEmailVerificationToken(token);
     setVerifiedEmail(getGuestEmail().toLowerCase().trim());
     setShowOtpModal(false);
 
-    // Retomar ação pendente
     if (pendingAction === 'placeOrder') {
-      // Pequeno delay para fechar o modal antes de processar
       setTimeout(() => {
         executeHandlePlaceOrder(token);
       }, 300);
@@ -134,7 +128,6 @@ const Cart = () => {
     if (!user && guestAddress?.email) {
       const currentEmail = guestAddress.email.toLowerCase().trim();
       if (verifiedEmail && currentEmail !== verifiedEmail) {
-        // Email mudou — resetar verificação
         setEmailVerificationToken(null);
         setVerifiedEmail(null);
       }
@@ -262,6 +255,7 @@ const Cart = () => {
       console.error('Erro ao salvar endereço:', error);
     }
   };
+
   // ═══════════════════════════════════════════════
   // CÁLCULOS DE TOTAL — com PIX 10%, cupom e FRETE
   // ═══════════════════════════════════════════════
@@ -295,6 +289,8 @@ const Cart = () => {
     if (!product) return;
 
     const availableStock = product.stock || 0;
+
+    if (newQuantity < 1) return;
 
     if (newQuantity > availableStock) {
       toast.error(
@@ -337,12 +333,10 @@ const Cart = () => {
     return !!(user ? selectedAddress : guestAddress);
   };
 
-  // Callback do ShippingCalculator
   const handleShippingSelect = option => {
     setSelectedShipping(option);
   };
 
-  // ✅ MIGRAÇÃO 12/03: Formatação de CPF (reutilizada para boleto)
   const formatCPF = value => {
     const digits = value.replace(/\D/g, '');
     const limited = digits.substring(0, 11);
@@ -356,10 +350,8 @@ const Cart = () => {
 
   // =============================================================================
   // 💳 HANDLE CARD SUBMIT — PAGAR.ME (TRANSPARENT CHECKOUT)
-  // ✅ 29/03/2026: Adicionada verificação OTP para guest
   // =============================================================================
   const handleCardSubmit = async cardPayload => {
-    // Se é guest e precisa de verificação OTP
     if (guestNeedsVerification()) {
       if (!getGuestEmail()) {
         return toast.error('Por favor, adicione um endereço com email válido.');
@@ -370,7 +362,6 @@ const Cart = () => {
       return;
     }
 
-    // Já verificado ou user logado — prosseguir
     executeHandleCardSubmit(cardPayload, emailVerificationToken);
   };
 
@@ -419,13 +410,11 @@ const Cart = () => {
         customerEmail,
         customerPhone,
         customerDocument,
-        // Frete
         shippingCost: shipping,
         shippingMethod: selectedShipping.name,
         shippingCarrier: selectedShipping.carrier,
         shippingDeliveryDays: selectedShipping.deliveryDays,
         shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
-        // Billing address
         billingAddress: {
           street: currentAddress.street,
           number: currentAddress.number || '',
@@ -445,11 +434,9 @@ const Cart = () => {
         orderPayload.isGuestOrder = false;
         endpoint = '/api/pagarme/card/create';
       } else {
-        // ✅ OTP: Incluir verificationToken no payload guest
         orderPayload.verificationToken = token;
         orderPayload.guestEmail = customerEmail;
 
-        // Guest: salvar endereço primeiro
         const addressResponse = await axios.post('/api/address/guest', {
           address: currentAddress,
           verificationToken: token,
@@ -470,7 +457,6 @@ const Cart = () => {
       const { data } = await axios.post(endpoint, orderPayload);
 
       if (data.success) {
-        // Limpar carrinho
         const emptyCart = {};
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
@@ -495,7 +481,6 @@ const Cart = () => {
       }
     } catch (error) {
       console.error('Erro no pagamento com cartão:', error);
-      // ✅ OTP: Tratar erro de verificação expirada
       if (error.response?.data?.requiresVerification) {
         setEmailVerificationToken(null);
         setVerifiedEmail(null);
@@ -514,10 +499,8 @@ const Cart = () => {
 
   // =============================================================================
   // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (PAGAR.ME)
-  // ✅ 29/03/2026: Adicionada verificação OTP para guest
   // =============================================================================
   const handlePlaceOrder = async () => {
-    // ✅ OTP: Se é guest e precisa de verificação, abrir modal
     if (guestNeedsVerification()) {
       if (!getGuestEmail()) {
         return toast.error('Por favor, adicione um endereço com email válido.');
@@ -527,7 +510,6 @@ const Cart = () => {
       return;
     }
 
-    // Já verificado ou user logado — prosseguir
     executeHandlePlaceOrder(emailVerificationToken);
   };
 
@@ -548,7 +530,6 @@ const Cart = () => {
       return;
     }
 
-    // ✅ MIGRAÇÃO 12/03: Validar CPF para boleto
     if (paymentMethod === 'boleto') {
       const cpfDigits = customerDocument.replace(/\D/g, '');
       if (cpfDigits.length !== 11) {
@@ -568,9 +549,7 @@ const Cart = () => {
         subtotal - promoDisc - pixDisc + shipping,
       );
 
-      // ═══════════════════════════════════════════════════════════
-      // 💰 FLUXO PIX MANUAL
-      // ═══════════════════════════════════════════════════════════
+      // ═══ FLUXO PIX MANUAL ═══
       if (paymentMethod === 'pix') {
         const pixPayload = {
           items: cartArray.map(item => ({
@@ -593,7 +572,6 @@ const Cart = () => {
           pixPayload.address = selectedAddress._id;
           pixEndpoint = '/api/pix/create';
         } else {
-          // ✅ OTP: Incluir verificationToken no payload guest
           pixPayload.verificationToken = token;
           pixPayload.guestEmail = currentAddress.email;
 
@@ -644,9 +622,7 @@ const Cart = () => {
         return;
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // 🏦 FLUXO BOLETO — PAGAR.ME V5
-      // ═══════════════════════════════════════════════════════════
+      // ═══ FLUXO BOLETO — PAGAR.ME V5 ═══
       const customerName =
         user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
       const customerEmail = user?.email || currentAddress.email;
@@ -666,7 +642,6 @@ const Cart = () => {
         customerEmail,
         customerPhone,
         customerDocument: customerDocument.replace(/\D/g, ''),
-        // Frete
         shippingCost: shipping,
         shippingMethod: selectedShipping.name,
         shippingCarrier: selectedShipping.carrier,
@@ -682,7 +657,6 @@ const Cart = () => {
         boletoPayload.isGuestOrder = false;
         endpoint = '/api/pagarme/boleto/create';
       } else {
-        // ✅ OTP: Incluir verificationToken no payload guest
         boletoPayload.verificationToken = token;
         boletoPayload.guestEmail = customerEmail;
 
@@ -706,7 +680,6 @@ const Cart = () => {
       const { data } = await axios.post(endpoint, boletoPayload);
 
       if (data.success) {
-        // Salvar dados do boleto no localStorage (para a página BoletoPayment)
         localStorage.setItem(
           'boleto_payment_data',
           JSON.stringify({
@@ -732,7 +705,6 @@ const Cart = () => {
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
-      // ✅ OTP: Tratar erro de verificação expirada
       if (error.response?.data?.requiresVerification) {
         setEmailVerificationToken(null);
         setVerifiedEmail(null);
@@ -900,8 +872,55 @@ const Cart = () => {
     );
   };
 
-  // Carrinho vazio
-  // Loading — carrinho tem itens mas produtos ainda não carregaram
+  // ═══════════════════════════════════════════════
+  // COMPONENTE: Seletor de Quantidade com +/−
+  // Touch-friendly (min 44px), acessível, responsivo
+  // ═══════════════════════════════════════════════
+  const QuantitySelector = ({ productId, quantity, maxStock, hasWarning }) => {
+    return (
+      <div className='flex items-center'>
+        <button
+          onClick={() => handleQuantityChange(productId, quantity - 1)}
+          disabled={quantity <= 1}
+          className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-l-lg border border-r-0 border-gray-300 transition-colors select-none ${
+            quantity <= 1
+              ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+              : 'bg-white text-gray-600 hover:bg-gray-50 active:bg-gray-100 cursor-pointer'
+          }`}
+          aria-label='Diminuir quantidade'
+        >
+          <Minus className='w-4 h-4' />
+        </button>
+
+        <div
+          className={`flex items-center justify-center w-10 h-9 sm:w-12 sm:h-10 border-t border-b text-center text-sm sm:text-base font-semibold select-none ${
+            hasWarning
+              ? 'border-red-300 bg-red-50 text-red-700'
+              : 'border-gray-300 bg-white text-gray-800'
+          }`}
+        >
+          {quantity}
+        </div>
+
+        <button
+          onClick={() => handleQuantityChange(productId, quantity + 1)}
+          disabled={quantity >= maxStock}
+          className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-r-lg border border-l-0 border-gray-300 transition-colors select-none ${
+            quantity >= maxStock
+              ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+              : 'bg-white text-gray-600 hover:bg-gray-50 active:bg-gray-100 cursor-pointer'
+          }`}
+          aria-label='Aumentar quantidade'
+        >
+          <Plus className='w-4 h-4' />
+        </button>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════
+  // LOADING STATE
+  // ═══════════════════════════════════════════════
   if (Object.keys(cartItems).length > 0 && products.length === 0) {
     return (
       <div className='flex flex-col items-center justify-center min-h-[70vh] px-4 text-center bg-gray-50'>
@@ -929,8 +948,9 @@ const Cart = () => {
     );
   }
 
-  // Carrinho vazio
-
+  // ═══════════════════════════════════════════════
+  // CARRINHO VAZIO
+  // ═══════════════════════════════════════════════
   if (isCartEmpty && products.length > 0) {
     return (
       <>
@@ -1014,6 +1034,9 @@ const Cart = () => {
     );
   };
 
+  // ═══════════════════════════════════════════════
+  // RENDER PRINCIPAL
+  // ═══════════════════════════════════════════════
   return (
     <>
       <SEO
@@ -1037,7 +1060,6 @@ const Cart = () => {
         isLoading={isAddressLoading}
       />
 
-      {/* ✅ OTP Verification Modal */}
       <OtpVerificationModal
         isOpen={showOtpModal}
         onClose={() => {
@@ -1050,7 +1072,7 @@ const Cart = () => {
       />
 
       <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 min-h-[calc(100vh-60px)]'>
-        {/* Progress Steps */}
+        {/* ═══ Progress Steps ═══ */}
         <div className='max-w-2xl mx-auto mb-8'>
           <div className='flex items-center justify-center'>
             <div className='flex items-center'>
@@ -1095,7 +1117,9 @@ const Cart = () => {
         </div>
 
         <div className='flex flex-col lg:flex-row gap-8'>
-          {/* Cart Items Section */}
+          {/* ═══════════════════════════════════════════════ */}
+          {/* COLUNA ESQUERDA — Itens do Carrinho             */}
+          {/* ═══════════════════════════════════════════════ */}
           <div className='lg:w-2/3'>
             <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6'>
               <h1 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-0'>
@@ -1115,23 +1139,27 @@ const Cart = () => {
               </button>
             </div>
 
-            <div className='bg-white rounded-xl shadow-lg overflow-hidden divide-y divide-gray-200'>
+            {/* ═══ Lista de Itens ═══ */}
+            <div className='bg-white rounded-xl shadow-lg overflow-hidden divide-y divide-gray-100'>
               {cartArray.map(product => {
                 const availableStock = product.stock || 0;
                 const hasStockWarning = stockWarnings[product._id];
                 const isLowStock = availableStock > 0 && availableStock <= 3;
+                const currentQty = cartItems[product._id] || 1;
 
                 return (
                   <div
                     key={product._id}
-                    className={`flex flex-col sm:flex-row items-center p-4 sm:p-6 ${hasStockWarning ? 'bg-red-50' : ''}`}
+                    className={`p-4 sm:p-5 transition-colors ${hasStockWarning ? 'bg-red-50' : ''}`}
                   >
-                    <div className='flex items-center w-full sm:w-2/3 mb-4 sm:mb-0'>
-                      <div className='relative'>
+                    {/* ── Layout principal: Imagem + Conteúdo ── */}
+                    <div className='flex items-start gap-3 sm:gap-4'>
+                      {/* Imagem do Produto */}
+                      <div className='relative flex-shrink-0'>
                         <img
                           src={product.image[0]}
                           alt={product.name}
-                          className='w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.02]'
+                          className='w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.02]'
                           onClick={() =>
                             navigate(
                               `/products/${product.category.toLowerCase()}/${product._id}`,
@@ -1142,100 +1170,103 @@ const Cart = () => {
                           <ColorBall
                             code1={product.colorCode}
                             code2={product.colorCode2}
-                            size={24}
+                            size={22}
                             title={product.color || 'Cor'}
                           />
                         )}
                       </div>
 
-                      <div className='ml-4 flex-grow'>
-                        <h3 className='font-semibold text-lg text-gray-800'>
-                          {product.name}
-                        </h3>
-
-                        {product.color && (
-                          <p className='text-sm text-gray-500 mt-0.5'>
-                            Cor: {product.color}
-                          </p>
-                        )}
-
-                        <p className='text-sm text-gray-500 mt-1'>
-                          Peso: {product.weight || 'N/A'}g
-                        </p>
-
-                        {isLowStock && !hasStockWarning && (
-                          <p className='text-xs text-orange-600 font-medium mt-1'>
-                            Últimas {availableStock} unidades!
-                          </p>
-                        )}
-
-                        {hasStockWarning && (
-                          <p className='text-xs text-red-600 font-medium mt-1 bg-red-100 px-2 py-1 rounded'>
-                            {hasStockWarning}
-                          </p>
-                        )}
-
-                        <p className='font-medium text-gray-700 mt-2 text-base sm:hidden'>
-                          {formatBRL(product.offerPrice * product.quantity)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className='flex justify-between items-center w-full sm:w-1/3 sm:justify-end sm:gap-8'>
-                      <div className='flex items-center'>
-                        <span className='mr-2 text-gray-600'>Qtd:</span>
-                        <select
-                          value={cartItems[product._id]}
-                          onChange={e =>
-                            handleQuantityChange(
-                              product._id,
-                              Number(e.target.value),
-                            )
-                          }
-                          className={`border rounded-md p-1 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 outline-none cursor-pointer ${
-                            hasStockWarning
-                              ? 'border-red-300 bg-red-50'
-                              : 'border-gray-300'
-                          }`}
-                        >
-                          {[
-                            ...Array(
-                              Math.max(availableStock, product.quantity, 1),
-                            ).keys(),
-                          ].map(num => (
-                            <option
-                              key={num + 1}
-                              value={num + 1}
-                              disabled={num + 1 > availableStock}
+                      {/* Conteúdo: Detalhes + Ações */}
+                      <div className='flex-1 min-w-0'>
+                        {/* Linha 1: Nome + Remover (desktop) */}
+                        <div className='flex items-start justify-between gap-2'>
+                          <div className='min-w-0'>
+                            <h3
+                              className='font-semibold text-base sm:text-lg text-gray-800 leading-snug cursor-pointer hover:text-primary transition-colors'
+                              onClick={() =>
+                                navigate(
+                                  `/products/${product.category.toLowerCase()}/${product._id}`,
+                                )
+                              }
                             >
-                              {num + 1}
-                              {num + 1 > availableStock
-                                ? ' (indisponível)'
-                                : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                              {product.name}
+                            </h3>
 
-                      <div className='text-right hidden sm:block'>
-                        <p className='font-bold text-lg text-gray-800 flex items-baseline justify-end'>
-                          <span>
-                            {formatBRL(product.offerPrice * product.quantity)}
-                          </span>
-                        </p>
+                            <div className='flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1'>
+                              {product.color && (
+                                <span className='text-sm text-gray-500'>
+                                  Cor: {product.color}
+                                </span>
+                              )}
+                              <span className='text-sm text-gray-500'>
+                                Peso: {product.weight || 'N/A'}g
+                              </span>
+                            </div>
+
+                            {isLowStock && !hasStockWarning && (
+                              <p className='text-xs text-orange-600 font-medium mt-1.5'>
+                                Últimas {availableStock} unidades!
+                              </p>
+                            )}
+
+                            {hasStockWarning && (
+                              <p className='text-xs text-red-600 font-medium mt-1.5 bg-red-100 px-2 py-0.5 rounded inline-block'>
+                                {hasStockWarning}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Botão Remover — visível apenas em desktop */}
+                          <button
+                            onClick={() => removeFromCart(product._id)}
+                            className='hidden sm:flex items-center justify-center w-8 h-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 cursor-pointer'
+                            title='Remover item'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </button>
+                        </div>
+
+                        {/* ── Linha 2: Quantidade + Preço + Remover (mobile) ── */}
+                        <div className='flex items-center justify-between mt-3 pt-3 border-t border-gray-100'>
+                          {/* Seletor de Quantidade +/- */}
+                          <QuantitySelector
+                            productId={product._id}
+                            quantity={currentQty}
+                            maxStock={availableStock}
+                            hasWarning={!!hasStockWarning}
+                          />
+
+                          {/* Preço */}
+                          <div className='flex items-center gap-3'>
+                            <div className='text-right'>
+                              {currentQty > 1 && (
+                                <p className='text-xs text-gray-400 leading-tight'>
+                                  {formatBRL(product.offerPrice)} /un
+                                </p>
+                              )}
+                              <p className='font-bold text-base sm:text-lg text-gray-800'>
+                                {formatBRL(product.offerPrice * currentQty)}
+                              </p>
+                            </div>
+
+                            {/* Botão Remover — visível apenas em mobile */}
+                            <button
+                              onClick={() => removeFromCart(product._id)}
+                              className='flex sm:hidden items-center justify-center w-9 h-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer'
+                              title='Remover item'
+                            >
+                              <Trash2 className='w-4 h-4' />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => removeFromCart(product._id)}
-                        className='text-red-500 hover:text-red-700 text-sm font-medium transition-colors duration-200 ml-4 cursor-pointer'
-                      >
-                        Remover
-                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
 
+            {/* Aviso global de estoque */}
             {Object.keys(stockWarnings).length > 0 && (
               <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg'>
                 <p className='text-red-700 font-medium'>
@@ -1246,7 +1277,9 @@ const Cart = () => {
             )}
           </div>
 
-          {/* Checkout Section */}
+          {/* ═══════════════════════════════════════════════ */}
+          {/* COLUNA DIREITA — Checkout / Resumo              */}
+          {/* ═══════════════════════════════════════════════ */}
           <div className='lg:w-1/3'>
             <div className='bg-white rounded-xl shadow-lg p-6 sticky lg:top-8'>
               <h2 className='text-2xl font-bold mb-5 text-gray-800'>
@@ -1269,7 +1302,7 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* ✅ OTP: Indicador de email verificado (guest) */}
+              {/* Indicador de email verificado (guest) */}
               {!user && verifiedEmail && (
                 <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
                   <div className='flex items-center gap-2 text-blue-800'>
@@ -1281,7 +1314,7 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* Address Section */}
+              {/* ═══ Endereço de Entrega ═══ */}
               <div className='mb-6 border-b pb-6 border-gray-200'>
                 <div className='flex items-center gap-2 mb-4'>
                   <MapPin className='w-5 h-5 text-primary' />
@@ -1389,9 +1422,7 @@ const Cart = () => {
                 )}
               </div>
 
-              {/* ═══════════════════════════════════════════════ */}
-              {/* FRETE — Melhor Envio                            */}
-              {/* ═══════════════════════════════════════════════ */}
+              {/* ═══ FRETE — Melhor Envio ═══ */}
               {hasAddress() && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <div className='flex items-center gap-2 mb-4'>
@@ -1450,9 +1481,7 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* ═══════════════════════════════════════════════ */}
-              {/* CUPOM DE DESCONTO — UX melhorado                */}
-              {/* ═══════════════════════════════════════════════ */}
+              {/* ═══ CUPOM DE DESCONTO ═══ */}
               <div className='mb-6 border-b pb-6 border-gray-200'>
                 <div className='flex items-center gap-2 mb-3'>
                   <Tag className='w-5 h-5 text-primary' />
@@ -1462,7 +1491,6 @@ const Cart = () => {
                 </div>
 
                 {discountApplied ? (
-                  /* ── Estado aplicado: tag de confirmação verde ── */
                   <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg'>
                     <div className='flex items-center gap-2.5'>
                       <div className='w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
@@ -1491,7 +1519,6 @@ const Cart = () => {
                     </button>
                   </div>
                 ) : (
-                  /* ── Estado inicial: input + botão aplicar ── */
                   <div className='flex w-full'>
                     <input
                       type='text'
@@ -1516,9 +1543,7 @@ const Cart = () => {
                 )}
               </div>
 
-              {/* ═══════════════════════════════════════════════ */}
-              {/* FORMA DE PAGAMENTO                              */}
-              {/* ═══════════════════════════════════════════════ */}
+              {/* ═══ FORMA DE PAGAMENTO ═══ */}
               {hasAddress() && selectedShipping && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <h3 className='font-semibold text-gray-700 mb-3'>
@@ -1764,7 +1789,7 @@ const Cart = () => {
                       )}
                     </label>
 
-                    {/* ✅ MIGRAÇÃO 12/03: Info e CPF para boleto */}
+                    {/* Info e CPF para boleto */}
                     {paymentMethod === 'boleto' && (
                       <>
                         <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800'>
@@ -1780,7 +1805,6 @@ const Cart = () => {
                           </div>
                         </div>
 
-                        {/* CPF para Boleto */}
                         <div className='mt-2'>
                           <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                             CPF do Pagador
@@ -1803,9 +1827,7 @@ const Cart = () => {
                       </>
                     )}
 
-                    {/* ═══════════════════════════════════════════ */}
-                    {/* 💳 FORMULÁRIO DE CARTÃO — PAGAR.ME          */}
-                    {/* ═══════════════════════════════════════════ */}
+                    {/* Formulário de Cartão — Pagar.me */}
                     {paymentMethod === 'card' && (
                       <div className='mt-4'>
                         <CreditCardForm
@@ -1821,9 +1843,7 @@ const Cart = () => {
                 </div>
               )}
 
-              {/* ═══════════════════════════════════════════════ */}
-              {/* RESUMO DO PEDIDO                                */}
-              {/* ═══════════════════════════════════════════════ */}
+              {/* ═══ RESUMO DO PEDIDO ═══ */}
               <div className='pt-4'>
                 <div className='flex justify-between items-center mb-3 text-gray-700'>
                   <span>
@@ -1908,10 +1928,7 @@ const Cart = () => {
                 )}
               </div>
 
-              {/* ═══════════════════════════════════════════════ */}
-              {/* BOTÃO PRINCIPAL — Só para PIX e Boleto           */}
-              {/* (Cartão usa o botão do CreditCardForm)          */}
-              {/* ═══════════════════════════════════════════════ */}
+              {/* ═══ BOTÃO PRINCIPAL — PIX e Boleto ═══ */}
               {paymentMethod !== 'card' && (
                 <button
                   onClick={handlePlaceOrder}
