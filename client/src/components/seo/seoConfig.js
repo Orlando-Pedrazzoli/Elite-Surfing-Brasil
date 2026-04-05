@@ -1,34 +1,13 @@
 /**
  * SEO Configuration - Elite Surfing Brasil
- * Versão: 3.1.0
- * Última atualização: 2026-03-05
+ * Versão: 4.0.0
+ * Última atualização: 2026-03-31
  *
- * REGRAS DE SINCRONIZAÇÃO:
- * 1. URLs SEM trailing slash (exceto homepage que usa '')
- * 2. URLs devem ser idênticas às do sitemap.xml
- * 3. Descrições entre 120-160 caracteres para melhor exibição no Google
- * 4. Títulos máximo 60 caracteres
- *
- * SINCRONIZADO COM:
- * - assets.js → groups[] (9 coleções)
- * - assets.js → categories[] (34 categorias)
- * - App.jsx → Routes
- * - generate-sitemap.js → URLs
- *
- * GROUPS (assets.js):
- * decks, leashes, capas, sarcofagos, quilhas, acessorios, bodyboard, sup, outlet
- *
- * CATEGORIES (assets.js) — paths exatos:
- * Decks: Deck-Maldivas, Deck-Mentawai, Deck-Fiji-Classic, Deck-Hawaii, Deck-J-Bay,
- *        Deck-Noronha, Deck-Peniche, Deck-Saquarema, Deck-Combate, Deck-Longboard,
- *        Deck-Front, Deck-SUP
- * Leashes: Leash-Shortboard-Hibridas, Leash-Fun-MiniLong, Leash-Longboard,
- *          Leash-StandUp, Leash-Bodyboard
- * Capas: Refletiva-Combate, Refletiva-Premium, Capa-Toalha
- * Sarcófagos: Sarcofago-Combate, Sarcofago-Premium, Sarcofago-Combate-Rodas,
- *             Sarcofago-Premium-Rodas
- * Quilhas: Quilha-Shortboard, Quilha-Longboard, Quilha-SUP, Chave-Parafuso
- * Acessórios: Racks, Parafinas, Bones, Protetor-Rabeta, Wetsuit-Bag, Diversos
+ * ALTERAÇÕES v4.0.0:
+ * - Adicionado seoConfig.blog (para /blog)
+ * - Adicionado seoConfig.blogPost (helper para /blog/:slug)
+ * - Adicionado getblogPostSEO() helper
+ * - Adicionadas páginas institucionais ao seoConfig
  */
 
 const BASE_URL = 'https://www.elitesurfing.com.br';
@@ -61,6 +40,21 @@ const seoConfig = {
       'produtos surf',
       'equipamento surf brasil',
       'comprar surf online',
+    ],
+  },
+
+  // ═══ NOVO: Blog ═══
+  blog: {
+    title: 'Blog Surf - Circuito Mundial WSL',
+    description:
+      'Acompanhe o circuito mundial de surf WSL. Rankings atualizados, calendário de etapas, campeões mundiais, artigos e vídeos sobre surf profissional.',
+    url: '/blog',
+    keywords: [
+      'blog surf',
+      'wsl',
+      'circuito mundial surf',
+      'ranking surf',
+      'campeonato surf',
     ],
   },
 
@@ -119,12 +113,38 @@ const seoConfig = {
   institucional: {
     title: 'Quem Somos - Elite Surfing Brasil',
     description:
-      'Conheça a história da Elite Surfing Brasil. Desde a fundação até hoje, nossa missão é oferecer acessórios de surf de qualidade premium para surfistas exigentes.',
+      'Conheça a história da Elite Surfing Brasil. Desde 2010, nossa missão é oferecer acessórios de surf de qualidade premium para surfistas exigentes.',
     url: '/institucional',
     noindex: false,
   },
 
-  // Páginas privadas — não indexar
+  // ═══ Páginas institucionais específicas ═══
+  'institucional-quem-somos': {
+    title: 'Quem Somos',
+    description:
+      'Conheça a história da Elite Surfing Brasil. Desde 2010, oferecendo acessórios de surf premium.',
+    url: '/institucional/quem-somos',
+  },
+  'institucional-catalogo': {
+    title: 'Catálogo de Produtos',
+    description:
+      'Catálogo completo de acessórios de surf da Elite Surfing Brasil. Decks, leashes, capas, sarcófagos e mais.',
+    url: '/institucional/catalogo',
+  },
+  'institucional-frete-gratis': {
+    title: 'Frete Grátis',
+    description:
+      'Frete grátis para compras acima de R$ 199 (Sul/Sudeste) e R$ 299 (demais regiões). Confira as condições.',
+    url: '/institucional/frete-gratis',
+  },
+  'institucional-representantes': {
+    title: 'Representantes',
+    description:
+      'Encontre representantes e pontos de venda da Elite Surfing Brasil em sua região.',
+    url: '/institucional/representantes',
+  },
+
+  // Páginas privadas
   myOrders: {
     title: 'Meus Pedidos',
     description:
@@ -132,7 +152,6 @@ const seoConfig = {
     url: '/my-orders',
     noindex: true,
   },
-
   addAddress: {
     title: 'Adicionar Endereço',
     description:
@@ -140,7 +159,6 @@ const seoConfig = {
     url: '/add-address',
     noindex: true,
   },
-
   writeReview: {
     title: 'Escrever Avaliação',
     description:
@@ -148,7 +166,6 @@ const seoConfig = {
     url: '/write-review',
     noindex: true,
   },
-
   orderSuccess: {
     title: 'Pedido Confirmado',
     description:
@@ -159,8 +176,7 @@ const seoConfig = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// CONFIGURAÇÃO SEO — COLLECTIONS (9 grupos do assets.js)
-// Rotas: /collections/{slug}
+// COLLECTIONS (sem alterações — manter igual ao original)
 // ═══════════════════════════════════════════════════════════════════
 
 export const collectionDescriptions = {
@@ -179,7 +195,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   leashes: {
     title: 'Leashes de Surf',
     description:
@@ -194,7 +209,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   capas: {
     title: 'Capas para Prancha de Surf',
     description:
@@ -210,7 +224,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   sarcofagos: {
     title: 'Sarcófagos para Prancha de Surf',
     description:
@@ -225,7 +238,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   quilhas: {
     title: 'Quilhas de Surf',
     description:
@@ -240,7 +252,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   acessorios: {
     title: 'Acessórios de Surf',
     description:
@@ -255,7 +266,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   bodyboard: {
     title: 'Acessórios de Bodyboard',
     description:
@@ -269,7 +279,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   sup: {
     title: 'Stand Up Paddle - Acessórios',
     description:
@@ -284,7 +293,6 @@ export const collectionDescriptions = {
     ],
     image: '/og-image.jpg',
   },
-
   outlet: {
     title: 'Outlet - Ofertas de Surf',
     description:
@@ -301,18 +309,10 @@ export const collectionDescriptions = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// CONFIGURAÇÃO SEO — CATEGORIAS (34 subcategorias do assets.js)
-// Rotas: /products/{slug}
-//
-// IMPORTANTE: As keys aqui são LOWERCASE dos paths do assets.js
-// O helper getCategorySEO() faz toLowerCase() antes de buscar
+// CATEGORIES (sem alterações — manter igual ao original)
 // ═══════════════════════════════════════════════════════════════════
 
 export const categoryDescriptions = {
-  // ═══════════════════════════════════════════════════════════════
-  // DECKS — 12 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   'deck-maldivas': {
     title: 'Deck Maldivas - Traction Pad',
     description:
@@ -320,7 +320,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Maldivas',
     keywords: ['deck maldivas', 'deck surf maldivas', 'traction pad maldivas'],
   },
-
   'deck-mentawai': {
     title: 'Deck Mentawai - Traction Pad',
     description:
@@ -328,7 +327,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Mentawai',
     keywords: ['deck mentawai', 'deck surf mentawai', 'traction pad mentawai'],
   },
-
   'deck-fiji-classic': {
     title: 'Deck Fiji Classic - Traction Pad',
     description:
@@ -336,7 +334,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Fiji-Classic',
     keywords: ['deck fiji', 'deck fiji classic', 'traction pad fiji'],
   },
-
   'deck-hawaii': {
     title: 'Deck Hawaii - Traction Pad',
     description:
@@ -344,7 +341,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Hawaii',
     keywords: ['deck hawaii', 'deck surf hawaii', 'traction pad hawaii'],
   },
-
   'deck-j-bay': {
     title: 'Deck J-Bay - Traction Pad',
     description:
@@ -352,7 +348,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-J-Bay',
     keywords: ['deck j-bay', 'deck jbay', 'traction pad j-bay'],
   },
-
   'deck-noronha': {
     title: 'Deck Noronha - Traction Pad',
     description:
@@ -360,7 +355,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Noronha',
     keywords: ['deck noronha', 'deck cnc', 'traction pad noronha'],
   },
-
   'deck-peniche': {
     title: 'Deck Peniche - Traction Pad',
     description:
@@ -368,7 +362,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Peniche',
     keywords: ['deck peniche', 'deck surf peniche', 'traction pad peniche'],
   },
-
   'deck-saquarema': {
     title: 'Deck Saquarema - Traction Pad',
     description:
@@ -376,7 +369,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Saquarema',
     keywords: ['deck saquarema', 'deck premium', 'traction pad saquarema'],
   },
-
   'deck-combate': {
     title: 'Deck Combate - Traction Pad',
     description:
@@ -384,7 +376,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Combate',
     keywords: ['deck combate', 'deck resistente', 'traction pad combate'],
   },
-
   'deck-longboard': {
     title: 'Deck Longboard - Traction Pad',
     description:
@@ -392,7 +383,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Longboard',
     keywords: ['deck longboard', 'grip longboard', 'traction pad longboard'],
   },
-
   'deck-front': {
     title: 'Deck Front - Traction Pad Frontal',
     description:
@@ -400,7 +390,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-Front',
     keywords: ['deck front', 'deck frontal', 'front pad surf'],
   },
-
   'deck-sup': {
     title: 'Deck SUP - Stand Up Paddle',
     description:
@@ -408,11 +397,6 @@ export const categoryDescriptions = {
     url: '/products/Deck-SUP',
     keywords: ['deck sup', 'deck stand up paddle', 'grip sup'],
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // LEASHES — 5 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   'leash-shortboard-hibridas': {
     title: 'Leash Shortboard / Híbridas',
     description:
@@ -425,7 +409,6 @@ export const categoryDescriptions = {
       'leash comp surf',
     ],
   },
-
   'leash-fun-minilong': {
     title: 'Leash Fun / Mini Long',
     description:
@@ -438,7 +421,6 @@ export const categoryDescriptions = {
       'cordinha funboard',
     ],
   },
-
   'leash-longboard': {
     title: 'Leash Longboard',
     description:
@@ -451,7 +433,6 @@ export const categoryDescriptions = {
       'leash 10ft',
     ],
   },
-
   'leash-standup': {
     title: 'Leash Stand Up Paddle',
     description:
@@ -464,7 +445,6 @@ export const categoryDescriptions = {
       'cordinha sup',
     ],
   },
-
   'leash-bodyboard': {
     title: 'Leash Bodyboard',
     description:
@@ -476,11 +456,6 @@ export const categoryDescriptions = {
       'leash pulso bodyboard',
     ],
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // CAPAS — 3 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   'refletiva-combate': {
     title: 'Capa Refletiva Combate',
     description:
@@ -492,7 +467,6 @@ export const categoryDescriptions = {
       'boardbag refletiva',
     ],
   },
-
   'refletiva-premium': {
     title: 'Capa Refletiva Premium',
     description:
@@ -504,7 +478,6 @@ export const categoryDescriptions = {
       'boardbag premium',
     ],
   },
-
   'capa-toalha': {
     title: 'Capa Toalha para Prancha',
     description:
@@ -512,11 +485,6 @@ export const categoryDescriptions = {
     url: '/products/Capa-Toalha',
     keywords: ['capa toalha prancha', 'capa toalha surf', 'sock prancha'],
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // SARCÓFAGOS — 4 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   'sarcofago-combate': {
     title: 'Sarcófago Combate',
     description:
@@ -528,7 +496,6 @@ export const categoryDescriptions = {
       'boardbag viagem combate',
     ],
   },
-
   'sarcofago-premium': {
     title: 'Sarcófago Premium',
     description:
@@ -540,7 +507,6 @@ export const categoryDescriptions = {
       'boardbag viagem premium',
     ],
   },
-
   'sarcofago-combate-rodas': {
     title: 'Sarcófago Combate com Rodas',
     description:
@@ -548,7 +514,6 @@ export const categoryDescriptions = {
     url: '/products/Sarcofago-Combate-Rodas',
     keywords: ['sarcófago combate rodas', 'sarcófago rodas', 'boardbag rodas'],
   },
-
   'sarcofago-premium-rodas': {
     title: 'Sarcófago Premium com Rodas',
     description:
@@ -560,11 +525,6 @@ export const categoryDescriptions = {
       'boardbag premium rodas',
     ],
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // QUILHAS — 4 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   'quilha-shortboard': {
     title: 'Quilhas Shortboard',
     description:
@@ -577,7 +537,6 @@ export const categoryDescriptions = {
       'quilha fcs',
     ],
   },
-
   'quilha-longboard': {
     title: 'Quilhas Longboard',
     description:
@@ -590,7 +549,6 @@ export const categoryDescriptions = {
       'fins longboard',
     ],
   },
-
   'quilha-sup': {
     title: 'Quilhas Stand Up Paddle',
     description:
@@ -598,7 +556,6 @@ export const categoryDescriptions = {
     url: '/products/Quilha-SUP',
     keywords: ['quilha sup', 'quilha stand up paddle', 'fins sup'],
   },
-
   'chave-parafuso': {
     title: 'Chaves e Parafusos para Quilhas',
     description:
@@ -611,11 +568,6 @@ export const categoryDescriptions = {
       'chave fcs',
     ],
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // ACESSÓRIOS — 6 categorias
-  // ═══════════════════════════════════════════════════════════════
-
   racks: {
     title: 'Racks para Prancha de Surf',
     description:
@@ -623,7 +575,6 @@ export const categoryDescriptions = {
     url: '/products/Racks',
     keywords: ['rack prancha', 'rack surf carro', 'suporte prancha'],
   },
-
   parafinas: {
     title: 'Parafinas / Wax para Surf',
     description:
@@ -637,7 +588,6 @@ export const categoryDescriptions = {
       'cera prancha',
     ],
   },
-
   bones: {
     title: 'Bonés de Surf',
     description:
@@ -645,7 +595,6 @@ export const categoryDescriptions = {
     url: '/products/Bones',
     keywords: ['boné surf', 'boné aba curva surf', 'chapéu surf'],
   },
-
   'protetor-rabeta': {
     title: 'Protetores de Rabeta',
     description:
@@ -653,7 +602,6 @@ export const categoryDescriptions = {
     url: '/products/Protetor-Rabeta',
     keywords: ['protetor rabeta', 'tail pad', 'proteção prancha'],
   },
-
   'wetsuit-bag': {
     title: 'Wetsuit Bag - Bolsa para Neoprene',
     description:
@@ -661,7 +609,6 @@ export const categoryDescriptions = {
     url: '/products/Wetsuit-Bag',
     keywords: ['wetsuit bag', 'bolsa neoprene', 'saco roupa surf'],
   },
-
   diversos: {
     title: 'Diversos - Acessórios de Surf',
     description:
@@ -675,19 +622,9 @@ export const categoryDescriptions = {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Obter configuração SEO para uma collection (grupo)
- * @param {string} collectionSlug - Slug da coleção (ex: 'decks')
- * @returns {object} Configuração SEO
- */
 export const getCollectionSEO = collectionSlug => {
   const slug = (collectionSlug || '').toLowerCase().trim();
-
-  if (collectionDescriptions[slug]) {
-    return collectionDescriptions[slug];
-  }
-
-  // Fallback para coleções não definidas
+  if (collectionDescriptions[slug]) return collectionDescriptions[slug];
   const formattedName = slug.charAt(0).toUpperCase() + slug.slice(1);
   return {
     title: `${formattedName} - Elite Surfing Brasil`,
@@ -697,24 +634,13 @@ export const getCollectionSEO = collectionSlug => {
   };
 };
 
-/**
- * Obter configuração SEO para uma categoria (subcategoria/modelo)
- * @param {string} categorySlug - Slug da categoria (ex: 'Deck-Maldivas' ou 'deck-maldivas')
- * @returns {object} Configuração SEO
- */
 export const getCategorySEO = categorySlug => {
   const slug = (categorySlug || '').toLowerCase().trim();
-
-  if (categoryDescriptions[slug]) {
-    return categoryDescriptions[slug];
-  }
-
-  // Fallback para categorias não definidas
+  if (categoryDescriptions[slug]) return categoryDescriptions[slug];
   const formattedName = slug
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-
   return {
     title: `${formattedName} - Elite Surfing Brasil`,
     description: `Produtos ${formattedName} na Elite Surfing Brasil. Acessórios de surf de alta qualidade com frete para todo Brasil.`,
@@ -723,31 +649,44 @@ export const getCategorySEO = categorySlug => {
   };
 };
 
-/**
- * Gerar meta tags para produto individual
- * @param {object} product - Objeto do produto
- * @returns {object} Configuração SEO
- */
 export const getProductSEO = product => {
   if (!product) return seoConfig.products;
-
   const category = (product.category || '').trim();
   const price = product.offerPrice || product.price;
-
   return {
     title: product.name,
     description:
-      `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${
-        Array.isArray(product.description)
-          ? product.description[0]
-          : product.description || ''
-      }`.slice(0, 155),
+      `${product.name} - R$ ${price?.toFixed(2).replace('.', ',')}. ${Array.isArray(product.description) ? product.description[0] : product.description || ''}`.slice(
+        0,
+        155,
+      ),
     url: `/products/${category}/${product._id}`,
     image: product.image?.[0] || '/og-image.jpg',
     type: 'product',
-    product: {
-      price: price,
-      inStock: product.inStock || product.stock > 0,
+    product: { price: price, inStock: product.inStock || product.stock > 0 },
+  };
+};
+
+/**
+ * NOVO: Gerar SEO para um blog post individual
+ */
+export const getBlogPostSEO = post => {
+  if (!post) return seoConfig.blog;
+  return {
+    title: post.title,
+    description: (post.excerpt || post.title || '').slice(0, 155),
+    url: `/blog/${post.slug}`,
+    image: post.image || '/og-image.jpg',
+    type: 'article',
+    article: {
+      publishedTime: post.createdAt
+        ? new Date(post.createdAt).toISOString()
+        : undefined,
+      modifiedTime: post.updatedAt
+        ? new Date(post.updatedAt).toISOString()
+        : undefined,
+      author: 'Elite Surfing Brasil',
+      tags: post.tags || [],
     },
   };
 };

@@ -1,7 +1,7 @@
 # =====================================================
 # Elite Surfing Brasil - robots.txt
 # https://www.elitesurfing.com.br
-# Última atualização: 2026-02-16
+# Última atualização: 2026-03-31
 # =====================================================
 
 # =====================================================
@@ -12,6 +12,8 @@ Allow: /
 Allow: /products
 Allow: /products/
 Allow: /collections/
+Allow: /blog
+Allow: /blog/
 Allow: /contact
 Allow: /faq
 Allow: /privacy
@@ -28,6 +30,8 @@ Disallow: /write-review
 Disallow: /order-success
 Disallow: /cart
 Disallow: /loader
+Disallow: /pix-payment
+Disallow: /boleto-payment
 
 # URLs técnicas
 Disallow: /api/
@@ -42,6 +46,8 @@ Allow: /
 Allow: /products
 Allow: /products/
 Allow: /collections/
+Allow: /blog
+Allow: /blog/
 Allow: /institucional
 Disallow: /seller
 Disallow: /seller/
@@ -51,6 +57,8 @@ Disallow: /add-address
 Disallow: /write-review
 Disallow: /order-success
 Disallow: /loader
+Disallow: /pix-payment
+Disallow: /boleto-payment
 
 # =====================================================
 # Google Images — permitir todas as imagens
@@ -71,6 +79,8 @@ Allow: /
 # Googlebot News — para Google Discover
 # =====================================================
 User-agent: Googlebot-News
+Allow: /blog
+Allow: /blog/
 Allow: /
 
 # =====================================================
@@ -81,6 +91,8 @@ Allow: /
 Allow: /products
 Allow: /products/
 Allow: /collections/
+Allow: /blog
+Allow: /blog/
 Allow: /institucional
 Disallow: /seller
 Disallow: /seller/
@@ -152,3 +164,4 @@ Sitemap: https://www.elitesurfing.com.br/sitemap-static.xml
 Sitemap: https://www.elitesurfing.com.br/sitemap-collections.xml
 Sitemap: https://www.elitesurfing.com.br/sitemap-categories.xml
 Sitemap: https://www.elitesurfing.com.br/sitemap-products.xml
+Sitemap: https://www.elitesurfing.com.br/sitemap-blog.xml

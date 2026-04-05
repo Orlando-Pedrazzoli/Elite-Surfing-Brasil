@@ -1,11 +1,12 @@
 /**
  * JSON-LD Structured Data - Elite Surfing Brasil
- * Versão: 2.1.0
- * Última atualização: 2026-02-24
+ * Versão: 3.0.0
+ * Última atualização: 2026-03-31
  *
- * IMPORTANTE: Todas as URLs devem usar www.elitesurfing.com.br
- * Referência: https://schema.org/
- * Teste: https://search.google.com/test/rich-results
+ * ALTERAÇÕES v3.0.0:
+ * - Corrigido foundingDate de "2023" para "2010" (data real de fundação)
+ * - Adicionado BlogSchema (para /blog)
+ * - Adicionado BlogPostingSchema (para /blog/:slug)
  */
 
 const BASE_URL = 'https://www.elitesurfing.com.br';
@@ -33,10 +34,11 @@ export const OrganizationSchema = () => {
     image: OG_IMAGE,
     description:
       'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax, quilhas e mais.',
-    foundingDate: '2023',
+    foundingDate: '2010',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
+      streetAddress:
+        'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
       addressLocality: 'Rio de Janeiro',
       addressRegion: 'RJ',
       postalCode: '22790-702',
@@ -45,7 +47,7 @@ export const OrganizationSchema = () => {
     geo: {
       '@type': 'GeoCoordinates',
       latitude: -22.9994,
-      longitude: -43.3650,
+      longitude: -43.365,
     },
     contactPoint: [
       {
@@ -66,16 +68,14 @@ export const OrganizationSchema = () => {
     ],
     sameAs: [
       'https://www.instagram.com/elitesurfingbrasil',
+      'https://www.facebook.com/elitesurfing.com.br',
       'https://wa.me/5521964358058',
-      // Adicionar quando existirem:
-      // "https://www.facebook.com/elitesurfingbrasil",
-      // "https://www.tiktok.com/@elitesurfingbrasil"
     ],
   };
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
@@ -92,12 +92,9 @@ export const WebSiteSchema = () => {
     name: SITE_NAME,
     alternateName: 'Elite Surfing',
     url: BASE_URL,
-    description:
-      'Loja online de acessórios e equipamentos de surf no Brasil',
+    description: 'Loja online de acessórios e equipamentos de surf no Brasil',
     inLanguage: 'pt-BR',
-    publisher: {
-      '@id': `${BASE_URL}/#organization`,
-    },
+    publisher: { '@id': `${BASE_URL}/#organization` },
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -110,14 +107,14 @@ export const WebSiteSchema = () => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
 };
 
 // =====================================================
-// SiteNavigationElement Schema - Define os sitelinks
+// SiteNavigationElement Schema
 // =====================================================
 export const SiteNavigationSchema = () => {
   const navigationItems = [
@@ -130,6 +127,7 @@ export const SiteNavigationSchema = () => {
     { name: 'Bodyboard', url: '/collections/bodyboard' },
     { name: 'Stand Up Paddle', url: '/collections/sup' },
     { name: 'Outlet', url: '/collections/outlet' },
+    { name: 'Blog', url: '/blog' },
     { name: 'Contato', url: '/contact' },
     { name: 'FAQ', url: '/faq' },
   ];
@@ -147,14 +145,14 @@ export const SiteNavigationSchema = () => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
 };
 
 // =====================================================
-// Product Schema - Para páginas de produto
+// Product Schema
 // =====================================================
 export const ProductSchema = ({ product }) => {
   if (!product) return null;
@@ -162,7 +160,6 @@ export const ProductSchema = ({ product }) => {
   const category = (product.category || '').toLowerCase();
   const productUrl = `${BASE_URL}/products/${category}/${product._id}`;
 
-  // Data de validade do preço (1 ano)
   const priceValidUntil = new Date();
   priceValidUntil.setFullYear(priceValidUntil.getFullYear() + 1);
 
@@ -177,14 +174,8 @@ export const ProductSchema = ({ product }) => {
     image: product.image || [],
     sku: product._id,
     mpn: product.sku || product._id,
-    brand: {
-      '@type': 'Brand',
-      name: 'Elite Surfing',
-    },
-    manufacturer: {
-      '@type': 'Organization',
-      name: 'Elite Surfing Brasil',
-    },
+    brand: { '@type': 'Brand', name: 'Elite Surfing' },
+    manufacturer: { '@type': 'Organization', name: SITE_NAME },
     category: product.category || 'Acessórios de Surf',
     material: product.material || undefined,
     color: product.color || undefined,
@@ -207,21 +198,12 @@ export const ProductSchema = ({ product }) => {
       },
       shippingDetails: {
         '@type': 'OfferShippingDetails',
-        shippingDestination: {
-          '@type': 'DefinedRegion',
-          addressCountry: 'BR',
-        },
+        shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'BR' },
         deliveryTime: {
           '@type': 'ShippingDeliveryTime',
           businessDays: {
             '@type': 'OpeningHoursSpecification',
-            dayOfWeek: [
-              'Monday',
-              'Tuesday',
-              'Wednesday',
-              'Thursday',
-              'Friday',
-            ],
+            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
           },
           handlingTime: {
             '@type': 'QuantitativeValue',
@@ -249,17 +231,11 @@ export const ProductSchema = ({ product }) => {
     },
   };
 
-  // Adicionar GTIN se disponível
   if (product.gtin || product.barcode || product.ean) {
     schema.gtin13 = product.gtin || product.barcode || product.ean;
   }
 
-  // Adicionar ratings se disponíveis
-  if (
-    product.averageRating &&
-    product.reviewCount &&
-    product.reviewCount > 0
-  ) {
+  if (product.averageRating && product.reviewCount && product.reviewCount > 0) {
     schema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: product.averageRating.toFixed(1),
@@ -269,7 +245,6 @@ export const ProductSchema = ({ product }) => {
     };
   }
 
-  // Adicionar reviews se disponíveis
   if (product.reviews && product.reviews.length > 0) {
     schema.review = product.reviews.slice(0, 5).map(review => ({
       '@type': 'Review',
@@ -279,10 +254,7 @@ export const ProductSchema = ({ product }) => {
         bestRating: 5,
         worstRating: 1,
       },
-      author: {
-        '@type': 'Person',
-        name: review.userName || 'Cliente',
-      },
+      author: { '@type': 'Person', name: review.userName || 'Cliente' },
       reviewBody: review.comment || review.title,
       datePublished: review.createdAt
         ? new Date(review.createdAt).toISOString().split('T')[0]
@@ -292,7 +264,7 @@ export const ProductSchema = ({ product }) => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
@@ -317,7 +289,7 @@ export const BreadcrumbSchema = ({ items }) => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
@@ -335,16 +307,13 @@ export const FAQSchema = ({ faqs }) => {
     mainEntity: faqs.map(faq => ({
       '@type': 'Question',
       name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer },
     })),
   };
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
@@ -367,17 +336,14 @@ export const LocalBusinessSchema = () => {
       'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, wax, quilhas e mais. PIX com 10% OFF, até 10x sem juros.',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
+      streetAddress:
+        'Avenida das Américas, 12900 Sala 203C - Edifício Argentina Americas Avenue',
       addressLocality: 'Rio de Janeiro',
       addressRegion: 'RJ',
       postalCode: '22790-702',
       addressCountry: 'BR',
     },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: -22.9994,
-      longitude: -43.3650,
-    },
+    geo: { '@type': 'GeoCoordinates', latitude: -22.9994, longitude: -43.365 },
     priceRange: 'R$',
     paymentAccepted: [
       'PIX',
@@ -386,10 +352,7 @@ export const LocalBusinessSchema = () => {
       'Boleto Bancário',
     ],
     currenciesAccepted: 'BRL',
-    areaServed: {
-      '@type': 'Country',
-      name: 'Brazil',
-    },
+    areaServed: { '@type': 'Country', name: 'Brazil' },
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
       name: 'Produtos de Surf',
@@ -410,10 +373,7 @@ export const LocalBusinessSchema = () => {
           name: 'Leashes',
           itemListElement: {
             '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Product',
-              name: 'Leashes de Surf',
-            },
+            itemOffered: { '@type': 'Product', name: 'Leashes de Surf' },
           },
         },
         {
@@ -443,10 +403,7 @@ export const LocalBusinessSchema = () => {
           name: 'Acessórios',
           itemListElement: {
             '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Product',
-              name: 'Acessórios de Surf',
-            },
+            itemOffered: { '@type': 'Product', name: 'Acessórios de Surf' },
           },
         },
       ],
@@ -455,14 +412,14 @@ export const LocalBusinessSchema = () => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
 };
 
 // =====================================================
-// CollectionPage Schema - Para páginas de coleção
+// CollectionPage Schema
 // =====================================================
 export const CollectionSchema = ({ collection, products = [] }) => {
   if (!collection) return null;
@@ -477,13 +434,8 @@ export const CollectionSchema = ({ collection, products = [] }) => {
     description: collection.description,
     url: collectionUrl,
     inLanguage: 'pt-BR',
-    isPartOf: {
-      '@id': `${BASE_URL}/#website`,
-    },
-    about: {
-      '@type': 'Thing',
-      name: collection.name,
-    },
+    isPartOf: { '@id': `${BASE_URL}/#website` },
+    about: { '@type': 'Thing', name: collection.name },
     numberOfItems: products.length,
     mainEntity: {
       '@type': 'ItemList',
@@ -498,14 +450,14 @@ export const CollectionSchema = ({ collection, products = [] }) => {
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );
 };
 
 // =====================================================
-// ContactPage Schema - Para página de contato
+// ContactPage Schema
 // =====================================================
 export const ContactPageSchema = () => {
   const schema = {
@@ -516,15 +468,84 @@ export const ContactPageSchema = () => {
     description:
       'Entre em contato com a Elite Surfing Brasil. Atendimento por WhatsApp, email e telefone.',
     url: `${BASE_URL}/contact`,
-    mainEntity: {
-      '@type': 'Organization',
-      '@id': `${BASE_URL}/#organization`,
-    },
+    mainEntity: { '@type': 'Organization', '@id': `${BASE_URL}/#organization` },
   };
 
   return (
     <script
-      type="application/ld+json"
+      type='application/ld+json'
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+};
+
+// =====================================================
+// NOVO: Blog Schema (para /blog)
+// =====================================================
+export const BlogSchema = () => {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${BASE_URL}/blog#blog`,
+    name: 'Blog Elite Surfing - Circuito Mundial de Surf WSL',
+    description:
+      'Acompanhe o circuito mundial de surf WSL. Rankings, calendário, campeões, artigos e vídeos sobre surf profissional.',
+    url: `${BASE_URL}/blog`,
+    inLanguage: 'pt-BR',
+    publisher: { '@id': `${BASE_URL}/#organization` },
+    isPartOf: { '@id': `${BASE_URL}/#website` },
+  };
+
+  return (
+    <script
+      type='application/ld+json'
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+};
+
+// =====================================================
+// NOVO: BlogPosting Schema (para /blog/:slug)
+// =====================================================
+export const BlogPostingSchema = ({ post }) => {
+  if (!post) return null;
+
+  const postUrl = `${BASE_URL}/blog/${post.slug}`;
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    '@id': `${postUrl}#article`,
+    headline: post.title,
+    description: post.excerpt || post.title,
+    url: postUrl,
+    image: post.image || OG_IMAGE,
+    datePublished: post.createdAt
+      ? new Date(post.createdAt).toISOString()
+      : undefined,
+    dateModified: post.updatedAt
+      ? new Date(post.updatedAt).toISOString()
+      : post.createdAt
+        ? new Date(post.createdAt).toISOString()
+        : undefined,
+    author: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      '@id': `${BASE_URL}/#organization`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      logo: { '@type': 'ImageObject', url: LOGO_URL },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
+    inLanguage: 'pt-BR',
+    keywords: post.tags ? post.tags.join(', ') : 'surf, wsl',
+  };
+
+  return (
+    <script
+      type='application/ld+json'
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />
   );

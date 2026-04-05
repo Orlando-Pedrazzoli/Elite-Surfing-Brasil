@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import "../styles/Blog.css";
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { SEO, BlogPostingSchema, BreadcrumbSchema } from '../components/seo';
+import { getBlogPostSEO } from '../components/seo/seoConfig';
+import '../styles/Blog.css';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const BlogPostDetail = () => {
   const { slug } = useParams();
@@ -16,7 +18,7 @@ const BlogPostDetail = () => {
         const json = await res.json();
         if (json.success) setPost(json.post);
       } catch (err) {
-        console.error("Erro:", err);
+        console.error('Erro:', err);
       } finally {
         setLoading(false);
       }
@@ -25,10 +27,16 @@ const BlogPostDetail = () => {
     window.scrollTo(0, 0);
   }, [slug]);
 
+  // SEO data (usa defaults enquanto carrega)
+  const seoData = post ? getBlogPostSEO(post) : null;
+
   if (loading) {
     return (
-      <div className="blog-page">
-        <div className="blog-container" style={{ paddingTop: 60, textAlign: "center" }}>
+      <div className='blog-page'>
+        <div
+          className='blog-container'
+          style={{ paddingTop: 60, textAlign: 'center' }}
+        >
           Carregando artigo...
         </div>
       </div>
@@ -37,57 +45,96 @@ const BlogPostDetail = () => {
 
   if (!post) {
     return (
-      <div className="blog-page">
-        <div className="blog-container" style={{ paddingTop: 60, textAlign: "center" }}>
+      <div className='blog-page'>
+        {/* ═══ SEO: 404 do blog — noindex ═══ */}
+        <SEO
+          title='Artigo não encontrado'
+          description='O artigo que procura não existe no blog da Elite Surfing Brasil.'
+          url={`/blog/${slug}`}
+          noindex={true}
+        />
+        <div
+          className='blog-container'
+          style={{ paddingTop: 60, textAlign: 'center' }}
+        >
           <h2>Artigo não encontrado</h2>
-          <Link to="/blog" className="blog-nav__link">← Voltar ao Blog</Link>
+          <Link to='/blog' className='blog-nav__link'>
+            ← Voltar ao Blog
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="blog-page">
-      <div className="blog-post-detail">
-        <Link to="/blog" className="blog-post-detail__back">← Voltar ao Blog</Link>
+    <div className='blog-page'>
+      {/* ═══ SEO DINÂMICO — NOVO ═══ */}
+      <SEO
+        title={seoData.title}
+        description={seoData.description}
+        url={seoData.url}
+        image={seoData.image}
+        type={seoData.type}
+        article={seoData.article}
+      >
+        <BlogPostingSchema post={post} />
+        <BreadcrumbSchema
+          items={[
+            { name: 'Home', url: '/' },
+            { name: 'Blog', url: '/blog' },
+            { name: post.title },
+          ]}
+        />
+      </SEO>
+
+      <div className='blog-post-detail'>
+        <Link to='/blog' className='blog-post-detail__back'>
+          ← Voltar ao Blog
+        </Link>
 
         {post.image && (
-          <div className="blog-post-detail__image">
+          <div className='blog-post-detail__image'>
             <img src={post.image} alt={post.title} />
           </div>
         )}
 
-        <div className="blog-post-detail__header">
-          <span className="blog-post-detail__category">{post.category}</span>
-          <h1 className="blog-post-detail__title">{post.title}</h1>
-          <div className="blog-post-detail__meta">
-            <span>{new Date(post.createdAt).toLocaleDateString("pt-BR", {
-              day: "numeric", month: "long", year: "numeric"
-            })}</span>
+        <div className='blog-post-detail__header'>
+          <span className='blog-post-detail__category'>{post.category}</span>
+          <h1 className='blog-post-detail__title'>{post.title}</h1>
+          <div className='blog-post-detail__meta'>
+            <span>
+              {new Date(post.createdAt).toLocaleDateString('pt-BR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </span>
             <span>{post.views} visualizações</span>
           </div>
         </div>
 
         {post.youtubeId && (
-          <div className="blog-post-detail__video">
+          <div className='blog-post-detail__video'>
             <iframe
               src={`https://www.youtube.com/embed/${post.youtubeId}`}
               title={post.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
               allowFullScreen
             />
           </div>
         )}
 
         <div
-          className="blog-post-detail__content"
+          className='blog-post-detail__content'
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
         {post.tags && post.tags.length > 0 && (
-          <div className="blog-post-detail__tags">
+          <div className='blog-post-detail__tags'>
             {post.tags.map((tag, i) => (
-              <span className="blog-post-detail__tag" key={i}>#{tag}</span>
+              <span className='blog-post-detail__tag' key={i}>
+                #{tag}
+              </span>
             ))}
           </div>
         )}

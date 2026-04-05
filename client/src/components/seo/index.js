@@ -1,15 +1,14 @@
 /**
  * SEO Components - Elite Surfing Brasil
- * Versão: 3.0.0
- * Última atualização: 2026-02-16
+ * Versão: 4.0.0
+ * Última atualização: 2026-03-31
  *
- * Exporta todos os componentes e utilitários de SEO
+ * ALTERAÇÕES v4.0.0:
+ * - Adicionado export de BlogSchema e BlogPostingSchema
  */
 
-// Componente principal de meta tags
 export { default as SEO } from './SEO';
 
-// Schemas JSON-LD (Structured Data)
 export {
   OrganizationSchema,
   WebSiteSchema,
@@ -20,9 +19,10 @@ export {
   LocalBusinessSchema,
   CollectionSchema,
   ContactPageSchema,
+  BlogSchema,
+  BlogPostingSchema,
 } from './JsonLd';
 
-// Configurações e helpers
 export {
   default as seoConfig,
   categoryDescriptions,
@@ -30,4 +30,5 @@ export {
   getCategorySEO,
   getCollectionSEO,
   getProductSEO,
+  getBlogPostSEO,
 } from './seoConfig';
