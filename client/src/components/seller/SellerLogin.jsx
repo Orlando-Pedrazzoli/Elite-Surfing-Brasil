@@ -56,11 +56,13 @@ const SellerLogin = () => {
           localStorage.removeItem('seller_email');
         }
 
-        // ✅ FIX IPHONE: Guardar token no localStorage e setar header customizado
-        // Safari bloqueia cookies cross-site, então usamos x-seller-token
+        // ✅ FIX IPHONE: Guardar token no localStorage
+        // O interceptor no AppContext envia automaticamente via x-seller-token
+        // APENAS para rotas protegidas (isSellerRoute)
         if (data.token) {
           localStorage.setItem('sellerToken', data.token);
-          axios.defaults.headers.common['x-seller-token'] = data.token;
+          // ✅ FIX: NÃO setar header global — o interceptor já cuida disso
+          // REMOVIDO: axios.defaults.headers.common['x-seller-token'] = data.token;
         }
 
         // ✅ CRÍTICO: Marcar que acabou de fazer login
@@ -77,10 +79,16 @@ const SellerLogin = () => {
       }
     } catch (error) {
       console.error('Erro no login:', error);
-      toast.error(
-        error.response?.data?.message ||
-          'Erro ao fazer login. Tente novamente.',
-      );
+
+      // ✅ FIX: Tratar 401 do novo authSeller
+      if (error.response?.status === 401) {
+        toast.error(error.response.data?.message || 'Credenciais inválidas');
+      } else {
+        toast.error(
+          error.response?.data?.message ||
+            'Erro ao fazer login. Tente novamente.',
+        );
+      }
     } finally {
       setIsLoading(false);
     }

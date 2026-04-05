@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { assets } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
@@ -17,9 +17,17 @@ import {
 } from 'lucide-react';
 
 const SellerLayout = () => {
-  const { logoutSeller } = useAppContext();
+  const { logoutSeller, isSeller, navigate } = useAppContext();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ✅ FIX: Se o seller perde autenticação durante uso (ex: token expira),
+  // redirecionar para login em vez de mostrar layout vazio
+  useEffect(() => {
+    if (!isSeller) {
+      navigate('/seller');
+    }
+  }, [isSeller, navigate]);
 
   const sidebarLinks = [
     {

@@ -4,7 +4,6 @@ const authSeller = async (req, res, next) => {
   // ✅ FIX IPHONE/SAFARI: Cookie primeiro, depois header customizado
   // Safari bloqueia cookies cross-site (ITP), então o frontend envia
   // o token via header 'x-seller-token' como fallback.
-  // Usa header customizado para NÃO conflitar com Authorization do user auth.
   let token = req.cookies?.sellerToken || null;
 
   // Fallback: header customizado (para Safari mobile / iPhone)
@@ -13,7 +12,9 @@ const authSeller = async (req, res, next) => {
   }
 
   if (!token) {
-    return res.json({ success: false, message: 'Not Authorized' });
+    // ✅ FIX: Retornar status 401 para que o frontend possa tratar corretamente
+    // Antes retornava 200 com success:false, o que não ativava o interceptor de erro
+    return res.status(401).json({ success: false, message: 'Not Authorized' });
   }
 
   try {
@@ -22,10 +23,13 @@ const authSeller = async (req, res, next) => {
     if (tokenDecode.email === process.env.SELLER_EMAIL) {
       next();
     } else {
-      return res.json({ success: false, message: 'Not Authorized' });
+      return res
+        .status(401)
+        .json({ success: false, message: 'Not Authorized' });
     }
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    // ✅ FIX: Token expirado ou inválido = 401
+    return res.status(401).json({ success: false, message: error.message });
   }
 };
 

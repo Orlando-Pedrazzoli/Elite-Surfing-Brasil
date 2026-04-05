@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
@@ -32,6 +32,10 @@ export const AppContextProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSellerLoading, setIsSellerLoading] = useState(true);
 
+  // ✅ FIX: Ref para evitar chamadas duplicadas de fetchSeller
+  const sellerFetchInProgress = useRef(false);
+  const sellerInitialized = useRef(false);
+
   // Token management functions
   const setAuthToken = token => {
     if (token) {
@@ -50,7 +54,6 @@ export const AppContextProvider = ({ children }) => {
   // ✅ FIX IPHONE: Limpar seller token
   const clearSellerToken = () => {
     localStorage.removeItem('sellerToken');
-    // NÃO usamos mais defaults.headers — o interceptor cuida de tudo
   };
 
   // ✅ FIX IPHONE: Verificar se uma URL é rota protegida por authSeller
@@ -221,6 +224,7 @@ export const AppContextProvider = ({ children }) => {
     } finally {
       setIsSeller(false);
       clearSellerToken();
+      sellerInitialized.current = false;
       sessionStorage.removeItem('seller_just_logged_in');
       sessionStorage.removeItem('seller_authenticated');
       navigate('/');
@@ -228,25 +232,39 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
-  // ✅ FIX: Fetch Seller
+  // ═══════════════════════════════════════════════════════════
+  // ✅ FIX PRINCIPAL: fetchSeller simplificado e robusto
+  // ═══════════════════════════════════════════════════════════
+  // PROBLEMA ANTERIOR: fetchSeller verificava window.location.pathname
+  // e sessionStorage para decidir se deveria aceitar o token válido.
+  // Isso causava race conditions onde um token válido era rejeitado
+  // porque o pathname ainda não tinha mudado, ou porque justLoggedIn
+  // já tinha sido limpo por uma chamada anterior.
+  //
+  // FIX: Se o servidor confirma que o token é válido (is-auth retorna
+  // success:true), o seller ESTÁ autenticado. Ponto final.
+  // A decisão de mostrar ou não o painel é responsabilidade do ROUTER
+  // (App.jsx), não do fetchSeller.
+  // ═══════════════════════════════════════════════════════════
   const fetchSeller = async () => {
+    // Evitar chamadas duplicadas simultâneas
+    if (sellerFetchInProgress.current) return;
+    sellerFetchInProgress.current = true;
+
     try {
-      setIsSellerLoading(true);
+      // ✅ FIX: Só setar loading se ainda não foi inicializado
+      // Evita flash de loading quando já está autenticado
+      if (!sellerInitialized.current) {
+        setIsSellerLoading(true);
+      }
 
       const { data } = await axios.get('/api/seller/is-auth');
 
       if (data.success) {
-        const isInSellerArea = window.location.pathname.startsWith('/seller');
-        const justLoggedIn = sessionStorage.getItem('seller_just_logged_in');
-
-        if (isInSellerArea || justLoggedIn) {
-          setIsSeller(true);
-          sessionStorage.setItem('seller_authenticated', 'true');
-          sessionStorage.removeItem('seller_just_logged_in');
-        } else {
-          setIsSeller(false);
-          sessionStorage.removeItem('seller_authenticated');
-        }
+        // ✅ FIX: Token válido = seller autenticado. Sem condições extras.
+        setIsSeller(true);
+        sessionStorage.setItem('seller_authenticated', 'true');
+        sessionStorage.removeItem('seller_just_logged_in');
       } else {
         setIsSeller(false);
         clearSellerToken();
@@ -261,8 +279,12 @@ export const AppContextProvider = ({ children }) => {
         sessionStorage.removeItem('seller_authenticated');
         sessionStorage.removeItem('seller_just_logged_in');
       }
+      // ✅ FIX: Em caso de erro de rede (não 401), manter estado atual
+      // se já estava autenticado (permite trabalhar offline brevemente)
     } finally {
       setIsSellerLoading(false);
+      sellerFetchInProgress.current = false;
+      sellerInitialized.current = true;
     }
   };
 
@@ -501,8 +523,6 @@ export const AppContextProvider = ({ children }) => {
         }
 
         // ✅ FIX: Seller token — APENAS em rotas protegidas por authSeller
-        // Enviar em todas as requests causava preflight CORS failure
-        // nas rotas públicas (/api/product/list, /api/user, etc.)
         const sellerToken = localStorage.getItem('sellerToken');
         if (sellerToken && isSellerRoute(config.url)) {
           config.headers['x-seller-token'] = sellerToken;
@@ -517,9 +537,17 @@ export const AppContextProvider = ({ children }) => {
       response => response,
       async error => {
         if (error.response?.status === 401) {
-          // ⚠️ Só limpar dados do USER, não do seller
           const requestUrl = error.config?.url || '';
-          if (!requestUrl.includes('/api/seller/')) {
+
+          // ✅ FIX: Tratar 401 de rotas seller separadamente
+          if (
+            isSellerRoute(requestUrl) ||
+            requestUrl.includes('/api/seller/')
+          ) {
+            // Não limpar dados do user — é um 401 do seller
+            // O fetchSeller já trata isso
+          } else {
+            // 401 de rota de user — limpar sessão do user
             setUser(null);
             setCartItems(loadCartFromStorage());
             clearStoredData();
@@ -535,14 +563,18 @@ export const AppContextProvider = ({ children }) => {
     };
   }, []);
 
-  // Inicialização rápida
+  // ═══════════════════════════════════════════════════════════
+  // ✅ FIX: Inicialização simplificada
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     const initializeApp = async () => {
+      // 1. Restaurar token do user
       const token = getStoredToken();
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
+      // 2. Restaurar cart e user do localStorage (instantâneo)
       const savedCart = loadCartFromStorage();
       setCartItems(savedCart);
 
@@ -551,26 +583,34 @@ export const AppContextProvider = ({ children }) => {
         setUser(savedUser);
       }
 
+      // 3. Fetch produtos e user em paralelo
       fetchProducts();
       fetchUser();
 
-      if (window.location.pathname.startsWith('/seller')) {
-        const sellerCached = sessionStorage.getItem('seller_authenticated');
-        const hasSellerToken = !!localStorage.getItem('sellerToken');
+      // 4. ✅ FIX: Lógica de seller simplificada
+      const hasSellerToken = !!localStorage.getItem('sellerToken');
+      const isInSellerArea = window.location.pathname.startsWith('/seller');
 
-        if (sellerCached === 'true' || hasSellerToken) {
-          if (hasSellerToken) {
-            setIsSeller(true);
-          }
+      if (hasSellerToken) {
+        // Tem token — confiar optimisticamente e validar em background
+        if (isInSellerArea) {
+          // Estamos na área seller: mostrar UI optimisticamente
+          setIsSeller(true);
           setIsSellerLoading(false);
-
-          fetchSeller().catch(() => {
-            console.log('⚠️ Verificação de seller falhou, mantendo sessão');
-          });
+          // Validar em background (se falhar, fetchSeller limpa tudo)
+          fetchSeller();
         } else {
+          // Não estamos na área seller: validar silenciosamente
+          // para ter o estado pronto quando navegar
+          setIsSellerLoading(false);
           fetchSeller();
         }
+      } else if (isInSellerArea) {
+        // Na área seller sem token: precisa de login
+        // fetchSeller vai confirmar e setar loading=false
+        fetchSeller();
       } else {
+        // Fora da área seller, sem token: nada a fazer
         setIsSellerLoading(false);
       }
     };
@@ -578,12 +618,14 @@ export const AppContextProvider = ({ children }) => {
     initializeApp();
   }, []);
 
-  // Verificar seller apenas na primeira vez que entra na área de seller
+  // ✅ FIX: Verificar seller quando navega para /seller pela primeira vez
+  // Agora usa ref para evitar chamadas duplicadas
   useEffect(() => {
     if (
       location.pathname.startsWith('/seller') &&
       !isSeller &&
-      isSellerLoading
+      !sellerInitialized.current &&
+      !sellerFetchInProgress.current
     ) {
       fetchSeller();
     }

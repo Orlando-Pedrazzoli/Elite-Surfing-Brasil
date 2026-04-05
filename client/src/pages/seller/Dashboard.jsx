@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Link } from 'react-router-dom';
 import {
@@ -17,13 +17,15 @@ import {
   MapPin,
   Receipt,
   Award,
+  RefreshCw,
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { axios } = useAppContext();
+  const { axios, isSeller } = useAppContext();
   const [orders, setOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [allProductsForAlerts, setAllProductsForAlerts] = useState([]);
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -37,20 +39,23 @@ const Dashboard = () => {
     avgTicket: 0,
   });
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  // ✅ FIX: fetchDashboardData com useCallback para estabilidade
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const [ordersRes, allProductsRes] = await Promise.all([
         axios.get('/api/order/seller'),
         axios.get('/api/product/list?all=true'),
       ]);
 
-      const fetchedOrders = ordersRes.data.success ? ordersRes.data.orders : [];
+      // ✅ FIX: Verificar se as respostas são válidas
+      if (!ordersRes.data.success) {
+        throw new Error(ordersRes.data.message || 'Erro ao carregar pedidos');
+      }
+
+      const fetchedOrders = ordersRes.data.orders || [];
       setAllOrders(fetchedOrders);
       setOrders(fetchedOrders.slice(0, 10));
 
@@ -98,12 +103,31 @@ const Dashboard = () => {
       });
 
       setAllProductsForAlerts(allProducts);
-    } catch (error) {
-      console.error('Dashboard error:', error);
+    } catch (err) {
+      console.error('Dashboard error:', err);
+
+      // ✅ FIX: Mensagem de erro user-friendly
+      if (err.response?.status === 401) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else if (err.response?.status >= 500) {
+        setError('Erro no servidor. Tente novamente em instantes.');
+      } else if (!navigator.onLine) {
+        setError('Sem conexão com a internet.');
+      } else {
+        setError(err.message || 'Erro ao carregar dados do dashboard.');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [axios]);
+
+  // ✅ FIX: Só buscar dados quando isSeller é true
+  // Isso garante que o token já está disponível no interceptor
+  useEffect(() => {
+    if (isSeller) {
+      fetchDashboardData();
+    }
+  }, [isSeller, fetchDashboardData]);
 
   const formatCurrency = value => {
     return new Intl.NumberFormat('pt-BR', {
@@ -142,7 +166,6 @@ const Dashboard = () => {
       Cancelado: { count: 0, color: 'bg-red-500', label: 'Cancelado' },
     };
 
-    // Mapear status antigos para novos
     const statusMapping = {
       'Aguardando Pagamento PIX': 'Aguardando Pagamento',
       'Order Placed': 'Pedido Confirmado',
@@ -320,10 +343,39 @@ const Dashboard = () => {
     .filter(p => !p.inStock || p.stock === 0)
     .slice(0, 4);
 
+  // ═══════════════════════════════════════════════
+  // LOADING STATE
+  // ═══════════════════════════════════════════════
   if (loading) {
     return (
       <div className='flex-1 flex items-center justify-center h-[80vh]'>
         <div className='animate-spin rounded-full h-10 w-10 border-b-2 border-primary'></div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════
+  // ✅ FIX: ERROR STATE com botão de retry
+  // ═══════════════════════════════════════════════
+  if (error) {
+    return (
+      <div className='flex-1 flex items-center justify-center h-[80vh]'>
+        <div className='text-center max-w-sm'>
+          <div className='w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4'>
+            <AlertTriangle className='w-8 h-8 text-red-500' />
+          </div>
+          <h2 className='text-lg font-semibold text-gray-900 mb-2'>
+            Erro ao carregar
+          </h2>
+          <p className='text-sm text-gray-500 mb-6'>{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className='inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors'
+          >
+            <RefreshCw className='w-4 h-4' />
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }
