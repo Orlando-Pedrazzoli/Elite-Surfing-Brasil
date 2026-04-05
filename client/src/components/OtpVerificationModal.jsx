@@ -242,7 +242,7 @@ const OtpVerificationModal = ({ isOpen, onClose, email, onVerified }) => {
 
           <div className='flex items-center gap-3'>
             <img
-              src='/logo.png'
+              src='/logo-branco.png'
               alt='Elite Surfing'
               className='w-12 h-12 object-contain'
             />
