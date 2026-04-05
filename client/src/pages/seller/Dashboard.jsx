@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Clock,
   ChevronRight,
+  ChevronLeft,
   Box,
   BarChart3,
   Eye,
@@ -18,139 +19,193 @@ import {
   Receipt,
   Award,
   RefreshCw,
+  Calendar,
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { axios, isSeller } = useAppContext();
-  const [orders, setOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [allProductsForAlerts, setAllProductsForAlerts] = useState([]);
-  const [stats, setStats] = useState({
+
+  const now = new Date();
+  const [selectedPeriod, setSelectedPeriod] = useState({
+    year: now.getFullYear(),
+    month: now.getMonth(),
+  });
+
+  const isCurrentMonth =
+    selectedPeriod.year === now.getFullYear() &&
+    selectedPeriod.month === now.getMonth();
+
+  const goToPreviousMonth = () => {
+    setSelectedPeriod(prev =>
+      prev.month === 0
+        ? { year: prev.year - 1, month: 11 }
+        : { year: prev.year, month: prev.month - 1 },
+    );
+  };
+
+  const goToNextMonth = () => {
+    if (isCurrentMonth) return;
+    setSelectedPeriod(prev =>
+      prev.month === 11
+        ? { year: prev.year + 1, month: 0 }
+        : { year: prev.year, month: prev.month + 1 },
+    );
+  };
+
+  const goToCurrentMonth = () => {
+    setSelectedPeriod({ year: now.getFullYear(), month: now.getMonth() });
+  };
+
+  const selectedMonthLabel = new Date(
+    selectedPeriod.year,
+    selectedPeriod.month,
+  ).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const selectedMonthShort = new Date(
+    selectedPeriod.year,
+    selectedPeriod.month,
+  ).toLocaleDateString('pt-BR', { month: 'short' });
+
+  // Pedidos filtrados pelo periodo
+  const periodOrders = useMemo(() => {
+    const start = new Date(selectedPeriod.year, selectedPeriod.month, 1);
+    const end = new Date(
+      selectedPeriod.year,
+      selectedPeriod.month + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+    return allOrders.filter(o => {
+      const d = new Date(o.createdAt);
+      return d >= start && d <= end;
+    });
+  }, [allOrders, selectedPeriod]);
+
+  const periodActiveOrders = useMemo(
+    () =>
+      periodOrders.filter(
+        o => o.status !== 'Cancelado' && o.status !== 'Cancelled',
+      ),
+    [periodOrders],
+  );
+
+  const [productStats, setProductStats] = useState({
     totalProducts: 0,
     activeProducts: 0,
     outOfStock: 0,
     lowStock: 0,
-    totalOrders: 0,
-    pendingOrders: 0,
-    monthRevenue: 0,
-    monthOrders: 0,
-    avgTicket: 0,
   });
 
-  // ✅ FIX: fetchDashboardData com useCallback para estabilidade
+  const periodStats = useMemo(() => {
+    const revenue = periodActiveOrders.reduce(
+      (sum, o) => sum + (o.amount || 0),
+      0,
+    );
+    const count = periodActiveOrders.length;
+    const pending = periodOrders.filter(o =>
+      [
+        'Pedido Confirmado',
+        'Order Placed',
+        'Processing',
+        'Aguardando Pagamento',
+        'Aguardando Pagamento PIX',
+      ].includes(o.status),
+    );
+    return {
+      totalOrders: periodOrders.length,
+      pendingOrders: pending.length,
+      monthRevenue: revenue,
+      monthOrders: count,
+      avgTicket: count > 0 ? revenue / count : 0,
+    };
+  }, [periodOrders, periodActiveOrders]);
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const [ordersRes, allProductsRes] = await Promise.all([
+      const [ordersRes, productsRes] = await Promise.all([
         axios.get('/api/order/seller'),
         axios.get('/api/product/list?all=true'),
       ]);
-
-      // ✅ FIX: Verificar se as respostas são válidas
-      if (!ordersRes.data.success) {
+      if (!ordersRes.data.success)
         throw new Error(ordersRes.data.message || 'Erro ao carregar pedidos');
-      }
-
-      const fetchedOrders = ordersRes.data.orders || [];
-      setAllOrders(fetchedOrders);
-      setOrders(fetchedOrders.slice(0, 10));
-
-      const allProducts = allProductsRes.data.success
-        ? allProductsRes.data.products
+      setAllOrders(ordersRes.data.orders || []);
+      const allProducts = productsRes.data.success
+        ? productsRes.data.products
         : [];
-      const activeProducts = allProducts.filter(p => p.inStock);
-      const outOfStock = allProducts.filter(p => !p.inStock || p.stock === 0);
-      const lowStock = allProducts.filter(p => p.stock > 0 && p.stock <= 5);
-
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthOrders = fetchedOrders.filter(
-        o =>
-          new Date(o.createdAt) >= startOfMonth &&
-          o.status !== 'Cancelado' &&
-          o.status !== 'Cancelled',
-      );
-      const monthRevenue = monthOrders.reduce(
-        (sum, o) => sum + (o.amount || 0),
-        0,
-      );
-      const avgTicket =
-        monthOrders.length > 0 ? monthRevenue / monthOrders.length : 0;
-
-      const pendingOrders = fetchedOrders.filter(
-        o =>
-          o.status === 'Pedido Confirmado' ||
-          o.status === 'Order Placed' ||
-          o.status === 'Processing' ||
-          o.status === 'Aguardando Pagamento' ||
-          o.status === 'Aguardando Pagamento PIX',
-      );
-
-      setStats({
+      setProductStats({
         totalProducts: allProducts.length,
-        activeProducts: activeProducts.length,
-        outOfStock: outOfStock.length,
-        lowStock: lowStock.length,
-        totalOrders: fetchedOrders.length,
-        pendingOrders: pendingOrders.length,
-        monthRevenue,
-        monthOrders: monthOrders.length,
-        avgTicket,
+        activeProducts: allProducts.filter(p => p.inStock).length,
+        outOfStock: allProducts.filter(p => !p.inStock || p.stock === 0).length,
+        lowStock: allProducts.filter(p => p.stock > 0 && p.stock <= 5).length,
       });
-
       setAllProductsForAlerts(allProducts);
     } catch (err) {
       console.error('Dashboard error:', err);
-
-      // ✅ FIX: Mensagem de erro user-friendly
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401)
         setError('Sessão expirada. Faça login novamente.');
-      } else if (err.response?.status >= 500) {
+      else if (err.response?.status >= 500)
         setError('Erro no servidor. Tente novamente em instantes.');
-      } else if (!navigator.onLine) {
-        setError('Sem conexão com a internet.');
-      } else {
-        setError(err.message || 'Erro ao carregar dados do dashboard.');
-      }
+      else if (!navigator.onLine) setError('Sem conexão com a internet.');
+      else setError(err.message || 'Erro ao carregar dados do dashboard.');
     } finally {
       setLoading(false);
     }
   }, [axios]);
 
-  // ✅ FIX: Só buscar dados quando isSeller é true
-  // Isso garante que o token já está disponível no interceptor
   useEffect(() => {
-    if (isSeller) {
-      fetchDashboardData();
-    }
+    if (isSeller) fetchDashboardData();
   }, [isSeller, fetchDashboardData]);
 
-  const formatCurrency = value => {
-    return new Intl.NumberFormat('pt-BR', {
+  const canGoBack = useMemo(() => {
+    if (allOrders.length === 0) return false;
+    const oldest = new Date(
+      Math.min(...allOrders.map(o => new Date(o.createdAt))),
+    );
+    const prev =
+      selectedPeriod.month === 0
+        ? { year: selectedPeriod.year - 1, month: 11 }
+        : { year: selectedPeriod.year, month: selectedPeriod.month - 1 };
+    return (
+      new Date(prev.year, prev.month, 1) >=
+      new Date(oldest.getFullYear(), oldest.getMonth(), 1)
+    );
+  }, [allOrders, selectedPeriod]);
+
+  const formatCurrency = v =>
+    new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatDate = dateString => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    }).format(v);
+  const formatDate = d =>
+    new Date(d).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  const statusMapping = {
+    'Aguardando Pagamento PIX': 'Aguardando Pagamento',
+    'Order Placed': 'Pedido Confirmado',
+    Processing: 'Pedido Confirmado',
+    Shipped: 'Enviado',
+    'Out for Delivery': 'Enviado',
+    Delivered: 'Entregue',
+    Cancelled: 'Cancelado',
   };
 
-  // ═══════════════════════════════════════════════
-  // PEDIDOS POR STATUS
-  // ═══════════════════════════════════════════════
   const ordersByStatus = useMemo(() => {
-    const statusMap = {
+    const map = {
       'Aguardando Pagamento': {
         count: 0,
         color: 'bg-amber-500',
@@ -165,38 +220,15 @@ const Dashboard = () => {
       Entregue: { count: 0, color: 'bg-green-500', label: 'Entregue' },
       Cancelado: { count: 0, color: 'bg-red-500', label: 'Cancelado' },
     };
-
-    const statusMapping = {
-      'Aguardando Pagamento PIX': 'Aguardando Pagamento',
-      'Order Placed': 'Pedido Confirmado',
-      Processing: 'Pedido Confirmado',
-      Shipped: 'Enviado',
-      'Out for Delivery': 'Enviado',
-      Delivered: 'Entregue',
-      Cancelled: 'Cancelado',
-    };
-
-    allOrders.forEach(order => {
-      const mapped = statusMapping[order.status] || order.status;
-      if (statusMap[mapped]) {
-        statusMap[mapped].count++;
-      }
+    periodOrders.forEach(o => {
+      const m = statusMapping[o.status] || o.status;
+      if (map[m]) map[m].count++;
     });
+    return Object.entries(map).map(([k, v]) => ({ status: k, ...v }));
+  }, [periodOrders]);
 
-    return Object.entries(statusMap).map(([key, val]) => ({
-      status: key,
-      ...val,
-    }));
-  }, [allOrders]);
-
-  // ═══════════════════════════════════════════════
-  // RECEITA POR MÉTODO DE PAGAMENTO (mês actual)
-  // ═══════════════════════════════════════════════
   const revenueByPayment = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const methods = {
+    const m = {
       pix_manual: {
         label: 'PIX',
         amount: 0,
@@ -222,66 +254,47 @@ const Dashboard = () => {
         bg: 'bg-amber-50',
       },
     };
-
-    allOrders.forEach(order => {
-      if (
-        new Date(order.createdAt) >= startOfMonth &&
-        order.status !== 'Cancelado' &&
-        order.status !== 'Cancelled'
-      ) {
-        const type = order.paymentType || 'unknown';
-        if (methods[type]) {
-          methods[type].amount += order.amount || 0;
-          methods[type].count++;
-        }
+    periodActiveOrders.forEach(o => {
+      const t = o.paymentType || 'unknown';
+      if (m[t]) {
+        m[t].amount += o.amount || 0;
+        m[t].count++;
       }
     });
+    return Object.values(m);
+  }, [periodActiveOrders]);
 
-    return Object.values(methods);
-  }, [allOrders]);
-
-  // ═══════════════════════════════════════════════
-  // TOP PRODUTOS VENDIDOS (mês actual)
-  // ═══════════════════════════════════════════════
   const topProducts = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const productSales = {};
-
-    allOrders.forEach(order => {
-      if (
-        new Date(order.createdAt) >= startOfMonth &&
-        order.status !== 'Cancelado' &&
-        order.status !== 'Cancelled'
-      ) {
-        order.items?.forEach(item => {
-          const product = item.product;
-          if (!product) return;
-          const id = product._id || product;
-          const name = product.name || 'Produto';
-          const image = product.image?.[0] || '';
-          const price = item.price || product.offerPrice || 0;
-
-          if (!productSales[id]) {
-            productSales[id] = { name, image, quantity: 0, revenue: 0 };
-          }
-          productSales[id].quantity += item.quantity || 1;
-          productSales[id].revenue += price * (item.quantity || 1);
-        });
-      }
+    const s = {};
+    periodActiveOrders.forEach(o => {
+      o.items?.forEach(item => {
+        const p = item.product;
+        if (!p) return;
+        const id = p._id || p,
+          name = p.name || 'Produto',
+          image = p.image?.[0] || '',
+          price = item.price || p.offerPrice || 0;
+        if (!s[id]) s[id] = { name, image, quantity: 0, revenue: 0 };
+        s[id].quantity += item.quantity || 1;
+        s[id].revenue += price * (item.quantity || 1);
+      });
     });
-
-    return Object.entries(productSales)
-      .map(([id, data]) => ({ id, ...data }))
+    return Object.entries(s)
+      .map(([id, d]) => ({ id, ...d }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
-  }, [allOrders]);
+  }, [periodActiveOrders]);
 
-  // ═══════════════════════════════════════════════
-  // STATUS HELPERS
-  // ═══════════════════════════════════════════════
-  const getStatusColor = status => {
-    const colors = {
+  const recentOrders = useMemo(
+    () =>
+      [...periodOrders]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 10),
+    [periodOrders],
+  );
+
+  const getStatusColor = s =>
+    ({
       'Aguardando Pagamento': 'bg-amber-100 text-amber-700',
       'Pedido Confirmado': 'bg-blue-100 text-blue-700',
       Enviado: 'bg-purple-100 text-purple-700',
@@ -294,12 +307,10 @@ const Dashboard = () => {
       'Out for Delivery': 'bg-purple-100 text-purple-700',
       Delivered: 'bg-green-100 text-green-700',
       Cancelled: 'bg-red-100 text-red-700',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
+    })[s] || 'bg-gray-100 text-gray-700';
 
-  const getStatusLabel = status => {
-    const labels = {
+  const getStatusLabel = s =>
+    ({
       'Aguardando Pagamento': 'Aguardando',
       'Pedido Confirmado': 'Confirmado',
       Enviado: 'Enviado',
@@ -312,52 +323,37 @@ const Dashboard = () => {
       'Out for Delivery': 'Enviado',
       Delivered: 'Entregue',
       Cancelled: 'Cancelado',
-    };
-    return labels[status] || status;
-  };
+    })[s] || s;
 
-  const getPaymentLabel = type => {
-    const labels = {
-      pix_manual: 'PIX',
-      pagarme_card: 'Cartao',
-      pagarme_boleto: 'Boleto',
-    };
-    return labels[type] || type || '—';
-  };
-
-  const getPaymentBadgeColor = type => {
-    const colors = {
+  const getPaymentLabel = t =>
+    ({ pix_manual: 'PIX', pagarme_card: 'Cartao', pagarme_boleto: 'Boleto' })[
+      t
+    ] ||
+    t ||
+    '—';
+  const getPaymentBadgeColor = t =>
+    ({
       pix_manual: 'bg-green-50 text-green-700',
       pagarme_card: 'bg-blue-50 text-blue-700',
       pagarme_boleto: 'bg-amber-50 text-amber-700',
-    };
-    return colors[type] || 'bg-gray-50 text-gray-700';
-  };
+    })[t] || 'bg-gray-50 text-gray-700';
 
   const lowStockProducts = allProductsForAlerts
     .filter(p => p.stock > 0 && p.stock <= 5)
     .sort((a, b) => a.stock - b.stock)
     .slice(0, 6);
-
   const outOfStockProducts = allProductsForAlerts
     .filter(p => !p.inStock || p.stock === 0)
     .slice(0, 4);
 
-  // ═══════════════════════════════════════════════
-  // LOADING STATE
-  // ═══════════════════════════════════════════════
-  if (loading) {
+  if (loading)
     return (
       <div className='flex-1 flex items-center justify-center h-[80vh]'>
         <div className='animate-spin rounded-full h-10 w-10 border-b-2 border-primary'></div>
       </div>
     );
-  }
 
-  // ═══════════════════════════════════════════════
-  // ✅ FIX: ERROR STATE com botão de retry
-  // ═══════════════════════════════════════════════
-  if (error) {
+  if (error)
     return (
       <div className='flex-1 flex items-center justify-center h-[80vh]'>
         <div className='text-center max-w-sm'>
@@ -372,27 +368,61 @@ const Dashboard = () => {
             onClick={fetchDashboardData}
             className='inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors'
           >
-            <RefreshCw className='w-4 h-4' />
-            Tentar novamente
+            <RefreshCw className='w-4 h-4' /> Tentar novamente
           </button>
         </div>
       </div>
     );
-  }
 
   return (
     <div className='flex-1 h-[95vh] overflow-y-auto'>
       <div className='p-6 md:p-8 max-w-7xl mx-auto space-y-8'>
-        <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Dashboard</h1>
-          <p className='text-sm text-gray-500 mt-1'>
-            Visao geral da sua loja Elite Surfing Brasil
-          </p>
+        {/* HEADER + SELETOR DE MÊS */}
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-900'>Dashboard</h1>
+            <p className='text-sm text-gray-500 mt-1'>
+              Visao geral da sua loja Elite Surfing Brasil
+            </p>
+          </div>
+          <div className='flex items-center gap-2'>
+            <div className='flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden'>
+              <button
+                onClick={goToPreviousMonth}
+                disabled={!canGoBack}
+                className='p-2.5 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-100'
+              >
+                <ChevronLeft className='w-4 h-4 text-gray-600' />
+              </button>
+              <button
+                onClick={goToCurrentMonth}
+                className='flex items-center gap-2 px-4 py-2 hover:bg-gray-50 transition-colors min-w-[180px] justify-center'
+              >
+                <Calendar className='w-4 h-4 text-gray-400' />
+                <span className='text-sm font-medium text-gray-800 capitalize'>
+                  {selectedMonthLabel}
+                </span>
+              </button>
+              <button
+                onClick={goToNextMonth}
+                disabled={isCurrentMonth}
+                className='p-2.5 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100'
+              >
+                <ChevronRight className='w-4 h-4 text-gray-600' />
+              </button>
+            </div>
+            {!isCurrentMonth && (
+              <button
+                onClick={goToCurrentMonth}
+                className='text-xs text-primary hover:text-primary/80 font-medium px-3 py-2 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors whitespace-nowrap'
+              >
+                Mês atual
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* STATS CARDS — 5 cards                          */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* STATS CARDS */}
         <div className='grid grid-cols-2 lg:grid-cols-5 gap-4'>
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
@@ -404,13 +434,13 @@ const Dashboard = () => {
               </span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>
-              {stats.activeProducts}
+              {productStats.activeProducts}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {stats.totalProducts} total · {stats.outOfStock} esgotados
+              {productStats.totalProducts} total · {productStats.outOfStock}{' '}
+              esgotados
             </p>
           </div>
-
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center'>
@@ -421,50 +451,47 @@ const Dashboard = () => {
               </span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>
-              {stats.pendingOrders}
+              {periodStats.pendingOrders}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {stats.totalOrders} pedidos total
+              {periodStats.totalOrders} pedidos no período
             </p>
           </div>
-
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'}`}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center ${productStats.lowStock > 0 ? 'bg-red-50' : 'bg-green-50'}`}
               >
                 <AlertTriangle
-                  className={`w-5 h-5 ${stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'}`}
+                  className={`w-5 h-5 ${productStats.lowStock > 0 ? 'text-red-500' : 'text-green-500'}`}
                 />
               </div>
               <span className='text-xs font-medium text-gray-400'>
                 ESTOQUE BAIXO
               </span>
             </div>
-            <p className='text-2xl font-bold text-gray-900'>{stats.lowStock}</p>
+            <p className='text-2xl font-bold text-gray-900'>
+              {productStats.lowStock}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
               Produtos com 5 un. ou menos
             </p>
           </div>
-
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center'>
                 <TrendingUp className='w-5 h-5 text-green-600' />
               </div>
-              <span className='text-xs font-medium text-gray-400'>
-                RECEITA MES
-              </span>
+              <span className='text-xs font-medium text-gray-400'>RECEITA</span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>
-              {formatCurrency(stats.monthRevenue)}
+              {formatCurrency(periodStats.monthRevenue)}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {stats.monthOrders} pedidos em{' '}
-              {new Date().toLocaleDateString('pt-BR', { month: 'long' })}
+              {periodStats.monthOrders} pedidos em{' '}
+              <span className='capitalize'>{selectedMonthShort}</span>
             </p>
           </div>
-
           <div className='bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow'>
             <div className='flex items-center justify-between mb-3'>
               <div className='w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center'>
@@ -475,17 +502,14 @@ const Dashboard = () => {
               </span>
             </div>
             <p className='text-2xl font-bold text-gray-900'>
-              {formatCurrency(stats.avgTicket)}
+              {formatCurrency(periodStats.avgTicket)}
             </p>
             <p className='text-xs text-gray-500 mt-1'>Valor medio por pedido</p>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* PEDIDOS POR STATUS + RECEITA POR PAGAMENTO     */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* STATUS + PAGAMENTO */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          {/* Pedidos por Status */}
           <div className='bg-white border border-gray-200 rounded-xl p-5'>
             <div className='flex items-center gap-2 mb-4'>
               <BarChart3 className='w-5 h-5 text-gray-400' />
@@ -495,8 +519,9 @@ const Dashboard = () => {
             </div>
             <div className='space-y-3'>
               {ordersByStatus.map(item => {
-                const total = allOrders.length || 1;
-                const percentage = Math.round((item.count / total) * 100);
+                const pct = Math.round(
+                  (item.count / (periodOrders.length || 1)) * 100,
+                );
                 return (
                   <div key={item.status} className='flex items-center gap-3'>
                     <span className='text-sm text-gray-600 w-24 flex-shrink-0'>
@@ -505,7 +530,7 @@ const Dashboard = () => {
                     <div className='flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden'>
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${item.color}`}
-                        style={{ width: `${percentage}%` }}
+                        style={{ width: `${pct}%` }}
                       />
                     </div>
                     <span className='text-sm font-semibold text-gray-700 w-12 text-right'>
@@ -516,22 +541,19 @@ const Dashboard = () => {
               })}
             </div>
           </div>
-
-          {/* Receita por Metodo de Pagamento */}
           <div className='bg-white border border-gray-200 rounded-xl p-5'>
             <div className='flex items-center gap-2 mb-4'>
               <CreditCard className='w-5 h-5 text-gray-400' />
               <h2 className='text-base font-semibold text-gray-900'>
                 Receita por Pagamento (
-                {new Date().toLocaleDateString('pt-BR', { month: 'short' })})
+                <span className='capitalize'>{selectedMonthShort}</span>)
               </h2>
             </div>
             <div className='space-y-3'>
               {revenueByPayment.map(method => {
                 const Icon = method.icon;
-                const totalRevenue = stats.monthRevenue || 1;
-                const percentage = Math.round(
-                  (method.amount / totalRevenue) * 100,
+                const pct = Math.round(
+                  (method.amount / (periodStats.monthRevenue || 1)) * 100,
                 );
                 return (
                   <div
@@ -557,7 +579,7 @@ const Dashboard = () => {
                           {method.count} pedidos
                         </span>
                         <span className='text-xs text-gray-500'>
-                          {percentage || 0}%
+                          {pct || 0}%
                         </span>
                       </div>
                     </div>
@@ -568,11 +590,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* PEDIDOS RECENTES + TOP PRODUTOS + ESTOQUE      */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* PEDIDOS + TOP + ESTOQUE */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          {/* Pedidos Recentes — 2 colunas */}
           <div className='lg:col-span-2 bg-white border border-gray-200 rounded-xl'>
             <div className='flex items-center justify-between p-5 border-b border-gray-100'>
               <div className='flex items-center gap-2'>
@@ -588,15 +607,17 @@ const Dashboard = () => {
                 Ver todos <ChevronRight className='w-4 h-4' />
               </Link>
             </div>
-
-            {orders.length === 0 ? (
+            {recentOrders.length === 0 ? (
               <div className='p-8 text-center text-gray-400'>
                 <ShoppingCart className='w-10 h-10 mx-auto mb-3 opacity-40' />
-                <p className='text-sm'>Nenhum pedido ainda</p>
+                <p className='text-sm'>
+                  Nenhum pedido em{' '}
+                  <span className='capitalize'>{selectedMonthLabel}</span>
+                </p>
               </div>
             ) : (
               <div className='divide-y divide-gray-50'>
-                {orders.map(order => (
+                {recentOrders.map(order => (
                   <div
                     key={order._id}
                     className='flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors'
@@ -653,25 +674,21 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Coluna direita: Top Produtos + Alertas de Estoque */}
           <div className='space-y-6'>
-            {/* Top Produtos Vendidos */}
             <div className='bg-white border border-gray-200 rounded-xl'>
               <div className='flex items-center justify-between p-5 border-b border-gray-100'>
                 <div className='flex items-center gap-2'>
                   <Award className='w-5 h-5 text-amber-500' />
                   <h2 className='text-base font-semibold text-gray-900'>
                     Top Vendidos (
-                    {new Date().toLocaleDateString('pt-BR', { month: 'short' })}
-                    )
+                    <span className='capitalize'>{selectedMonthShort}</span>)
                   </h2>
                 </div>
               </div>
-
               {topProducts.length === 0 ? (
                 <div className='p-6 text-center text-gray-400'>
                   <Award className='w-8 h-8 mx-auto mb-2 opacity-40' />
-                  <p className='text-sm'>Sem vendas este mes</p>
+                  <p className='text-sm'>Sem vendas neste período</p>
                 </div>
               ) : (
                 <div className='divide-y divide-gray-50'>
@@ -713,7 +730,6 @@ const Dashboard = () => {
               )}
             </div>
 
-            {/* Alertas de Estoque */}
             <div className='bg-white border border-gray-200 rounded-xl'>
               <div className='flex items-center justify-between p-5 border-b border-gray-100'>
                 <div className='flex items-center gap-2'>
@@ -729,7 +745,6 @@ const Dashboard = () => {
                   Gerir <ChevronRight className='w-4 h-4' />
                 </Link>
               </div>
-
               {lowStockProducts.length === 0 &&
               outOfStockProducts.length === 0 ? (
                 <div className='p-6 text-center text-gray-400'>
@@ -791,9 +806,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* QUICK ACTIONS                                  */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* QUICK ACTIONS */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>
           <Link
             to='/seller/add-product'
