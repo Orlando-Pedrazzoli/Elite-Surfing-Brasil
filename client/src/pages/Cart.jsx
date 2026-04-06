@@ -1152,14 +1152,21 @@ const Cart = () => {
                     key={product._id}
                     className={`p-4 sm:p-5 transition-colors ${hasStockWarning ? 'bg-red-50' : ''}`}
                   >
-                    {/* ── Layout principal: Imagem + Conteúdo ── */}
+                    {/* ══════════════════════════════════════════
+                        DESKTOP (sm+): Uma linha — Imagem | Info | Qty | Preço | Lixeira
+                        MOBILE: Duas linhas
+                          L1: Imagem + Info (nome, cor, peso)
+                          L2: [−][qty][+]  Preço  🗑️   (full width)
+                    ══════════════════════════════════════════ */}
+
+                    {/* ── LINHA 1: Imagem + Detalhes do produto ── */}
                     <div className='flex items-start gap-3 sm:gap-4'>
-                      {/* Imagem do Produto */}
+                      {/* Imagem */}
                       <div className='relative flex-shrink-0'>
                         <img
                           src={product.image[0]}
                           alt={product.name}
-                          className='w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.02]'
+                          className='w-[72px] h-[72px] sm:w-24 sm:h-24 object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.02]'
                           onClick={() =>
                             navigate(
                               `/products/${product.category.toLowerCase()}/${product._id}`,
@@ -1170,19 +1177,18 @@ const Cart = () => {
                           <ColorBall
                             code1={product.colorCode}
                             code2={product.colorCode2}
-                            size={22}
+                            size={20}
                             title={product.color || 'Cor'}
                           />
                         )}
                       </div>
 
-                      {/* Conteúdo: Detalhes + Ações */}
+                      {/* Info do produto */}
                       <div className='flex-1 min-w-0'>
-                        {/* Linha 1: Nome + Remover (desktop) */}
                         <div className='flex items-start justify-between gap-2'>
                           <div className='min-w-0'>
                             <h3
-                              className='font-semibold text-base sm:text-lg text-gray-800 leading-snug cursor-pointer hover:text-primary transition-colors'
+                              className='font-semibold text-[15px] sm:text-lg text-gray-800 leading-snug cursor-pointer hover:text-primary transition-colors line-clamp-2'
                               onClick={() =>
                                 navigate(
                                   `/products/${product.category.toLowerCase()}/${product._id}`,
@@ -1192,31 +1198,31 @@ const Cart = () => {
                               {product.name}
                             </h3>
 
-                            <div className='flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1'>
+                            <div className='flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5'>
                               {product.color && (
-                                <span className='text-sm text-gray-500'>
+                                <span className='text-xs sm:text-sm text-gray-500'>
                                   Cor: {product.color}
                                 </span>
                               )}
-                              <span className='text-sm text-gray-500'>
+                              <span className='text-xs sm:text-sm text-gray-500'>
                                 Peso: {product.weight || 'N/A'}g
                               </span>
                             </div>
 
                             {isLowStock && !hasStockWarning && (
-                              <p className='text-xs text-orange-600 font-medium mt-1.5'>
+                              <p className='text-xs text-orange-600 font-medium mt-1'>
                                 Últimas {availableStock} unidades!
                               </p>
                             )}
 
                             {hasStockWarning && (
-                              <p className='text-xs text-red-600 font-medium mt-1.5 bg-red-100 px-2 py-0.5 rounded inline-block'>
+                              <p className='text-xs text-red-600 font-medium mt-1 bg-red-100 px-2 py-0.5 rounded inline-block'>
                                 {hasStockWarning}
                               </p>
                             )}
                           </div>
 
-                          {/* Botão Remover — visível apenas em desktop */}
+                          {/* Remover — desktop only (canto sup direito) */}
                           <button
                             onClick={() => removeFromCart(product._id)}
                             className='hidden sm:flex items-center justify-center w-8 h-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 cursor-pointer'
@@ -1226,39 +1232,57 @@ const Cart = () => {
                           </button>
                         </div>
 
-                        {/* ── Linha 2: Quantidade + Preço + Remover (mobile) ── */}
-                        <div className='flex items-center justify-between mt-3 pt-3 border-t border-gray-100'>
-                          {/* Seletor de Quantidade +/- */}
+                        {/* Desktop: Qty + Preço na mesma área (abaixo do nome) */}
+                        <div className='hidden sm:flex items-center justify-between mt-3 pt-3 border-t border-gray-100'>
                           <QuantitySelector
                             productId={product._id}
                             quantity={currentQty}
                             maxStock={availableStock}
                             hasWarning={!!hasStockWarning}
                           />
-
-                          {/* Preço */}
-                          <div className='flex items-center gap-3'>
-                            <div className='text-right'>
-                              {currentQty > 1 && (
-                                <p className='text-xs text-gray-400 leading-tight'>
-                                  {formatBRL(product.offerPrice)} /un
-                                </p>
-                              )}
-                              <p className='font-bold text-base sm:text-lg text-gray-800'>
-                                {formatBRL(product.offerPrice * currentQty)}
+                          <div className='text-right'>
+                            {currentQty > 1 && (
+                              <p className='text-xs text-gray-400 leading-tight'>
+                                {formatBRL(product.offerPrice)} /un
                               </p>
-                            </div>
-
-                            {/* Botão Remover — visível apenas em mobile */}
-                            <button
-                              onClick={() => removeFromCart(product._id)}
-                              className='flex sm:hidden items-center justify-center w-9 h-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer'
-                              title='Remover item'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </button>
+                            )}
+                            <p className='font-bold text-lg text-gray-800'>
+                              {formatBRL(product.offerPrice * currentQty)}
+                            </p>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* ── LINHA 2 (mobile only): Qty + Preço + Remover ── */}
+                    {/* Full width abaixo da imagem+info, não espremida */}
+                    <div className='flex sm:hidden items-center justify-between mt-3 pt-3 border-t border-gray-100'>
+                      <QuantitySelector
+                        productId={product._id}
+                        quantity={currentQty}
+                        maxStock={availableStock}
+                        hasWarning={!!hasStockWarning}
+                      />
+
+                      <div className='flex items-center gap-2'>
+                        <div className='text-right'>
+                          {currentQty > 1 && (
+                            <p className='text-xs text-gray-400 leading-tight'>
+                              {formatBRL(product.offerPrice)} /un
+                            </p>
+                          )}
+                          <p className='font-bold text-base text-gray-800'>
+                            {formatBRL(product.offerPrice * currentQty)}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => removeFromCart(product._id)}
+                          className='flex items-center justify-center w-9 h-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer'
+                          title='Remover item'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
                       </div>
                     </div>
                   </div>
