@@ -1,6 +1,7 @@
 // server.js - Elite Surfing Brasil
 // ✅ MIGRAÇÃO 12/03/2026: Stripe REMOVIDO — Pagar.me é o único gateway
 // ✅ 29/03/2026: Adicionado OTP Email Verification para guest checkout
+// ✅ 07/04/2026: API de catálogo para parceiros (dropshipping Rio Surf Shop)
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
@@ -22,6 +23,8 @@ import pagarmeRouter from './routes/pagarmeRoute.js';
 import otpRouter from './routes/otpRoute.js';
 import blogRouter from './routes/blogRoute.js';
 import wslRouter from './routes/wslRoute.js';
+import catalogRouter from './routes/catalogRoute.js';
+import partnerRouter from './routes/partnerRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -41,6 +44,8 @@ const allowedOrigins = [
   'https://elitesurfing.com.br',
   'https://www.elitesurfing.com.br',
   'https://elitesurfingbr-backend.vercel.app',
+  'https://riosurfshop.com.br',
+  'https://www.riosurfshop.com.br',
 ];
 
 // ✅ CORS PRIMEIRO - antes de qualquer body parsing
@@ -54,6 +59,7 @@ app.use(
       'Authorization',
       'X-Requested-With',
       'x-seller-token',
+      'X-API-Key',
     ],
   }),
 );
@@ -68,7 +74,7 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '3.1.0',
+    version: '3.2.0',
     payments: {
       pix: '✅ PIX Manual',
       card: '✅ Pagar.me — Cartão 12x sem juros',
@@ -76,6 +82,9 @@ app.get('/', (req, res) => {
     },
     security: {
       emailOTP: '✅ Verificação de email OTP no guest checkout',
+    },
+    integrations: {
+      catalog: '✅ API de catálogo para parceiros (dropshipping)',
     },
   });
 });
@@ -96,10 +105,13 @@ app.use('/api/pagarme', pagarmeRouter);
 app.use('/api/otp', otpRouter);
 app.use('/api/blog', blogRouter);
 app.use('/api/wsl', wslRouter);
+app.use('/api/v1/catalog', catalogRouter); // API de catálogo (parceiros)
+app.use('/api/partner', partnerRouter); // Gestão de parceiros (admin)
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
 console.log('✅ Security: Email OTP verification enabled');
+console.log('✅ Integrations: Catalog API for partners enabled');
 
 // ✅ 404 handler
 app.use('*', (req, res) => {
