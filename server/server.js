@@ -2,11 +2,14 @@
 // ✅ MIGRAÇÃO 12/03/2026: Stripe REMOVIDO — Pagar.me é o único gateway
 // ✅ 29/03/2026: Adicionado OTP Email Verification para guest checkout
 // ✅ 07/04/2026: API de catálogo para parceiros (dropshipping Rio Surf Shop)
-// ⚡ 20/04/2026: OTIMIZAÇÃO DE EDGE REQUESTS
+// ⚡ 20/04/2026 v1: OTIMIZAÇÃO DE EDGE REQUESTS
 //    - Rate limiting por IP (express-rate-limit)
-//    - Cache headers em rotas GET públicas (reduz hits de bots/scrapers)
-//    - Bloqueio de scrapers agressivos (user-agents suspeitos)
-//    - Early exit em OPTIONS (pre-flight CORS) sem tocar no resto
+//    - Cache headers em rotas GET públicas
+//    - Bloqueio de scrapers agressivos
+// 🔧 20/04/2026 v2: HOTFIX — scripts de build (sitemap/feed) bloqueados
+//    - Adicionado INTERNAL_BUILD_TOKEN para bypass
+//    - Lista de bloqueio reduzida APENAS a scrapers comprovadamente maliciosos
+//    - Removido bloqueio por UA curto/ausente (causava falsos positivos)
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -45,36 +48,44 @@ await connectCloudinary();
 console.log('✅ Database connected successfully');
 console.log('✅ Cloudinary connected successfully');
 
-// ⚡ BLOQUEIO DE SCRAPERS AGRESSIVOS (antes de qualquer processamento)
-// Bots legítimos de SEO (Googlebot, Bingbot) passam. Scrapers abusivos são barrados.
+// ⚡ BLOQUEIO DE SCRAPERS — lista CURTA de bots comprovadamente maliciosos.
+// NÃO bloqueamos por "UA ausente" ou "UA curto" para evitar falsos positivos
+// com clientes HTTP legítimos (Node fetch, axios, mobile apps, webhooks).
+// Scripts internos fazem bypass via header x-internal-build-token.
 const BLOCKED_USER_AGENTS = [
-  /python-requests/i,
-  /scrapy/i,
-  /curl\//i,
-  /wget/i,
-  /java\//i,
-  /go-http-client/i,
-  /httrack/i,
   /semrushbot/i,
   /ahrefsbot/i,
   /mj12bot/i,
   /dotbot/i,
   /petalbot/i,
-  /seznambot/i,
-  /bytespider/i,
   /megaindex/i,
+  /bytespider/i,
+  /httrack/i,
 ];
 
 app.use((req, res, next) => {
-  const ua = req.headers['user-agent'] || '';
-
-  // Bloquear scrapers conhecidos
-  if (BLOCKED_USER_AGENTS.some(pattern => pattern.test(ua))) {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+  // 1. Bypass para scripts internos de build (sitemap, product-feed)
+  const buildToken = req.headers['x-internal-build-token'];
+  if (
+    buildToken &&
+    process.env.INTERNAL_BUILD_TOKEN &&
+    buildToken === process.env.INTERNAL_BUILD_TOKEN
+  ) {
+    return next();
   }
 
-  // Bloquear requests sem user-agent (quase sempre bots mal configurados)
-  if (!ua || ua.length < 10) {
+  // 2. Bypass para webhooks (Pagar.me, Melhor Envio)
+  if (
+    req.path.startsWith('/api/pagarme/webhook') ||
+    req.path.startsWith('/api/shipping/webhook')
+  ) {
+    return next();
+  }
+
+  const ua = req.headers['user-agent'] || '';
+
+  // 3. Bloquear APENAS scrapers confirmadamente maliciosos
+  if (BLOCKED_USER_AGENTS.some(pattern => pattern.test(ua))) {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
@@ -94,7 +105,7 @@ const allowedOrigins = [
   'https://www.riosurfshop.com.br',
 ];
 
-// ✅ CORS PRIMEIRO - antes de qualquer body parsing
+// ✅ CORS
 app.use(
   cors({
     origin: allowedOrigins,
@@ -106,6 +117,7 @@ app.use(
       'X-Requested-With',
       'x-seller-token',
       'X-API-Key',
+      'x-internal-build-token',
     ],
   }),
 );
@@ -114,15 +126,22 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// ⚡ RATE LIMITING GLOBAL — 200 req/min por IP (generoso para uso legítimo, barra abuso)
+// ⚡ RATE LIMITING GLOBAL — 200 req/min por IP
 const globalLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 200, // máx 200 requests por IP/minuto
+  windowMs: 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, slow down.' },
   skip: req => {
-    // Webhooks do Pagar.me não devem ter rate limiting
+    const buildToken = req.headers['x-internal-build-token'];
+    if (
+      buildToken &&
+      process.env.INTERNAL_BUILD_TOKEN &&
+      buildToken === process.env.INTERNAL_BUILD_TOKEN
+    ) {
+      return true;
+    }
     if (req.path.startsWith('/api/pagarme/webhook')) return true;
     return false;
   },
@@ -130,23 +149,29 @@ const globalLimiter = rateLimit({
 
 app.use(globalLimiter);
 
-// ⚡ RATE LIMITING ESPECÍFICO para rotas públicas de leitura (mais apertado)
+// ⚡ RATE LIMITING ESPECÍFICO para rotas públicas de leitura
 const readLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60, // 60 req/min por IP em listagens públicas
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests.' },
+  skip: req => {
+    const buildToken = req.headers['x-internal-build-token'];
+    return !!(
+      buildToken &&
+      process.env.INTERNAL_BUILD_TOKEN &&
+      buildToken === process.env.INTERNAL_BUILD_TOKEN
+    );
+  },
 });
 
 // ⚡ CACHE HEADERS em rotas GET públicas
-// Reduz massivamente hits repetidos de crawlers/scrapers
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
 
   const path = req.path;
 
-  // Produtos (catálogo) — cache 5 min (edge) + 1 min (browser)
   if (path.startsWith('/api/product/list') || path === '/api/product') {
     res.setHeader(
       'Cache-Control',
@@ -154,7 +179,6 @@ app.use((req, res, next) => {
     );
   }
 
-  // Blog — cache 10 min
   if (path.startsWith('/api/blog')) {
     res.setHeader(
       'Cache-Control',
@@ -162,7 +186,6 @@ app.use((req, res, next) => {
     );
   }
 
-  // WSL (rankings/eventos) — cache 1 hora (dados mudam raramente)
   if (path.startsWith('/api/wsl')) {
     res.setHeader(
       'Cache-Control',
@@ -170,7 +193,6 @@ app.use((req, res, next) => {
     );
   }
 
-  // Catálogo parceiros — cache 15 min
   if (path.startsWith('/api/v1/catalog')) {
     res.setHeader(
       'Cache-Control',
@@ -188,7 +210,7 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '3.3.0',
+    version: '3.3.1',
     payments: {
       pix: '✅ PIX Manual',
       card: '✅ Pagar.me — Cartão 12x sem juros',
@@ -197,7 +219,7 @@ app.get('/', (req, res) => {
     security: {
       emailOTP: '✅ Verificação de email OTP no guest checkout',
       rateLimit: '✅ 200 req/min global + limites específicos',
-      scraperBlock: '✅ Bloqueio de scrapers agressivos',
+      scraperBlock: '✅ Bloqueio de scrapers agressivos conhecidos',
     },
     integrations: {
       catalog: '✅ API de catálogo para parceiros (dropshipping)',
@@ -205,7 +227,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ Rotas principais (com rate limit específico em rotas de leitura pública)
+// ✅ Rotas principais
 app.use('/api/user', userRouter);
 app.use('/api/seller', sellerRouter);
 app.use('/api/product', readLimiter, productRouter);
@@ -221,8 +243,8 @@ app.use('/api/pagarme', pagarmeRouter);
 app.use('/api/otp', otpRouter);
 app.use('/api/blog', readLimiter, blogRouter);
 app.use('/api/wsl', readLimiter, wslRouter);
-app.use('/api/v1/catalog', readLimiter, catalogRouter); // API de catálogo (parceiros)
-app.use('/api/partner', partnerRouter); // Gestão de parceiros (admin)
+app.use('/api/v1/catalog', readLimiter, catalogRouter);
+app.use('/api/partner', partnerRouter);
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
