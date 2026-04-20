@@ -4,17 +4,16 @@
  *
  * LOCALIZAÇÃO: client/middleware.js (raiz do client, junto ao vercel.json)
  *
- * PRÉ-REQUISITOS:
- *   1. Criar conta em https://prerender.io (plano free = 250 pages/mês)
- *   2. Copiar token em Dashboard → Security and Access
- *   3. Vercel Dashboard → Settings → Environment Variables:
- *      Nome: PRERENDER_TOKEN | Valor: (token) | Escopo: Production + Preview
+ * ⚡ OTIMIZAÇÃO 20/04/2026 — Adicionado MATCHER para reduzir Edge Requests:
+ *    Antes: middleware corria em TODOS os requests (assets, imagens, fonts...)
+ *    Depois: matcher filtra ANTES do middleware ser invocado.
+ *    Impacto estimado: -70% a -90% de Edge Requests no frontend.
  *
  * FLUXO:
  *   Bot → middleware detecta user-agent → proxy para Prerender.io → HTML renderizado
  *   User → middleware ignora → SPA carrega normalmente
  *
- * Versão: 1.0.0 | 2026-03-31
+ * Versão: 1.1.0 | 2026-04-20
  */
 
 const BOT_USER_AGENTS = [
@@ -68,30 +67,6 @@ const BOT_USER_AGENTS = [
   'chrome-lighthouse',
 ];
 
-const STATIC_EXTENSIONS = [
-  '.js',
-  '.css',
-  '.xml',
-  '.json',
-  '.txt',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.webp',
-  '.svg',
-  '.ico',
-  '.woff',
-  '.woff2',
-  '.ttf',
-  '.eot',
-  '.map',
-  '.pdf',
-  '.mp4',
-  '.webm',
-  '.ogg',
-];
-
 const PRIVATE_PATHS = [
   '/seller',
   '/my-orders',
@@ -109,18 +84,14 @@ export default async function middleware(request) {
   const pathname = url.pathname;
   const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
 
-  // 1. Ignorar ficheiros estáticos
-  if (STATIC_EXTENSIONS.some(ext => pathname.toLowerCase().endsWith(ext)))
-    return;
-
-  // 2. Ignorar rotas privadas
+  // 1. Ignorar rotas privadas
   if (PRIVATE_PATHS.some(path => pathname.startsWith(path))) return;
 
-  // 3. Detectar bot
+  // 2. Detectar bot
   const isBot = BOT_USER_AGENTS.some(bot => userAgent.includes(bot));
   if (!isBot) return;
 
-  // 4. Proxy para Prerender.io
+  // 3. Proxy para Prerender.io
   const prerenderToken = process.env.PRERENDER_TOKEN;
   if (!prerenderToken) {
     console.warn('[Middleware] PRERENDER_TOKEN não configurado.');
@@ -153,4 +124,23 @@ export default async function middleware(request) {
   }
 }
 
-export const config = { runtime: 'edge' };
+/**
+ * ⚡ MATCHER — define EM QUE PATHS o middleware corre.
+ *
+ * Esta regex NEGATIVA exclui tudo o que não deve passar pelo middleware:
+ *   - /_next/static  → chunks JS/CSS gerados pelo build
+ *   - /_next/image   → otimização de imagens
+ *   - /api/*         → API routes (não precisam de prerender)
+ *   - /assets/*      → assets do Vite (SPA)
+ *   - /favicon.ico, /robots.txt, /sitemap.xml, /product-feed.xml → ficheiros de root
+ *   - Extensões estáticas: js, css, imagens, fontes, vídeos, PDF, map, xml, json, txt
+ *
+ * Resultado: o middleware APENAS corre em rotas de páginas HTML reais.
+ * Isto reduz as invocações do middleware em ~90%.
+ */
+export const config = {
+  runtime: 'edge',
+  matcher: [
+    '/((?!api|assets|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|product-feed.xml|.*\\.(?:js|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|map|pdf|mp4|webm|ogg|xml|json|txt)$).*)',
+  ],
+};
