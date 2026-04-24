@@ -26,12 +26,16 @@ import {
 // 1. Headers no-cache → força browser a não servir do cache local
 // 2. Query _t=timestamp → garante URL única (bypass CDN + Service Worker)
 // 3. Vercel vê Cache-Control: no-cache → não serve do edge cache
+//
+// ⚠️ NOTA: NÃO incluir header 'Expires' aqui — é permitido apenas em
+// RESPONSES. Se incluído em REQUEST, o browser bloqueia por CORS policy
+// ("Request header field expires is not allowed by Access-Control-Allow-Headers").
+// Cache-Control + Pragma sozinhos já são suficientes.
 // ═══════════════════════════════════════════════════════════════════════
 const ADMIN_REQUEST_CONFIG = {
   headers: {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     Pragma: 'no-cache',
-    Expires: '0',
   },
 };
 
