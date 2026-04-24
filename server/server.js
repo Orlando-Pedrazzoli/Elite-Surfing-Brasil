@@ -10,6 +10,11 @@
 //    - Adicionado INTERNAL_BUILD_TOKEN para bypass
 //    - Lista de bloqueio reduzida APENAS a scrapers comprovadamente maliciosos
 //    - Removido bloqueio por UA curto/ausente (causava falsos positivos)
+// 🔧 24/04/2026: FIX CACHE ADMIN — resolve bug de "3 refreshes para ver update"
+//    - /api/product/list?all=true NUNCA é cacheado (rota admin)
+//    - /api/product/list (público) mantém cache mas reduzido a 30s
+//    - Rotas de mutação retornam no-store para invalidar
+//    - Vary: Authorization para separar cache por user
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -49,9 +54,6 @@ console.log('✅ Database connected successfully');
 console.log('✅ Cloudinary connected successfully');
 
 // ⚡ BLOQUEIO DE SCRAPERS — lista CURTA de bots comprovadamente maliciosos.
-// NÃO bloqueamos por "UA ausente" ou "UA curto" para evitar falsos positivos
-// com clientes HTTP legítimos (Node fetch, axios, mobile apps, webhooks).
-// Scripts internos fazem bypass via header x-internal-build-token.
 const BLOCKED_USER_AGENTS = [
   /semrushbot/i,
   /ahrefsbot/i,
@@ -64,7 +66,6 @@ const BLOCKED_USER_AGENTS = [
 ];
 
 app.use((req, res, next) => {
-  // 1. Bypass para scripts internos de build (sitemap, product-feed)
   const buildToken = req.headers['x-internal-build-token'];
   if (
     buildToken &&
@@ -74,7 +75,6 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // 2. Bypass para webhooks (Pagar.me, Melhor Envio)
   if (
     req.path.startsWith('/api/pagarme/webhook') ||
     req.path.startsWith('/api/shipping/webhook')
@@ -84,7 +84,6 @@ app.use((req, res, next) => {
 
   const ua = req.headers['user-agent'] || '';
 
-  // 3. Bloquear APENAS scrapers confirmadamente maliciosos
   if (BLOCKED_USER_AGENTS.some(pattern => pattern.test(ua))) {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
@@ -118,7 +117,10 @@ app.use(
       'x-seller-token',
       'X-API-Key',
       'x-internal-build-token',
+      'Cache-Control',
+      'Pragma',
     ],
+    exposedHeaders: ['ETag', 'Last-Modified'],
   }),
 );
 
@@ -166,34 +168,68 @@ const readLimiter = rateLimit({
   },
 });
 
-// ⚡ CACHE HEADERS em rotas GET públicas
+// ═══════════════════════════════════════════════════════════════════════
+// 🔧 CACHE HEADERS — Estratégia corrigida (best practices 2026)
+// ═══════════════════════════════════════════════════════════════════════
+// REGRA DE OURO:
+//   - Rotas admin (com ?all=true, seller token, ou mutations) → no-store
+//   - Rotas públicas de leitura → cache curto + SWR
+//   - Vary: Authorization → garante que cache do admin não vaza para público
+// ═══════════════════════════════════════════════════════════════════════
 app.use((req, res, next) => {
-  if (req.method !== 'GET') return next();
+  // 1. Mutations (POST/PUT/DELETE) nunca são cacheadas + invalidam intermediários
+  if (req.method !== 'GET') {
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, max-age=0',
+    );
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return next();
+  }
 
   const path = req.path;
 
+  // 2. Identificar requisições de admin/seller
+  //    → Têm x-seller-token, Authorization, ou query ?all=true
+  const isAdminRequest =
+    !!req.headers['x-seller-token'] ||
+    !!req.headers['authorization'] ||
+    req.query.all === 'true';
+
+  if (isAdminRequest) {
+    // Admin NUNCA deve ver dados cacheados
+    res.setHeader(
+      'Cache-Control',
+      'private, no-store, no-cache, must-revalidate, max-age=0',
+    );
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Vary', 'Authorization, x-seller-token');
+    return next();
+  }
+
+  // 3. Rotas públicas — cache curto + stale-while-revalidate
+  //    max-age reduzido para resposta mais rápida a mudanças do admin
   if (path.startsWith('/api/product/list') || path === '/api/product') {
     res.setHeader(
       'Cache-Control',
-      'public, max-age=60, s-maxage=300, stale-while-revalidate=600',
+      'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
     );
-  }
-
-  if (path.startsWith('/api/blog')) {
+    res.setHeader('Vary', 'Authorization, x-seller-token');
+  } else if (path.startsWith('/api/blog')) {
     res.setHeader(
       'Cache-Control',
       'public, max-age=300, s-maxage=600, stale-while-revalidate=1800',
     );
-  }
-
-  if (path.startsWith('/api/wsl')) {
+    res.setHeader('Vary', 'Authorization, x-seller-token');
+  } else if (path.startsWith('/api/wsl')) {
     res.setHeader(
       'Cache-Control',
       'public, max-age=1800, s-maxage=3600, stale-while-revalidate=7200',
     );
-  }
-
-  if (path.startsWith('/api/v1/catalog')) {
+    res.setHeader('Vary', 'Authorization, x-seller-token');
+  } else if (path.startsWith('/api/v1/catalog')) {
     res.setHeader(
       'Cache-Control',
       'public, max-age=300, s-maxage=900, stale-while-revalidate=1800',
@@ -210,7 +246,7 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '3.3.1',
+    version: '3.3.2',
     payments: {
       pix: '✅ PIX Manual',
       card: '✅ Pagar.me — Cartão 12x sem juros',
@@ -220,6 +256,9 @@ app.get('/', (req, res) => {
       emailOTP: '✅ Verificação de email OTP no guest checkout',
       rateLimit: '✅ 200 req/min global + limites específicos',
       scraperBlock: '✅ Bloqueio de scrapers agressivos conhecidos',
+    },
+    cache: {
+      strategy: '✅ Admin no-store + Public SWR + Vary: Authorization',
     },
     integrations: {
       catalog: '✅ API de catálogo para parceiros (dropshipping)',
@@ -249,6 +288,7 @@ app.use('/api/partner', partnerRouter);
 console.log('✅ All routes registered');
 console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
 console.log('✅ Security: Email OTP + Rate Limiting + Scraper Block');
+console.log('✅ Cache: Admin no-store + Public SWR + Vary: Authorization');
 console.log('✅ Integrations: Catalog API for partners enabled');
 
 // ✅ 404 handler

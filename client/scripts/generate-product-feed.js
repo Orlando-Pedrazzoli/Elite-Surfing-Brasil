@@ -13,13 +13,13 @@
  * Output:
  *   client/public/product-feed.xml
  *
- * Configuração:
- *   - BACKEND_URL: URL da API (default: https://elitesurfingbr-backend.vercel.app)
- *   - Pode ser agendado via cron ou Vercel Cron Jobs para atualizar diariamente
- *
- * Requisitos Google Merchant Center:
- *   - id, title, description, link, image_link, price, availability, condition, brand
- *   - Opcionais: sale_price, product_type, gtin, shipping, additional_image_link
+ * 🆕 24/04/2026 — ALTERAÇÕES (padrão Shopify Draft/Active):
+ *   - Agora usa /api/product/list (SEM ?all=true) para excluir Drafts.
+ *   - Drafts (inStock=false) NÃO aparecem no feed — evita reprovação no
+ *     Google Merchant Center por "produto indisponível".
+ *   - Produtos publicados sem stock (inStock=true, stock=0) continuam no
+ *     feed com availability=out_of_stock (comportamento correto).
+ *   - Adicionado filtro isMainVariant (feed só inclui produtos principais).
  */
 
 import { writeFileSync } from 'fs';
@@ -35,8 +35,6 @@ const SITE_URL = 'https://www.elitesurfing.com.br';
 const BRAND = 'Elite Surfing';
 const CURRENCY = 'BRL';
 
-// Mapeamento de categorias para Google Product Category
-// https://www.google.com/basepages/producttype/taxonomy-with-ids.pt-BR.txt
 const GOOGLE_CATEGORY_MAP = {
   'Deck-Maldivas':
     'Artigos esportivos > Esportes aquáticos > Surfe > Acessórios para pranchas de surfe',
@@ -121,13 +119,19 @@ function getDescription(product) {
 function buildProductXml(product) {
   const category = (product.category || '').trim();
   const productUrl = `${SITE_URL}/products/${encodeURIComponent(category)}/${product._id}`;
-  const availability =
-    product.inStock && product.stock > 0 ? 'in_stock' : 'out_of_stock';
+
+  // 🆕 Lógica de availability (padrão Google Merchant):
+  //   - Como só processamos produtos publicados (inStock=true), só resta
+  //     verificar se tem stock disponível.
+  //   - stock > 0  → in_stock
+  //   - stock = 0  → out_of_stock (produto visível como "Esgotado" no site)
+  const availability = product.stock > 0 ? 'in_stock' : 'out_of_stock';
+
   const googleCategory =
     GOOGLE_CATEGORY_MAP[category] || DEFAULT_GOOGLE_CATEGORY;
   const description = getDescription(product);
   const mainImage = (product.image && product.image[0]) || '';
-  const additionalImages = (product.image || []).slice(1, 11); // max 10 additional
+  const additionalImages = (product.image || []).slice(1, 11);
 
   let itemXml = `    <item>
       <g:id>${escapeXml(product._id)}</g:id>
@@ -137,12 +141,10 @@ function buildProductXml(product) {
       <g:image_link>${escapeXml(mainImage)}</g:image_link>
 `;
 
-  // Additional images
   for (const img of additionalImages) {
     itemXml += `      <g:additional_image_link>${escapeXml(img)}</g:additional_image_link>\n`;
   }
 
-  // Price — se tem preço de "lista" diferente do offerPrice, usar sale_price
   if (
     product.price &&
     product.offerPrice &&
@@ -162,39 +164,32 @@ function buildProductXml(product) {
       <g:product_type>${escapeXml(category)}</g:product_type>
 `;
 
-  // SKU / MPN
   if (product.sku) {
     itemXml += `      <g:mpn>${escapeXml(product.sku)}</g:mpn>\n`;
   }
 
-  // GTIN (se existir)
   if (product.gtin || product.barcode || product.ean) {
     itemXml += `      <g:gtin>${escapeXml(product.gtin || product.barcode || product.ean)}</g:gtin>\n`;
   } else {
     itemXml += `      <g:identifier_exists>false</g:identifier_exists>\n`;
   }
 
-  // Cor
   if (product.color) {
     itemXml += `      <g:color>${escapeXml(product.color)}</g:color>\n`;
   }
 
-  // Tamanho
   if (product.size) {
     itemXml += `      <g:size>${escapeXml(product.size)}</g:size>\n`;
   }
 
-  // Peso (para cálculo de frete)
   if (product.weight) {
     itemXml += `      <g:shipping_weight>${product.weight} g</g:shipping_weight>\n`;
   }
 
-  // Family / item_group_id (para variantes)
   if (product.productFamily) {
     itemXml += `      <g:item_group_id>${escapeXml(product.productFamily)}</g:item_group_id>\n`;
   }
 
-  // Shipping — frete grátis se produto tem freeShipping
   if (product.freeShipping) {
     itemXml += `      <g:shipping>
         <g:country>BR</g:country>
@@ -202,7 +197,6 @@ function buildProductXml(product) {
       </g:shipping>\n`;
   }
 
-  // Custom labels para segmentação de campanhas
   const tags = product.tags || [];
   if (tags.includes('bestseller')) {
     itemXml += `      <g:custom_label_0>bestseller</g:custom_label_0>\n`;
@@ -223,18 +217,26 @@ async function generateFeed() {
   console.log(`🌐 Backend: ${BACKEND_URL}`);
 
   try {
-    // Fetch todos os produtos (incluindo inativos para o Merchant Center)
-    const response = await fetch(`${BACKEND_URL}/api/product/list?all=true`);
+    // 🆕 Usa /api/product/list (sem ?all=true) → backend já filtra
+    // automaticamente Drafts (inStock=false) e variantes secundárias.
+    // Feed resultante contém APENAS produtos publicados e principais.
+    const response = await fetch(`${BACKEND_URL}/api/product/list`);
     const data = await response.json();
 
     if (!data.success || !data.products) {
       throw new Error('Falha ao buscar produtos da API');
     }
 
-    const products = data.products;
-    console.log(`✅ ${products.length} produtos encontrados`);
+    // 🆕 Filtro defensivo extra — caso a API mude de comportamento no futuro
+    const products = data.products.filter(p => {
+      if (p.inStock === false) return false; // Draft
+      if (p.isMainVariant === false) return false; // variante secundária
+      return true;
+    });
 
-    // Gerar XML
+    console.log(`✅ ${products.length} produtos publicados encontrados`);
+    console.log(`   (produtos em Draft foram excluídos automaticamente)`);
+
     const now = new Date().toISOString();
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
@@ -253,7 +255,6 @@ async function generateFeed() {
     xml += `  </channel>
 </rss>`;
 
-    // Salvar ficheiro
     const outputPath = join(__dirname, '..', 'public', 'product-feed.xml');
     writeFileSync(outputPath, xml, 'utf-8');
 

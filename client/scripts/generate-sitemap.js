@@ -3,8 +3,13 @@ import path from 'path';
 
 /**
  * Gerador de Sitemaps - Elite Surfing Brasil
- * Versão: 4.0.0
- * Última atualização: 2026-03-31
+ * Versão: 4.1.0
+ * Última atualização: 2026-04-24
+ *
+ * ALTERAÇÕES v4.1.0 (24/04/2026):
+ * - 🆕 Filtro defensivo para excluir produtos em Draft (inStock=false).
+ *   A API /api/product/list já filtra automaticamente, mas adicionamos
+ *   defesa em profundidade para o caso de a API mudar.
  *
  * ALTERAÇÕES v4.0.0:
  * - Adicionado /blog às páginas estáticas
@@ -18,15 +23,15 @@ import path from 'path';
  * 2. sitemap-static.xml       - Páginas estáticas
  * 3. sitemap-collections.xml  - Coleções
  * 4. sitemap-categories.xml   - Categorias/Modelos
- * 5. sitemap-products.xml     - Produtos individuais
- * 6. sitemap-blog.xml         - NOVO: Artigos do blog
+ * 5. sitemap-products.xml     - Produtos individuais (só publicados)
+ * 6. sitemap-blog.xml         - Artigos do blog
  */
 
 const SITE_URL = 'https://www.elitesurfing.com.br';
 const API_URL = 'https://elitesurfingbr-backend.vercel.app';
 
 // =====================================================
-// PÁGINAS ESTÁTICAS (ATUALIZADO: blog + institucionais)
+// PÁGINAS ESTÁTICAS
 // =====================================================
 const staticRoutes = [
   { url: '', changefreq: 'daily', priority: 1.0 },
@@ -131,10 +136,12 @@ const formatDate = dateString => {
 
 // =====================================================
 // FETCH PRODUTOS DA API
+// 🆕 v4.1.0: Filtro defensivo para excluir Drafts (inStock=false)
 // =====================================================
 async function fetchProducts() {
   try {
     console.log('🔍 Conectando à API (produtos)...');
+    // /api/product/list (sem ?all=true) → a API já filtra Drafts e variantes
     const response = await fetch(`${API_URL}/api/product/list`);
     if (!response.ok)
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -143,14 +150,29 @@ async function fetchProducts() {
       console.log('⚠️ Nenhum produto encontrado');
       return [];
     }
+
+    // 🆕 Filtro defensivo:
+    //   - Excluir Drafts (inStock=false) — produtos não publicados
+    //   - Excluir variantes não-principais (já excluídas pela API, mas garante)
+    //   - Excluir slugs inválidos da lista manual
     const validProducts = data.products.filter(product => {
       if (invalidProductSlugs.includes(product.slug)) return false;
       if (product.isMainVariant === false) return false;
+      if (product.inStock === false) return false; // 🆕 Draft
       return true;
     });
+
+    const draftsExcluded = data.products.filter(
+      p => p.inStock === false,
+    ).length;
     console.log(
-      `✅ ${validProducts.length} produtos válidos de ${data.products.length} total`,
+      `✅ ${validProducts.length} produtos publicados de ${data.products.length} total`,
     );
+    if (draftsExcluded > 0) {
+      console.log(
+        `   ℹ️ ${draftsExcluded} produto(s) em Draft excluídos do sitemap`,
+      );
+    }
     return validProducts;
   } catch (err) {
     console.error('❌ Erro ao buscar produtos:', err.message);
@@ -159,7 +181,7 @@ async function fetchProducts() {
 }
 
 // =====================================================
-// NOVO: FETCH BLOG POSTS DA API
+// FETCH BLOG POSTS DA API
 // =====================================================
 async function fetchBlogPosts() {
   try {
@@ -268,16 +290,11 @@ function generateProductsSitemap(products) {
   return xml;
 }
 
-// =====================================================
-// NOVO: GERADOR DE SITEMAP DO BLOG
-// =====================================================
 function generateBlogSitemap(blogPosts) {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
-  // Página principal do blog
   xml += `  <url>\n    <loc>${SITE_URL}/blog</loc>\n    <lastmod>${getToday()}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
 
-  // Posts individuais
   for (const post of blogPosts) {
     if (!post.slug) continue;
     const fullUrl = `${SITE_URL}/blog/${post.slug}`;
@@ -296,7 +313,7 @@ async function generateSitemaps() {
   console.log('');
   console.log('╔═══════════════════════════════════════════════════╗');
   console.log('║   GERADOR DE SITEMAPS - Elite Surfing Brasil 🇧🇷  ║');
-  console.log('║   v4.0.0 — Agora com sitemap do Blog!           ║');
+  console.log('║   v4.1.0 — Draft products excluded              ║');
   console.log('╚═══════════════════════════════════════════════════╝');
   console.log('');
   console.log(`📍 URL Base: ${SITE_URL}`);
@@ -310,7 +327,6 @@ async function generateSitemaps() {
     console.log('📁 Pasta /public criada');
   }
 
-  // Buscar dados da API
   const products = await fetchProducts();
   const blogPosts = await fetchBlogPosts();
 
@@ -318,7 +334,6 @@ async function generateSitemaps() {
   console.log('📝 Gerando arquivos XML...');
   console.log('');
 
-  // 1. Sitemap Index
   fs.writeFileSync(
     path.join(outputDir, 'sitemap.xml'),
     generateSitemapIndex(),
@@ -326,7 +341,6 @@ async function generateSitemaps() {
   );
   console.log('   ✓ sitemap.xml (índice principal)');
 
-  // 2. Static
   fs.writeFileSync(
     path.join(outputDir, 'sitemap-static.xml'),
     generateStaticSitemap(),
@@ -334,7 +348,6 @@ async function generateSitemaps() {
   );
   console.log(`   ✓ sitemap-static.xml (${staticRoutes.length} páginas)`);
 
-  // 3. Collections
   fs.writeFileSync(
     path.join(outputDir, 'sitemap-collections.xml'),
     generateCollectionsSitemap(),
@@ -342,7 +355,6 @@ async function generateSitemaps() {
   );
   console.log(`   ✓ sitemap-collections.xml (${collections.length} coleções)`);
 
-  // 4. Categories
   fs.writeFileSync(
     path.join(outputDir, 'sitemap-categories.xml'),
     generateCategoriesSitemap(),
@@ -350,7 +362,6 @@ async function generateSitemaps() {
   );
   console.log(`   ✓ sitemap-categories.xml (${categories.length} categorias)`);
 
-  // 5. Products
   fs.writeFileSync(
     path.join(outputDir, 'sitemap-products.xml'),
     generateProductsSitemap(products),
@@ -358,7 +369,6 @@ async function generateSitemaps() {
   );
   console.log(`   ✓ sitemap-products.xml (${products.length} produtos)`);
 
-  // 6. NOVO: Blog
   fs.writeFileSync(
     path.join(outputDir, 'sitemap-blog.xml'),
     generateBlogSitemap(blogPosts),
@@ -366,7 +376,6 @@ async function generateSitemaps() {
   );
   console.log(`   ✓ sitemap-blog.xml (${blogPosts.length} posts)`);
 
-  // Resumo
   const totalUrls =
     staticRoutes.length +
     collections.length +
