@@ -4,7 +4,7 @@ import { SEO, BlogPostingSchema, BreadcrumbSchema } from '../components/seo';
 import { getBlogPostSEO } from '../components/seo/seoConfig';
 import '../styles/Blog.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4001';
 
 const BlogPostDetail = () => {
   const { slug } = useParams();
@@ -14,7 +14,9 @@ const BlogPostDetail = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/blog/post/${slug}`);
+        const res = await fetch(`${API_URL}/api/blog/post/${slug}`, {
+          cache: 'no-store',
+        });
         const json = await res.json();
         if (json.success) setPost(json.post);
       } catch (err) {
@@ -68,7 +70,7 @@ const BlogPostDetail = () => {
 
   return (
     <div className='blog-page'>
-      {/* ═══ SEO DINÂMICO — NOVO ═══ */}
+      {/* ═══ SEO DINÂMICO ═══ */}
       <SEO
         title={seoData.title}
         description={seoData.description}
