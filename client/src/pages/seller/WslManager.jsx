@@ -849,10 +849,12 @@ const WslManager = () => {
                       }
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
@@ -882,10 +884,12 @@ const WslManager = () => {
                       placeholder='Rip Curl Pro Bells Beach'
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
@@ -915,10 +919,12 @@ const WslManager = () => {
                       placeholder='Bells Beach, Victoria, Austrália'
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
@@ -948,10 +954,12 @@ const WslManager = () => {
                       placeholder='1 - 11 Abril'
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
@@ -979,10 +987,12 @@ const WslManager = () => {
                       }
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     >
                       <option value='CT'>CT</option>
@@ -1015,10 +1025,12 @@ const WslManager = () => {
                       }
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     >
                       <option value='upcoming'>Em breve</option>
@@ -1031,6 +1043,7 @@ const WslManager = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '4px',
+                      gridColumn: '1 / -1',
                     }}
                   >
                     <label
@@ -1041,25 +1054,23 @@ const WslManager = () => {
                         textTransform: 'uppercase',
                       }}
                     >
-                      Vencedor
+                      Vencedor (masculino e feminino)
                     </label>
                     <input
                       type='text'
                       value={evt.winner || ''}
                       onChange={e =>
-                        updateEventField(
-                          index,
-                          'winner',
-                          e.target.value || null,
-                        )
+                        updateEventField(index, 'winner', e.target.value)
                       }
-                      placeholder='Nome do vencedor'
+                      placeholder='Ex: Miguel Pupo e Gabriela Bryan'
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
@@ -1090,10 +1101,12 @@ const WslManager = () => {
                       placeholder='Informação extra (opcional)'
                       disabled={savingEvents}
                       style={{
+                        width: '100%',
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '0.88rem',
+                        boxSizing: 'border-box',
                       }}
                     />
                   </div>
