@@ -13,7 +13,12 @@ const WslRankings = () => {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/wsl/rankings?season=2026`);
+        // ⚡ cache: 'no-store' evita que o browser sirva versão antiga
+        // após o admin atualizar. O CDN ainda cacheia 60s (s-maxage),
+        // que é aceitável para um blog que atualiza a cada 1-2 semanas.
+        const res = await fetch(`${API_URL}/api/wsl/rankings?season=2026`, {
+          cache: 'no-store',
+        });
         const json = await res.json();
         if (json.success) {
           setMaleRankings(json.male);

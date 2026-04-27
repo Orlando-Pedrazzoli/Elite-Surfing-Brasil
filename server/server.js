@@ -15,6 +15,11 @@
 //    - /api/product/list (público) mantém cache mas reduzido a 30s
 //    - Rotas de mutação retornam no-store para invalidar
 //    - Vary: Authorization para separar cache por user
+// 🔧 27/04/2026: FIX CACHE WSL — admin salvava ranking mas blog não atualizava
+//    - /api/wsl reduzido de 30min/1h para max-age=0 + s-maxage=60
+//    - Browser nunca cacheia, CDN cacheia no máximo 60s
+//    - Resolve atraso entre PUT do admin e GET público
+//    - Mutações no controller WSL setam CDN-Cache-Control: no-store
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -224,9 +229,15 @@ app.use((req, res, next) => {
     );
     res.setHeader('Vary', 'Authorization, x-seller-token');
   } else if (path.startsWith('/api/wsl')) {
+    // 🔧 27/04/2026 — cache MUITO curto.
+    // O admin atualiza manualmente após cada etapa (a cada 1-2 semanas)
+    // e precisa ver a atualização no blog imediatamente.
+    // - max-age=0 → browser nunca cacheia
+    // - s-maxage=60 → CDN cacheia 60s no máximo
+    // - SWR=300 → serve stale enquanto revalida (sem flash de loading)
     res.setHeader(
       'Cache-Control',
-      'public, max-age=1800, s-maxage=3600, stale-while-revalidate=7200',
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
     );
     res.setHeader('Vary', 'Authorization, x-seller-token');
   } else if (path.startsWith('/api/v1/catalog')) {
@@ -246,7 +257,7 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '3.3.2',
+    version: '3.3.3',
     payments: {
       pix: '✅ PIX Manual',
       card: '✅ Pagar.me — Cartão 12x sem juros',
@@ -259,6 +270,7 @@ app.get('/', (req, res) => {
     },
     cache: {
       strategy: '✅ Admin no-store + Public SWR + Vary: Authorization',
+      wsl: '✅ Cache curto (60s CDN) — atualização rápida do blog',
     },
     integrations: {
       catalog: '✅ API de catálogo para parceiros (dropshipping)',

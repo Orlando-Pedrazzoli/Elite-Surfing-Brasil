@@ -15,7 +15,10 @@ const WslSchedule = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/wsl/events?season=2026`);
+        // ⚡ cache: 'no-store' — ver comentário no WslRankings.jsx
+        const res = await fetch(`${API_URL}/api/wsl/events?season=2026`, {
+          cache: 'no-store',
+        });
         const json = await res.json();
         if (json.success) {
           setEvents(json.events);
@@ -69,6 +72,7 @@ const WslSchedule = () => {
                   {status.label}
                 </div>
               </div>
+
               <div className='schedule-card__content'>
                 <h3 className='schedule-card__name'>{event.event}</h3>
                 <div className='schedule-card__details'>
@@ -86,6 +90,7 @@ const WslSchedule = () => {
                   <div className='schedule-card__note'>ℹ️ {event.note}</div>
                 )}
               </div>
+
               <div className='schedule-card__tour-badge'>{event.tour}</div>
             </div>
           );

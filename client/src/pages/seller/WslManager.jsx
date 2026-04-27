@@ -1,7 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import '../../styles/Blog.css';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4001';
+
+// ────────────────────────────────────────────────────────────────
+// Helpers de fetch — SEMPRE com bypass de cache
+// O admin nunca pode ver dados velhos do CDN, ou parece que "salvar
+// não funciona" quando na verdade só está vendo cache antigo.
+// ────────────────────────────────────────────────────────────────
+const noCacheFetch = (url, options = {}) => {
+  const sep = url.includes('?') ? '&' : '?';
+  const bustedUrl = `${url}${sep}_t=${Date.now()}`;
+  return fetch(bustedUrl, {
+    ...options,
+    cache: 'no-store',
+    headers: {
+      ...(options.headers || {}),
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+  });
+};
 
 // ── Country flag map (common WSL countries) ──
 const FLAG_MAP = {
@@ -9,9 +29,11 @@ const FLAG_MAP = {
   AUS: '🇦🇺',
   USA: '🇺🇸',
   ZAF: '🇿🇦',
+  RSA: '🇿🇦',
   JPN: '🇯🇵',
   FRA: '🇫🇷',
   PRT: '🇵🇹',
+  POR: '🇵🇹',
   ITA: '🇮🇹',
   IDN: '🇮🇩',
   MEX: '🇲🇽',
@@ -25,9 +47,10 @@ const FLAG_MAP = {
   DEU: '🇩🇪',
   CHL: '🇨🇱',
   ARG: '🇦🇷',
-  RSA: '🇿🇦',
   TAH: '🇵🇫',
   FIJ: '🇫🇯',
+  ISR: '🇮🇱',
+  MAR: '🇲🇦',
 };
 
 const getFlag = country =>
@@ -57,6 +80,8 @@ const COUNTRY_NAME_TO_CODE = {
   argentina: 'ARG',
   tahiti: 'TAH',
   fiji: 'FIJ',
+  israel: 'ISR',
+  morocco: 'MAR',
 };
 
 const parseRankingsText = text => {
@@ -147,8 +172,12 @@ const emptyEvent = {
 const WslManager = () => {
   const [activeTab, setActiveTab] = useState('rankings');
   const [season, setSeason] = useState('2026');
-  const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Saving states (per-button so o user vê qual está em progresso)
+  const [savingMale, setSavingMale] = useState(false);
+  const [savingFemale, setSavingFemale] = useState(false);
+  const [savingEvents, setSavingEvents] = useState(false);
 
   // Rankings state
   const [maleText, setMaleText] = useState('');
@@ -166,47 +195,64 @@ const WslManager = () => {
     'x-seller-token': token,
   };
 
+  const isAnySaving = savingMale || savingFemale || savingEvents;
+
   // ── Fetch data ──
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const rankRes = await fetch(
-        `${API_URL}/api/wsl/rankings?season=${season}`,
-      );
-      const rankJson = await rankRes.json();
-      if (rankJson.success) {
-        const toText = surfers =>
-          surfers
-            .map(s => `${s.rank}\t${s.name}\t${s.country}\t${s.points || ''}`)
-            .join('\n');
+  const fetchData = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!silent) setLoading(true);
+      try {
+        const rankRes = await noCacheFetch(
+          `${API_URL}/api/wsl/rankings?season=${season}`,
+        );
+        const rankJson = await rankRes.json();
+        if (rankJson.success) {
+          const toText = surfers =>
+            surfers
+              .map(s => `${s.rank}\t${s.name}\t${s.country}\t${s.points || ''}`)
+              .join('\n');
 
-        setMaleText(toText(rankJson.male));
-        setFemaleText(toText(rankJson.female));
-        setMaleParsed(rankJson.male);
-        setFemaleParsed(rankJson.female);
-        setRankingsLastUpdated(rankJson.lastUpdated || '');
-      }
+          setMaleText(toText(rankJson.male));
+          setFemaleText(toText(rankJson.female));
+          setMaleParsed(rankJson.male);
+          setFemaleParsed(rankJson.female);
+          setRankingsLastUpdated(rankJson.lastUpdated || '');
+        }
 
-      const evtRes = await fetch(`${API_URL}/api/wsl/events?season=${season}`);
-      const evtJson = await evtRes.json();
-      if (evtJson.success) {
-        setEvents(evtJson.events);
+        const evtRes = await noCacheFetch(
+          `${API_URL}/api/wsl/events?season=${season}`,
+        );
+        const evtJson = await evtRes.json();
+        if (evtJson.success) {
+          setEvents(evtJson.events);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar dados WSL:', err);
+        if (!silent) {
+          toast.error('Erro ao carregar dados. Verifica a tua conexão.');
+        }
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (err) {
-      console.error('Erro ao buscar dados WSL:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [season],
+  );
 
   useEffect(() => {
     fetchData();
-  }, [season]);
+  }, [fetchData]);
 
-  const showMessage = (text, type = 'success') => {
-    setMsg({ text, type });
-    setTimeout(() => setMsg(null), 4000);
-  };
+  // Avisar antes de fechar/recarregar a página enquanto guarda
+  useEffect(() => {
+    const beforeUnload = e => {
+      if (isAnySaving) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isAnySaving]);
 
   const handleMaleTextChange = text => {
     setMaleText(text);
@@ -218,16 +264,26 @@ const WslManager = () => {
     setFemaleParsed(parseRankingsText(text));
   };
 
+  // ────────────────────────────────────────────────────────────────
+  // SAVE RANKINGS — com toast loading/success/error e refetch
+  // ────────────────────────────────────────────────────────────────
   const saveRankings = async gender => {
     const surfers = gender === 'male' ? maleParsed : femaleParsed;
+    const setSaving = gender === 'male' ? setSavingMale : setSavingFemale;
+    const label = gender === 'male' ? 'masculino' : 'feminino';
+
     if (surfers.length === 0) {
-      return showMessage(
-        'Nenhum surfista detectado. Verifica o formato do texto.',
-        'error',
+      toast.error(
+        `Nenhum surfista detectado no ranking ${label}. Verifica o formato.`,
       );
+      return;
     }
+
+    setSaving(true);
+    const toastId = toast.loading(`A salvar ranking ${label}…`);
+
     try {
-      const res = await fetch(`${API_URL}/api/wsl/admin/rankings`, {
+      const res = await noCacheFetch(`${API_URL}/api/wsl/admin/rankings`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -238,13 +294,28 @@ const WslManager = () => {
         }),
       });
       const json = await res.json();
-      if (json.success) {
-        showMessage(json.message);
-      } else {
-        showMessage(json.message, 'error');
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || `HTTP ${res.status}`);
       }
+
+      toast.success(
+        `🏄 Ranking ${label} guardado! ${json.count || surfers.length} surfistas.`,
+        { id: toastId, duration: 3500 },
+      );
+
+      // Refetch silencioso pra confirmar que o que está no Mongo é
+      // exatamente o que a textarea mostra. Se houver divergência, o
+      // utilizador vê na hora.
+      await fetchData({ silent: true });
     } catch (err) {
-      showMessage('Erro ao salvar rankings', 'error');
+      console.error('Erro ao salvar rankings:', err);
+      toast.error(`Erro ao salvar: ${err.message || 'tenta novamente'}`, {
+        id: toastId,
+        duration: 5000,
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -258,32 +329,68 @@ const WslManager = () => {
     const nextStop =
       events.length > 0 ? Math.max(...events.map(e => e.stop)) + 1 : 1;
     setEvents([...events, { ...emptyEvent, stop: nextStop }]);
+    toast.success(`Etapa ${nextStop} adicionada — preenche e salva.`, {
+      duration: 2500,
+    });
   };
 
   const removeEvent = index => {
-    if (!window.confirm('Remover esta etapa?')) return;
+    const evt = events[index];
+    const label = evt.event ? `"${evt.event}"` : `Stop ${evt.stop}`;
+    if (!window.confirm(`Remover ${label}?`)) return;
     setEvents(events.filter((_, i) => i !== index));
+    toast(`${label} removida. Não esquecer de salvar!`, { icon: '🗑️' });
   };
 
+  // ────────────────────────────────────────────────────────────────
+  // SAVE EVENTS — com toast loading/success/error e refetch
+  // ────────────────────────────────────────────────────────────────
   const saveEvents = async () => {
     if (events.length === 0) {
-      return showMessage('Adiciona pelo menos uma etapa.', 'error');
+      toast.error('Adiciona pelo menos uma etapa.');
+      return;
     }
+
+    // Validação básica de campos obrigatórios
+    const invalid = events.find(
+      e => !e.event?.trim() || !e.location?.trim() || !e.dates?.trim(),
+    );
+    if (invalid) {
+      toast.error(
+        `Stop ${invalid.stop}: preenche evento, local e datas antes de salvar.`,
+      );
+      return;
+    }
+
+    setSavingEvents(true);
+    const toastId = toast.loading('A salvar calendário…');
+
     try {
-      const res = await fetch(`${API_URL}/api/wsl/admin/events`, {
+      const res = await noCacheFetch(`${API_URL}/api/wsl/admin/events`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ season, events }),
       });
       const json = await res.json();
-      if (json.success) {
-        showMessage(json.message);
-        fetchData();
-      } else {
-        showMessage(json.message, 'error');
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || `HTTP ${res.status}`);
       }
+
+      toast.success(
+        `📅 Calendário ${season} guardado! ${json.count || events.length} etapas.`,
+        { id: toastId, duration: 3500 },
+      );
+
+      await fetchData({ silent: true });
     } catch (err) {
-      showMessage('Erro ao salvar calendário', 'error');
+      console.error('Erro ao salvar calendário:', err);
+      toast.error(`Erro ao salvar: ${err.message || 'tenta novamente'}`, {
+        id: toastId,
+        duration: 5000,
+      });
+    } finally {
+      setSavingEvents(false);
     }
   };
 
@@ -323,6 +430,23 @@ const WslManager = () => {
     );
   };
 
+  // Estilo reutilizável dos botões "Salvar"
+  const saveBtnStyle = isSaving => ({
+    marginTop: '14px',
+    padding: '10px 28px',
+    background: isSaving ? '#93c5fd' : '#2563eb',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    cursor: isSaving ? 'not-allowed' : 'pointer',
+    transition: 'background 0.15s ease',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+  });
+
   return (
     <div style={{ height: '100%', overflowY: 'auto' }}>
       <div
@@ -354,11 +478,13 @@ const WslManager = () => {
             <select
               value={season}
               onChange={e => setSeason(e.target.value)}
+              disabled={isAnySaving}
               style={{
                 padding: '6px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
+                cursor: isAnySaving ? 'not-allowed' : 'pointer',
               }}
             >
               <option value='2025'>2025</option>
@@ -367,24 +493,6 @@ const WslManager = () => {
             </select>
           </div>
         </div>
-
-        {/* Message */}
-        {msg && (
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              background: msg.type === 'error' ? '#fef2f2' : '#f0fdf4',
-              color: msg.type === 'error' ? '#dc2626' : '#166534',
-              border: `1px solid ${msg.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
-            }}
-          >
-            {msg.text}
-          </div>
-        )}
 
         {/* Tabs */}
         <div
@@ -397,38 +505,42 @@ const WslManager = () => {
         >
           <button
             onClick={() => setActiveTab('rankings')}
+            disabled={isAnySaving}
             style={{
               padding: '10px 24px',
               border: 'none',
               background: 'none',
               fontSize: '0.95rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isAnySaving ? 'not-allowed' : 'pointer',
               marginBottom: '-2px',
               color: activeTab === 'rankings' ? '#2563eb' : '#6b7280',
               borderBottom:
                 activeTab === 'rankings'
                   ? '2px solid #2563eb'
                   : '2px solid transparent',
+              opacity: isAnySaving ? 0.6 : 1,
             }}
           >
             Rankings
           </button>
           <button
             onClick={() => setActiveTab('events')}
+            disabled={isAnySaving}
             style={{
               padding: '10px 24px',
               border: 'none',
               background: 'none',
               fontSize: '0.95rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isAnySaving ? 'not-allowed' : 'pointer',
               marginBottom: '-2px',
               color: activeTab === 'events' ? '#2563eb' : '#6b7280',
               borderBottom:
                 activeTab === 'events'
                   ? '2px solid #2563eb'
                   : '2px solid transparent',
+              opacity: isAnySaving ? 0.6 : 1,
             }}
           >
             Calendario / Etapas
@@ -505,7 +617,8 @@ const WslManager = () => {
                 type='text'
                 value={rankingsLastUpdated}
                 onChange={e => setRankingsLastUpdated(e.target.value)}
-                placeholder='Ex: 30 Março 2026'
+                placeholder='Ex: 27 Abril 2026'
+                disabled={isAnySaving}
                 style={{
                   flex: 1,
                   maxWidth: '300px',
@@ -534,6 +647,7 @@ const WslManager = () => {
                 onChange={e => handleMaleTextChange(e.target.value)}
                 placeholder='Cola aqui a lista masculina do site da WSL...'
                 rows={10}
+                disabled={savingMale}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -550,19 +664,27 @@ const WslManager = () => {
               <PreviewTable surfers={maleParsed} label='surfistas' />
               <button
                 onClick={() => saveRankings('male')}
-                style={{
-                  marginTop: '14px',
-                  padding: '10px 28px',
-                  background: '#2563eb',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                }}
+                disabled={savingMale || maleParsed.length === 0}
+                style={saveBtnStyle(savingMale)}
               >
-                Salvar Rankings Masculino
+                {savingMale ? (
+                  <>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '14px',
+                        height: '14px',
+                        border: '2px solid rgba(255,255,255,0.4)',
+                        borderTopColor: '#fff',
+                        borderRadius: '50%',
+                        animation: 'wslSpin 0.8s linear infinite',
+                      }}
+                    />
+                    A salvar…
+                  </>
+                ) : (
+                  'Salvar Rankings Masculino'
+                )}
               </button>
             </div>
 
@@ -583,6 +705,7 @@ const WslManager = () => {
                 onChange={e => handleFemaleTextChange(e.target.value)}
                 placeholder='Cola aqui a lista feminina do site da WSL...'
                 rows={8}
+                disabled={savingFemale}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -599,19 +722,27 @@ const WslManager = () => {
               <PreviewTable surfers={femaleParsed} label='surfistas' />
               <button
                 onClick={() => saveRankings('female')}
-                style={{
-                  marginTop: '14px',
-                  padding: '10px 28px',
-                  background: '#2563eb',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                }}
+                disabled={savingFemale || femaleParsed.length === 0}
+                style={saveBtnStyle(savingFemale)}
               >
-                Salvar Rankings Feminino
+                {savingFemale ? (
+                  <>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '14px',
+                        height: '14px',
+                        border: '2px solid rgba(255,255,255,0.4)',
+                        borderTopColor: '#fff',
+                        borderRadius: '50%',
+                        animation: 'wslSpin 0.8s linear infinite',
+                      }}
+                    />
+                    A salvar…
+                  </>
+                ) : (
+                  'Salvar Rankings Feminino'
+                )}
               </button>
             </div>
           </div>
@@ -666,6 +797,7 @@ const WslManager = () => {
                   </span>
                   <button
                     onClick={() => removeEvent(index)}
+                    disabled={savingEvents}
                     style={{
                       padding: '4px 12px',
                       background: '#fef2f2',
@@ -673,7 +805,7 @@ const WslManager = () => {
                       border: '1px solid #fecaca',
                       borderRadius: '6px',
                       fontSize: '0.8rem',
-                      cursor: 'pointer',
+                      cursor: savingEvents ? 'not-allowed' : 'pointer',
                       fontWeight: 600,
                     }}
                   >
@@ -715,6 +847,7 @@ const WslManager = () => {
                           parseInt(e.target.value) || 1,
                         )
                       }
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -747,6 +880,7 @@ const WslManager = () => {
                         updateEventField(index, 'event', e.target.value)
                       }
                       placeholder='Rip Curl Pro Bells Beach'
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -779,6 +913,7 @@ const WslManager = () => {
                         updateEventField(index, 'location', e.target.value)
                       }
                       placeholder='Bells Beach, Victoria, Austrália'
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -811,6 +946,7 @@ const WslManager = () => {
                         updateEventField(index, 'dates', e.target.value)
                       }
                       placeholder='1 - 11 Abril'
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -841,6 +977,7 @@ const WslManager = () => {
                       onChange={e =>
                         updateEventField(index, 'tour', e.target.value)
                       }
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -876,6 +1013,7 @@ const WslManager = () => {
                       onChange={e =>
                         updateEventField(index, 'status', e.target.value)
                       }
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -916,6 +1054,7 @@ const WslManager = () => {
                         )
                       }
                       placeholder='Nome do vencedor'
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -949,6 +1088,7 @@ const WslManager = () => {
                         updateEventField(index, 'note', e.target.value)
                       }
                       placeholder='Informação extra (opcional)'
+                      disabled={savingEvents}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid #d1d5db',
@@ -971,6 +1111,7 @@ const WslManager = () => {
             >
               <button
                 onClick={addEvent}
+                disabled={savingEvents}
                 style={{
                   padding: '10px 24px',
                   background: '#f0fdf4',
@@ -979,30 +1120,46 @@ const WslManager = () => {
                   borderRadius: '8px',
                   fontWeight: 600,
                   fontSize: '0.9rem',
-                  cursor: 'pointer',
+                  cursor: savingEvents ? 'not-allowed' : 'pointer',
                 }}
               >
                 + Adicionar Etapa
               </button>
               <button
                 onClick={saveEvents}
-                style={{
-                  padding: '10px 28px',
-                  background: '#2563eb',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                }}
+                disabled={savingEvents || events.length === 0}
+                style={saveBtnStyle(savingEvents)}
               >
-                Salvar Calendario Completo
+                {savingEvents ? (
+                  <>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '14px',
+                        height: '14px',
+                        border: '2px solid rgba(255,255,255,0.4)',
+                        borderTopColor: '#fff',
+                        borderRadius: '50%',
+                        animation: 'wslSpin 0.8s linear infinite',
+                      }}
+                    />
+                    A salvar…
+                  </>
+                ) : (
+                  'Salvar Calendario Completo'
+                )}
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Spinner keyframes */}
+      <style>{`
+        @keyframes wslSpin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
