@@ -7,7 +7,7 @@ import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
 import ShippingCalculator from '../components/ShippingCalculator';
-import CreditCardForm from '../components/CreditCardForm';
+import MercadoPagoCardPayment from '../components/MercadoPagoCardPayment';
 import OtpVerificationModal from '../components/OtpVerificationModal';
 import {
   MapPin,
@@ -70,7 +70,7 @@ const Cart = () => {
   // ═══ FRETE — Melhor Envio ═══
   const [selectedShipping, setSelectedShipping] = useState(null);
 
-  // ═══ CPF para Pagar.me (cartão + boleto) ═══
+  // ═══ CPF para Mercado Pago (boleto + fallback do cartão) ═══
   const [customerDocument, setCustomerDocument] = useState('');
 
   // ═══ OTP Email Verification (Guest Checkout) ═══
@@ -78,7 +78,6 @@ const Cart = () => {
   const [emailVerificationToken, setEmailVerificationToken] = useState(null);
   const [verifiedEmail, setVerifiedEmail] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
-  const [pendingCardPayload, setPendingCardPayload] = useState(null);
 
   const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
   const [appliedPromoCode, setAppliedPromoCode] = useState('');
@@ -113,14 +112,15 @@ const Cart = () => {
       setTimeout(() => {
         executeHandlePlaceOrder(token);
       }, 300);
-    } else if (pendingAction === 'cardSubmit' && pendingCardPayload) {
-      setTimeout(() => {
-        executeHandleCardSubmit(pendingCardPayload, token);
-      }, 300);
+    } else if (pendingAction === 'cardSubmit') {
+      // O token do cartão (Brick) expira rápido — não reenviamos automaticamente.
+      // O utilizador clica em pagar novamente, agora já com o email verificado.
+      toast.success(
+        'Email verificado! Clique em pagar novamente para concluir.',
+      );
     }
 
     setPendingAction(null);
-    setPendingCardPayload(null);
   };
 
   // Reset verificação quando email do guest muda
@@ -349,90 +349,88 @@ const Cart = () => {
   };
 
   // =============================================================================
-  // 💳 HANDLE CARD SUBMIT — PAGAR.ME (TRANSPARENT CHECKOUT)
+  // 💳 CARTÃO — recebe o formData do Card Payment Brick (Mercado Pago)
+  // O Brick chama isto no submit; devolvemos uma Promise (resolve=sucesso, reject=erro).
   // =============================================================================
-  const handleCardSubmit = async cardPayload => {
+  const handleCardSubmit = async formData => {
+    // Guest tem de verificar o email ANTES (o token do cartão é curto).
     if (guestNeedsVerification()) {
       if (!getGuestEmail()) {
-        return toast.error('Por favor, adicione um endereço com email válido.');
+        toast.error('Por favor, adicione um endereço com email válido.');
+        throw new Error('email_required');
       }
       setPendingAction('cardSubmit');
-      setPendingCardPayload(cardPayload);
       setShowOtpModal(true);
-      return;
+      toast('Verifique o seu email e confirme o pagamento novamente.', {
+        icon: '📧',
+      });
+      throw new Error('verification_required');
     }
 
-    executeHandleCardSubmit(cardPayload, emailVerificationToken);
+    return executeHandleCardSubmit(formData, emailVerificationToken);
   };
 
-  const executeHandleCardSubmit = async (cardPayload, token) => {
-    const { cardToken, installments, customerDocument, cardBrand } =
-      cardPayload;
+  const executeHandleCardSubmit = async (formData, token) => {
     const currentAddress = getCurrentAddress();
     if (!currentAddress) {
-      return toast.error('Por favor, adicione um endereço de entrega.');
+      toast.error('Por favor, adicione um endereço de entrega.');
+      throw new Error('no_address');
     }
     if (!selectedShipping) {
-      return toast.error('Por favor, calcule e selecione uma opção de frete.');
+      toast.error('Por favor, calcule e selecione uma opção de frete.');
+      throw new Error('no_shipping');
     }
     const stockErrors = validateStockBeforeCheckout();
     if (stockErrors.length > 0) {
       toast.error('Estoque insuficiente:\n' + stockErrors.join('\n'));
-      return;
+      throw new Error('stock');
     }
+
     trackInitiateCheckout(cartItems, parseFloat(calculateTotal()));
     setIsProcessing(true);
 
     try {
-      const subtotal = getSubtotal();
-      const promoDisc = getPromoDiscount();
-      const shipping = getShippingCost();
-      const finalAmount = Math.max(0, subtotal - promoDisc + shipping);
-
       const customerName =
         user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
       const customerEmail = user?.email || currentAddress.email;
       const customerPhone = currentAddress.phone || '';
+      const cpf = (
+        customerDocument ||
+        formData.payer?.identification?.number ||
+        ''
+      ).replace(/\D/g, '');
 
       const orderPayload = {
         items: cartArray.map(item => ({
           product: item._id,
           quantity: item.quantity,
         })),
-        amount: finalAmount,
-        originalAmount: subtotal,
-        discountAmount: promoDisc,
+        // ─── dados do Brick ───
+        token: formData.token,
+        issuer_id: formData.issuer_id,
+        payment_method_id: formData.payment_method_id,
+        installments: formData.installments,
+        payer: formData.payer,
+        // ─── contexto do pedido (o valor é RECALCULADO no servidor) ───
         discountPercentage: discountApplied ? 10 : 0,
         promoCode: discountApplied ? appliedPromoCode : '',
-        installments,
-        cardToken,
         customerName,
         customerEmail,
         customerPhone,
-        customerDocument,
-        shippingCost: shipping,
+        customerDocument: cpf,
+        shippingCost: getShippingCost(),
         shippingMethod: selectedShipping.name,
         shippingCarrier: selectedShipping.carrier,
         shippingDeliveryDays: selectedShipping.deliveryDays,
         shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
-        billingAddress: {
-          street: currentAddress.street,
-          number: currentAddress.number || '',
-          complement: currentAddress.complement || '',
-          neighborhood: currentAddress.neighborhood || '',
-          city: currentAddress.city,
-          state: currentAddress.state,
-          zipcode: currentAddress.zipcode,
-        },
       };
 
       let endpoint;
-
       if (user) {
         orderPayload.userId = user._id;
         orderPayload.address = selectedAddress._id;
         orderPayload.isGuestOrder = false;
-        endpoint = '/api/pagarme/card/create';
+        endpoint = '/api/mercadopago/card/create';
       } else {
         orderPayload.verificationToken = token;
         orderPayload.guestEmail = customerEmail;
@@ -451,7 +449,7 @@ const Cart = () => {
         orderPayload.isGuestOrder = true;
         orderPayload.guestName = customerName;
         orderPayload.guestPhone = customerPhone;
-        endpoint = '/api/pagarme/card/guest/create';
+        endpoint = '/api/mercadopago/card/guest/create';
       }
 
       const { data } = await axios.post(endpoint, orderPayload);
@@ -468,37 +466,38 @@ const Cart = () => {
         if (data.status === 'paid') {
           toast.success('Pagamento aprovado!');
           navigate(
-            `/order-success/${data.orderId}?payment=pagarme&method=card${!user ? '&guest=true' : ''}`,
+            `/order-success/${data.orderId}?payment=mercadopago&method=card${!user ? '&guest=true' : ''}`,
           );
-        } else if (data.status === 'pending') {
+        } else {
           toast.success('Pagamento em análise. Você será notificado!');
           navigate(
-            `/order-success/${data.orderId}?payment=pagarme&method=card&pending=true${!user ? '&guest=true' : ''}`,
+            `/order-success/${data.orderId}?payment=mercadopago&method=card&pending=true${!user ? '&guest=true' : ''}`,
           );
         }
-      } else {
-        toast.error(data.message || 'Falha no pagamento. Tente novamente.');
+        return; // resolve → Brick conclui com sucesso
       }
+
+      // recusado
+      toast.error(data.message || 'Falha no pagamento. Tente novamente.');
+      throw new Error(data.message || 'payment_rejected'); // reject → Brick mostra erro
     } catch (error) {
-      console.error('Erro no pagamento com cartão:', error);
       if (error.response?.data?.requiresVerification) {
         setEmailVerificationToken(null);
         setVerifiedEmail(null);
+        toast.error('Verificação expirada. Verifique seu email novamente.');
+      } else if (error.response) {
         toast.error(
-          'Verificação expirada. Por favor, verifique seu email novamente.',
+          error.response?.data?.message || 'Erro ao processar pagamento.',
         );
-        return;
       }
-      toast.error(
-        error.response?.data?.message || 'Erro ao processar pagamento.',
-      );
+      throw error; // garante reject no Brick
     } finally {
       setIsProcessing(false);
     }
   };
 
   // =============================================================================
-  // HANDLE PLACE ORDER — PIX MANUAL + BOLETO (PAGAR.ME)
+  // HANDLE PLACE ORDER — PIX NATIVO + BOLETO (MERCADO PAGO)
   // =============================================================================
   const handlePlaceOrder = async () => {
     if (guestNeedsVerification()) {
@@ -549,36 +548,46 @@ const Cart = () => {
         subtotal - promoDisc - pixDisc + shipping,
       );
 
-      // ═══ FLUXO PIX MANUAL ═══
+      // ═══ FLUXO PIX NATIVO — MERCADO PAGO ═══
       if (paymentMethod === 'pix') {
+        const customerName =
+          user?.name ||
+          `${currentAddress.firstName} ${currentAddress.lastName}`;
+        const customerEmail = user?.email || currentAddress.email;
+        const customerPhone = currentAddress.phone || '';
+
         const pixPayload = {
           items: cartArray.map(item => ({
             product: item._id,
             quantity: item.quantity,
           })),
+          discountPercentage: discountApplied ? 10 : 0,
+          promoCode: discountApplied ? appliedPromoCode : '',
+          customerName,
+          customerEmail,
+          customerPhone,
+          customerDocument: customerDocument.replace(/\D/g, ''),
           shippingCost: shipping,
           shippingMethod: selectedShipping.name,
           shippingCarrier: selectedShipping.carrier,
           shippingDeliveryDays: selectedShipping.deliveryDays,
           shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
-          promoCode: discountApplied ? appliedPromoCode : null,
-          discountAmount: promoDisc,
-          discountPercentage: discountApplied ? 10 : 0,
         };
 
         let pixEndpoint;
-
         if (user) {
+          pixPayload.userId = user._id;
           pixPayload.address = selectedAddress._id;
-          pixEndpoint = '/api/pix/create';
+          pixPayload.isGuestOrder = false;
+          pixEndpoint = '/api/mercadopago/pix/create';
         } else {
           pixPayload.verificationToken = token;
-          pixPayload.guestEmail = currentAddress.email;
+          pixPayload.guestEmail = customerEmail;
 
           const addressResponse = await axios.post('/api/address/guest', {
             address: currentAddress,
             verificationToken: token,
-            guestEmail: currentAddress.email,
+            guestEmail: customerEmail,
           });
           if (!addressResponse.data.success) {
             throw new Error(
@@ -587,22 +596,22 @@ const Cart = () => {
           }
 
           pixPayload.address = addressResponse.data.addressId;
-          pixPayload.guestName = `${currentAddress.firstName} ${currentAddress.lastName}`;
-          pixPayload.guestPhone = currentAddress.phone || '';
-          pixEndpoint = '/api/pix/guest/create';
+          pixPayload.isGuestOrder = true;
+          pixPayload.guestName = customerName;
+          pixPayload.guestPhone = customerPhone;
+          pixEndpoint = '/api/mercadopago/pix/guest/create';
         }
 
         const { data } = await axios.post(pixEndpoint, pixPayload);
 
         if (data.success) {
           localStorage.setItem(
-            'pix_manual_data',
+            'pix_payment_data',
             JSON.stringify({
-              orderId: data.order.orderId,
-              amount: data.order.amount,
-              originalAmount: data.order.originalAmount,
-              pixDiscount: data.order.pixDiscount,
-              createdAt: data.order.createdAt,
+              orderId: data.orderId,
+              amount: data.amount,
+              pix: data.pix, // { qrCode, qrCodeBase64, ticketUrl, expiresAt }
+              expiresAt: data.pix.expiresAt,
             }),
           );
 
@@ -610,19 +619,19 @@ const Cart = () => {
           setCartItems(emptyCart);
           saveCartToStorage(emptyCart);
 
-          if (!user && currentAddress.email) {
-            localStorage.setItem('guest_checkout_email', currentAddress.email);
+          if (!user && customerEmail) {
+            localStorage.setItem('guest_checkout_email', customerEmail);
           }
 
-          navigate(`/pix-payment/${data.order.orderId}`);
+          navigate(`/pix-payment/${data.orderId}`);
         } else {
-          toast.error(data.message || 'Erro ao criar pedido PIX.');
+          toast.error(data.message || 'Erro ao criar pagamento PIX.');
         }
 
         return;
       }
 
-      // ═══ FLUXO BOLETO — PAGAR.ME V5 ═══
+      // ═══ FLUXO BOLETO — MERCADO PAGO ═══
       const customerName =
         user?.name || `${currentAddress.firstName} ${currentAddress.lastName}`;
       const customerEmail = user?.email || currentAddress.email;
@@ -633,7 +642,6 @@ const Cart = () => {
           product: item._id,
           quantity: item.quantity,
         })),
-        amount: finalAmount,
         originalAmount: subtotal,
         discountAmount: promoDisc,
         discountPercentage: discountApplied ? 10 : 0,
@@ -655,7 +663,7 @@ const Cart = () => {
         boletoPayload.userId = user._id;
         boletoPayload.address = selectedAddress._id;
         boletoPayload.isGuestOrder = false;
-        endpoint = '/api/pagarme/boleto/create';
+        endpoint = '/api/mercadopago/boleto/create';
       } else {
         boletoPayload.verificationToken = token;
         boletoPayload.guestEmail = customerEmail;
@@ -674,7 +682,7 @@ const Cart = () => {
         boletoPayload.isGuestOrder = true;
         boletoPayload.guestName = customerName;
         boletoPayload.guestPhone = customerPhone;
-        endpoint = '/api/pagarme/boleto/guest/create';
+        endpoint = '/api/mercadopago/boleto/guest/create';
       }
 
       const { data } = await axios.post(endpoint, boletoPayload);
@@ -684,7 +692,7 @@ const Cart = () => {
           'boleto_payment_data',
           JSON.stringify({
             orderId: data.orderId,
-            amount: finalAmount,
+            amount: data.amount ?? finalAmount,
             boleto: data.boleto,
             createdAt: new Date().toISOString(),
           }),
@@ -1065,7 +1073,6 @@ const Cart = () => {
         onClose={() => {
           setShowOtpModal(false);
           setPendingAction(null);
-          setPendingCardPayload(null);
         }}
         email={getGuestEmail()}
         onVerified={handleOtpVerified}
@@ -1152,13 +1159,6 @@ const Cart = () => {
                     key={product._id}
                     className={`p-4 sm:p-5 transition-colors ${hasStockWarning ? 'bg-red-50' : ''}`}
                   >
-                    {/* ══════════════════════════════════════════
-                        DESKTOP (sm+): Uma linha — Imagem | Info | Qty | Preço | Lixeira
-                        MOBILE: Duas linhas
-                          L1: Imagem + Info (nome, cor, peso)
-                          L2: [−][qty][+]  Preço  🗑️   (full width)
-                    ══════════════════════════════════════════ */}
-
                     {/* ── LINHA 1: Imagem + Detalhes do produto ── */}
                     <div className='flex items-start gap-3 sm:gap-4'>
                       {/* Imagem */}
@@ -1255,7 +1255,6 @@ const Cart = () => {
                     </div>
 
                     {/* ── LINHA 2 (mobile only): Qty + Preço + Remover ── */}
-                    {/* Full width abaixo da imagem+info, não espremida */}
                     <div className='flex sm:hidden items-center justify-between mt-3 pt-3 border-t border-gray-100'>
                       <QuantitySelector
                         productId={product._id}
@@ -1851,15 +1850,13 @@ const Cart = () => {
                       </>
                     )}
 
-                    {/* Formulário de Cartão — Pagar.me */}
+                    {/* Formulário de Cartão — Mercado Pago (Card Brick) */}
                     {paymentMethod === 'card' && (
                       <div className='mt-4'>
-                        <CreditCardForm
+                        <MercadoPagoCardPayment
                           totalAmount={parseFloat(calculateTotal())}
                           onSubmit={handleCardSubmit}
-                          isProcessing={isProcessing}
-                          customerDocument={customerDocument}
-                          setCustomerDocument={setCustomerDocument}
+                          payerEmail={user?.email || getCurrentAddress()?.email}
                         />
                       </div>
                     )}

@@ -1,5 +1,6 @@
 // server.js - Elite Surfing Brasil
-// ✅ MIGRAÇÃO 12/03/2026: Stripe REMOVIDO — Pagar.me é o único gateway
+// ✅ MIGRAÇÃO 12/06/2026: Pagar.me REMOVIDO — Mercado Pago é o único gateway
+//    (Cartão via Card Brick + PIX nativo auto-confirmado + Boleto)
 // ✅ 29/03/2026: Adicionado OTP Email Verification para guest checkout
 // ✅ 07/04/2026: API de catálogo para parceiros (dropshipping Rio Surf Shop)
 // ⚡ 20/04/2026 v1: OTIMIZAÇÃO DE EDGE REQUESTS
@@ -39,7 +40,7 @@ import shippingRouter from './routes/shippingRoute.js';
 import pixRouter from './routes/pixManualRoute.js';
 import clienteRouter from './routes/clienteRoute.js';
 import romaneioRouter from './routes/romaneioRoute.js';
-import pagarmeRouter from './routes/pagarmeRoute.js';
+import mercadoPagoRouter from './routes/mercadoPagoRoute.js';
 import otpRouter from './routes/otpRoute.js';
 import blogRouter from './routes/blogRoute.js';
 import wslRouter from './routes/wslRoute.js';
@@ -81,7 +82,7 @@ app.use((req, res, next) => {
   }
 
   if (
-    req.path.startsWith('/api/pagarme/webhook') ||
+    req.path.startsWith('/api/mercadopago/webhook') ||
     req.path.startsWith('/api/shipping/webhook')
   ) {
     return next();
@@ -149,7 +150,8 @@ const globalLimiter = rateLimit({
     ) {
       return true;
     }
-    if (req.path.startsWith('/api/pagarme/webhook')) return true;
+    // Webhook do Mercado Pago nunca deve ser limitado
+    if (req.path.startsWith('/api/mercadopago/webhook')) return true;
     return false;
   },
 });
@@ -257,16 +259,17 @@ app.get('/', (req, res) => {
     message: 'Elite Surfing Brasil API is Working',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    version: '3.3.3',
+    version: '4.0.0',
     payments: {
-      pix: '✅ PIX Manual',
-      card: '✅ Pagar.me — Cartão 12x sem juros',
-      boleto: '✅ Pagar.me — Boleto Bancário',
+      pix: '✅ Mercado Pago — PIX nativo (auto-confirmado)',
+      card: '✅ Mercado Pago — Cartão (Card Brick, até 12x)',
+      boleto: '✅ Mercado Pago — Boleto Bancário',
     },
     security: {
       emailOTP: '✅ Verificação de email OTP no guest checkout',
       rateLimit: '✅ 200 req/min global + limites específicos',
       scraperBlock: '✅ Bloqueio de scrapers agressivos conhecidos',
+      webhook: '✅ Webhook Mercado Pago validado por x-signature',
     },
     cache: {
       strategy: '✅ Admin no-store + Public SWR + Vary: Authorization',
@@ -287,10 +290,10 @@ app.use('/api/address', addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/shipping', shippingRouter);
-app.use('/api/pix', pixRouter);
+app.use('/api/pix', pixRouter); // legado (PIX manual) — checkout já não usa
 app.use('/api/clientes', clienteRouter);
 app.use('/api/romaneios', romaneioRouter);
-app.use('/api/pagarme', pagarmeRouter);
+app.use('/api/mercadopago', mercadoPagoRouter);
 app.use('/api/otp', otpRouter);
 app.use('/api/blog', readLimiter, blogRouter);
 app.use('/api/wsl', readLimiter, wslRouter);
@@ -298,8 +301,10 @@ app.use('/api/v1/catalog', readLimiter, catalogRouter);
 app.use('/api/partner', partnerRouter);
 
 console.log('✅ All routes registered');
-console.log('✅ Payments: PIX Manual + Pagar.me (Cartão 12x + Boleto)');
-console.log('✅ Security: Email OTP + Rate Limiting + Scraper Block');
+console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');
+console.log(
+  '✅ Security: Email OTP + Rate Limiting + Scraper Block + Webhook x-signature',
+);
 console.log('✅ Cache: Admin no-store + Public SWR + Vary: Authorization');
 console.log('✅ Integrations: Catalog API for partners enabled');
 
