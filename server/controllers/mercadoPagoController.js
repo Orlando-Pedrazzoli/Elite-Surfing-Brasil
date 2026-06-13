@@ -608,6 +608,18 @@ export const createBoletoPayment = async (req, res) => {
       });
     }
 
+    console.log(
+      '🧾 MP boleto resposta:',
+      JSON.stringify({
+        id: payment?.id,
+        status: payment?.status,
+        status_detail: payment?.status_detail,
+        external_resource_url:
+          payment?.transaction_details?.external_resource_url || null,
+        barcode: payment?.barcode?.content || null,
+      }),
+    );
+
     const td = payment.transaction_details || {};
     const boletoUrl = td.external_resource_url || '';
     const barcode = payment.barcode?.content || '';
