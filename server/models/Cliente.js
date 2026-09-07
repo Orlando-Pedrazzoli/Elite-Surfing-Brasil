@@ -1,3 +1,4 @@
+// server/models/Cliente.js
 import mongoose from 'mongoose';
 
 const enderecoSchema = new mongoose.Schema(
@@ -25,12 +26,16 @@ const clienteSchema = new mongoose.Schema(
     // ── Pessoa Jurídica ──
     razaoSocial: { type: String, default: null },
     nomeFantasia: { type: String, default: null },
-    cnpj: { type: String, default: null, sparse: true },
+    // 🔧 FIX: removido `sparse: true` inline — no Mongoose, sparse no
+    // campo já cria um índice, duplicando o schema.index() lá embaixo
+    // (warning "Duplicate schema index"). O índice fica SÓ no schema.index.
+    cnpj: { type: String, default: null },
     ie: { type: String, default: null }, // Inscrição Estadual
 
     // ── Pessoa Física ──
     nome: { type: String, default: null },
-    cpf: { type: String, default: null, sparse: true },
+    // 🔧 FIX: mesmo caso do cnpj acima — índice fica só no schema.index
+    cpf: { type: String, default: null },
     rg: { type: String, default: null },
 
     // ── Contato (ambos) ──
