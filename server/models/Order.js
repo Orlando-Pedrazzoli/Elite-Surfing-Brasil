@@ -1,3 +1,4 @@
+// server/models/Order.js
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema(
@@ -32,6 +33,17 @@ const orderSchema = new mongoose.Schema(
     shippingServiceId: { type: String, default: '' },
     pixDiscount: { type: Number, default: 0 },
     paidAt: { type: Date, default: null },
+
+    // ═══ 🏷️ Melhor Envio — Etiqueta de Envio ═══
+    // meStatus: null → 'cart' → 'paid' → 'generated' → 'printed'
+    // O fluxo é retomável: se parar em qualquer etapa (ex: saldo
+    // insuficiente no checkout), clicar de novo continua de onde parou.
+    meShipmentIds: { type: [String], default: [] },
+    meStatus: { type: String, default: null },
+    meTrackingCode: { type: String, default: null },
+    meLabelUrl: { type: String, default: null },
+    mePurchasedAt: { type: Date, default: null },
+    meError: { type: String, default: null },
 
     // ═══ Mercado Pago ═══
     mpPaymentId: { type: String, default: null },

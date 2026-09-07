@@ -8,7 +8,17 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { calculateShipping } from '../services/melhorEnvioService.js';
+import {
+  addOrderToMeCart,
+  checkoutShipments,
+  generateLabels,
+  printLabels,
+  getShipmentInfo,
+  meDelay,
+} from '../services/melhorEnvioLabelService.js';
 import Product from '../models/Product.js';
+import Order from '../models/Order.js';
+import Address from '../models/Address.js';
 
 // =============================================================================
 // HELPERS — REGIÃO, FRETE GRÁTIS
@@ -19,7 +29,7 @@ import Product from '../models/Product.js';
  * Sul/Sudeste: SP (01-19), RJ (20-28), ES (29), MG (30-39), PR (80-87), SC (88-89), RS (90-99)
  * Demais: tudo entre 40-79
  */
-const getRegionFromCep = (cep) => {
+const getRegionFromCep = cep => {
   const prefix = parseInt(cep.substring(0, 2), 10);
 
   // Sudeste: SP (01-19), RJ (20-28), ES (29), MG (30-39)
@@ -35,7 +45,7 @@ const getRegionFromCep = (cep) => {
 /**
  * Retorna o estado estimado a partir do CEP (para exibição)
  */
-const getStateFromCep = (cep) => {
+const getStateFromCep = cep => {
   const prefix = parseInt(cep.substring(0, 2), 10);
   if (prefix >= 1 && prefix <= 19) return 'SP';
   if (prefix >= 20 && prefix <= 28) return 'RJ';
@@ -88,7 +98,10 @@ export const calculateShippingQuote = async (req, res) => {
 
     const cleanCep = String(cep).replace(/\D/g, '');
     if (cleanCep.length !== 8) {
-      return res.json({ success: false, message: 'CEP inválido. Deve conter 8 dígitos.' });
+      return res.json({
+        success: false,
+        message: 'CEP inválido. Deve conter 8 dígitos.',
+      });
     }
 
     // 2. Montar lista de produtos para cotação
@@ -96,16 +109,19 @@ export const calculateShippingQuote = async (req, res) => {
 
     if (products && Array.isArray(products) && products.length > 0) {
       // ═══ MODO CARRINHO ═══
-      const productIds = products.map((p) => p.productId || p._id || p.id);
+      const productIds = products.map(p => p.productId || p._id || p.id);
       const dbProducts = await Product.find({ _id: { $in: productIds } });
 
       if (dbProducts.length === 0) {
-        return res.json({ success: false, message: 'Nenhum produto encontrado.' });
+        return res.json({
+          success: false,
+          message: 'Nenhum produto encontrado.',
+        });
       }
 
-      productList = dbProducts.map((dbProduct) => {
+      productList = dbProducts.map(dbProduct => {
         const cartItem = products.find(
-          (p) => String(p.productId || p._id || p.id) === String(dbProduct._id)
+          p => String(p.productId || p._id || p.id) === String(dbProduct._id),
         );
         return {
           _id: dbProduct._id,
@@ -115,39 +131,55 @@ export const calculateShippingQuote = async (req, res) => {
           quantity: cartItem?.quantity || 1,
         };
       });
-
     } else if (product) {
       // ═══ MODO PRODUTO INDIVIDUAL ═══
       if (product._id && product.weight && product.dimensions) {
-        productList = [{
-          _id: product._id,
-          weight: product.weight,
-          dimensions: product.dimensions,
-          offerPrice: product.offerPrice || 0,
-          quantity: product.quantity || 1,
-        }];
+        productList = [
+          {
+            _id: product._id,
+            weight: product.weight,
+            dimensions: product.dimensions,
+            offerPrice: product.offerPrice || 0,
+            quantity: product.quantity || 1,
+          },
+        ];
       } else if (product._id || product.productId) {
-        const dbProduct = await Product.findById(product._id || product.productId);
+        const dbProduct = await Product.findById(
+          product._id || product.productId,
+        );
         if (!dbProduct) {
-          return res.json({ success: false, message: 'Produto não encontrado.' });
+          return res.json({
+            success: false,
+            message: 'Produto não encontrado.',
+          });
         }
-        productList = [{
-          _id: dbProduct._id,
-          weight: dbProduct.weight,
-          dimensions: dbProduct.dimensions,
-          offerPrice: dbProduct.offerPrice,
-          quantity: product.quantity || 1,
-        }];
+        productList = [
+          {
+            _id: dbProduct._id,
+            weight: dbProduct.weight,
+            dimensions: dbProduct.dimensions,
+            offerPrice: dbProduct.offerPrice,
+            quantity: product.quantity || 1,
+          },
+        ];
       } else {
-        return res.json({ success: false, message: 'Dados do produto incompletos.' });
+        return res.json({
+          success: false,
+          message: 'Dados do produto incompletos.',
+        });
       }
-
     } else {
-      return res.json({ success: false, message: 'Informe os produtos para cálculo de frete.' });
+      return res.json({
+        success: false,
+        message: 'Informe os produtos para cálculo de frete.',
+      });
     }
 
     // 3. Calcular subtotal dos produtos
-    const subtotal = productList.reduce((sum, p) => sum + (p.offerPrice * p.quantity), 0);
+    const subtotal = productList.reduce(
+      (sum, p) => sum + p.offerPrice * p.quantity,
+      0,
+    );
 
     // 4. Determinar região e threshold de frete grátis
     const region = getRegionFromCep(cleanCep);
@@ -156,7 +188,9 @@ export const calculateShippingQuote = async (req, res) => {
     const qualifiesFreeShipping = subtotal >= threshold;
     const amountToFreeShipping = Math.max(0, threshold - subtotal);
 
-    console.log(`📦 Frete — CEP: ${cleanCep} | Estado: ${state} | Região: ${region} | Subtotal: R$${subtotal.toFixed(2)} | Threshold: R$${threshold} | Free: ${qualifiesFreeShipping}`);
+    console.log(
+      `📦 Frete — CEP: ${cleanCep} | Estado: ${state} | Região: ${region} | Subtotal: R$${subtotal.toFixed(2)} | Threshold: R$${threshold} | Free: ${qualifiesFreeShipping}`,
+    );
 
     // 5. Chamar serviço do Melhor Envio
     const result = await calculateShipping(cleanCep, productList);
@@ -166,7 +200,7 @@ export const calculateShippingQuote = async (req, res) => {
     }
 
     // 6. Aplicar frete grátis nas opções (se qualificar)
-    let options = result.options.map((option) => {
+    let options = result.options.map(option => {
       if (qualifiesFreeShipping) {
         return {
           ...option,
@@ -199,12 +233,192 @@ export const calculateShippingQuote = async (req, res) => {
         amountRemaining: parseFloat(amountToFreeShipping.toFixed(2)),
       },
     });
-
   } catch (error) {
     console.error('❌ Erro no cálculo de frete:', error.message);
     return res.json({
       success: false,
       message: 'Erro interno ao calcular frete. Tente novamente.',
     });
+  }
+};
+// =============================================================================
+// 🏷️ POST /api/shipping/label/process — Etiqueta Melhor Envio (authSeller)
+// =============================================================================
+// Fluxo completo em UM clique: carrinho → checkout → geração → impressão.
+// RETOMÁVEL: cada etapa persiste o progresso em order.meStatus. Se parar
+// (ex: saldo insuficiente), o próximo clique continua de onde parou —
+// nunca insere/paga duas vezes.
+//
+// Body: { orderId, invoiceKey?, recipientDocument? }
+//   - invoiceKey: chave da NF-e (44 dígitos) → envio COMERCIAL.
+//     Sem invoiceKey → envio com Declaração de Conteúdo (DC-e automática).
+//   - recipientDocument: CPF do destinatário, caso o pedido não tenha.
+// =============================================================================
+
+export const processShippingLabel = async (req, res) => {
+  try {
+    const { orderId, invoiceKey, recipientDocument } = req.body;
+
+    if (!orderId) {
+      return res.json({ success: false, message: 'orderId é obrigatório' });
+    }
+
+    const order = await Order.findById(orderId).populate('items.product');
+    if (!order) {
+      return res.json({ success: false, message: 'Pedido não encontrado' });
+    }
+
+    const address = await Address.findById(order.address);
+    if (!address) {
+      return res.json({
+        success: false,
+        message: 'Endereço do pedido não encontrado',
+      });
+    }
+
+    // Limpa erro anterior (novo processamento)
+    order.meError = null;
+
+    // ─── ETAPA 1: Inserir no carrinho ME (se ainda não foi) ─────────
+    if (!order.meShipmentIds || order.meShipmentIds.length === 0) {
+      const products = order.items
+        .filter(item => item.product)
+        .map(item => ({
+          _id: item.product._id,
+          name: item.product.name,
+          offerPrice: item.product.offerPrice,
+          quantity: item.quantity,
+          weight: item.product.weight,
+          dimensions: item.product.dimensions,
+        }));
+
+      if (products.length === 0) {
+        return res.json({
+          success: false,
+          message: 'Pedido sem produtos válidos (produtos excluídos?)',
+        });
+      }
+
+      const cartResult = await addOrderToMeCart({
+        order,
+        address,
+        products,
+        invoiceKey: invoiceKey || null,
+        recipientDocument: recipientDocument || null,
+      });
+
+      order.meShipmentIds = cartResult.shipmentIds;
+      order.meStatus = 'cart';
+      await order.save();
+
+      if (cartResult.partial) {
+        return res.json({
+          success: false,
+          meStatus: 'cart',
+          message: `Apenas parte dos volumes entrou no carrinho ME (${cartResult.shipmentIds.length}). Erro: ${cartResult.error}. Verifique no painel do Melhor Envio.`,
+        });
+      }
+    }
+
+    // ─── ETAPA 2: Checkout (pagar com saldo da carteira ME) ─────────
+    if (order.meStatus === 'cart') {
+      await checkoutShipments(order.meShipmentIds);
+      order.meStatus = 'paid';
+      order.mePurchasedAt = new Date();
+      await order.save();
+    }
+
+    // ─── ETAPA 3: Gerar etiqueta (processo assíncrono no ME) ────────
+    if (order.meStatus === 'paid') {
+      await generateLabels(order.meShipmentIds);
+      order.meStatus = 'generated';
+      await order.save();
+      // Docs recomendam delay entre generate e print (geração assíncrona)
+      await meDelay(2000);
+    }
+
+    // ─── ETAPA 4: URL de impressão do PDF ───────────────────────────
+    // (sempre re-executa: gera URL fresca mesmo para reimpressão)
+    const labelUrl = await printLabels(order.meShipmentIds);
+    order.meLabelUrl = labelUrl;
+    order.meStatus = 'printed';
+
+    // ─── Código de rastreio (best-effort) ───────────────────────────
+    if (!order.meTrackingCode) {
+      const info = await getShipmentInfo(order.meShipmentIds[0]);
+      if (info?.tracking) {
+        order.meTrackingCode = info.tracking;
+      }
+    }
+
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: order.meTrackingCode
+        ? `Etiqueta pronta! Rastreio: ${order.meTrackingCode}`
+        : 'Etiqueta pronta para impressão!',
+      labelUrl,
+      trackingCode: order.meTrackingCode,
+      meStatus: order.meStatus,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao processar etiqueta ME:', error.message);
+
+    // Persiste o erro e o progresso já feito (fluxo retomável)
+    try {
+      const { orderId } = req.body;
+      if (orderId) {
+        await Order.findByIdAndUpdate(orderId, { meError: error.message });
+      }
+    } catch (saveError) {
+      console.error('   (falha ao salvar meError):', saveError.message);
+    }
+
+    return res.json({ success: false, message: error.message });
+  }
+};
+
+// =============================================================================
+// 🏷️ POST /api/shipping/label/tracking — Atualizar rastreio (authSeller)
+// =============================================================================
+// Consulta o ME e atualiza o código de rastreio do pedido (o código pode
+// demorar a existir — só aparece depois que a etiqueta é gerada/postada).
+// =============================================================================
+
+export const refreshLabelTracking = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order || !order.meShipmentIds?.length) {
+      return res.json({
+        success: false,
+        message: 'Pedido sem etiqueta do Melhor Envio',
+      });
+    }
+
+    const info = await getShipmentInfo(order.meShipmentIds[0]);
+    if (!info) {
+      return res.json({
+        success: false,
+        message: 'Não foi possível consultar a etiqueta no Melhor Envio',
+      });
+    }
+
+    if (info.tracking && info.tracking !== order.meTrackingCode) {
+      order.meTrackingCode = info.tracking;
+      await order.save();
+    }
+
+    return res.json({
+      success: true,
+      trackingCode: order.meTrackingCode,
+      meStatus: order.meStatus,
+      remoteStatus: info.status,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao consultar rastreio:', error.message);
+    return res.json({ success: false, message: error.message });
   }
 };

@@ -1,3 +1,4 @@
+// client/src/pages/seller/AddProduct.jsx
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   assets,
@@ -9,6 +10,7 @@ import {
 } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+import { compressImages } from '../../utils/imageCompression';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
@@ -454,6 +456,12 @@ const AddProduct = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
+  // 🔧 FIX: proteção contra duplo-submit + feedback de progresso.
+  // Antes o botão nunca era desabilitado — durante o upload (10-30s com
+  // várias imagens) o admin clicava de novo e criava produtos DUPLICADOS.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   // GROUP + CATEGORY
   const [selectedGroup, setSelectedGroup] = useState('');
   const [category, setCategory] = useState('');
@@ -634,9 +642,12 @@ const AddProduct = () => {
   };
 
   const onSubmitHandler = async event => {
-    try {
-      event.preventDefault();
+    event.preventDefault();
 
+    // 🔧 FIX: se já está enviando, ignora cliques repetidos
+    if (isSubmitting) return;
+
+    try {
       const activeFiles = files.filter(Boolean);
 
       if (activeFiles.length === 0) {
@@ -718,7 +729,14 @@ const AddProduct = () => {
         }
 
         if (!productFamily.trim()) {
-          const baseName = name.replace(new RegExp(color, 'gi'), '').trim();
+          // 🔧 FIX: escapar caracteres especiais da regex — uma cor como
+          // "Azul (claro)" quebrava o submit com SyntaxError
+          const baseName = name
+            .replace(
+              new RegExp(color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+              '',
+            )
+            .trim();
           if (baseName) {
             productData.productFamily = generateFamilySlug(baseName);
           }
@@ -745,13 +763,29 @@ const AddProduct = () => {
         }
       }
 
+      // 🔧 FIX: bloqueia o formulário desde já (compressão + upload)
+      setIsSubmitting(true);
+      setUploadProgress(0);
+
+      // 🔧 FIX 413: comprime as imagens no browser antes de enviar —
+      // fotos de celular (3-8MB) estouravam o limite de ~4.5MB do Vercel
+      const compressedFiles = await compressImages(activeFiles);
+
       const formData = new FormData();
       formData.append('productData', JSON.stringify(productData));
-      for (let i = 0; i < activeFiles.length; i++) {
-        formData.append('images', activeFiles[i]);
+      for (let i = 0; i < compressedFiles.length; i++) {
+        formData.append('images', compressedFiles[i]);
       }
 
-      const { data } = await axios.post('/api/product/add', formData);
+      const { data } = await axios.post('/api/product/add', formData, {
+        onUploadProgress: progressEvent => {
+          if (progressEvent.total) {
+            setUploadProgress(
+              Math.round((progressEvent.loaded / progressEvent.total) * 100),
+            );
+          }
+        },
+      });
 
       if (data.success) {
         toast.success('Produto adicionado com sucesso!');
@@ -788,7 +822,22 @@ const AddProduct = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      // 🔧 FIX: mensagem amigável para o limite de 4.5MB do Vercel (413)
+      if (error.response?.status === 413) {
+        toast.error(
+          'Upload muito grande. Reduza o tamanho ou a quantidade de imagens (limite total: ~4MB).',
+        );
+      } else {
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            'Erro ao adicionar produto',
+        );
+      }
+    } finally {
+      // 🔧 FIX: sempre libera o formulário no fim (sucesso ou erro)
+      setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -1718,12 +1767,46 @@ const AddProduct = () => {
           </div>
         </div>
 
-        {/* Botão Submit */}
+        {/* Botão Submit — 🔧 FIX: desabilitado durante o envio + progresso */}
         <button
           type='submit'
-          className='w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dull transition-colors mt-6'
+          disabled={isSubmitting}
+          className={`w-full py-3 font-semibold rounded-lg transition-colors mt-6 ${
+            isSubmitting
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-primary text-white hover:bg-primary-dull'
+          }`}
         >
-          Adicionar Produto
+          {isSubmitting ? (
+            <span className='flex items-center justify-center gap-2'>
+              <svg
+                className='animate-spin h-5 w-5'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                />
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                />
+              </svg>
+              {uploadProgress > 0 && uploadProgress < 100
+                ? `Enviando imagens... ${uploadProgress}%`
+                : uploadProgress === 100
+                  ? 'Processando no servidor...'
+                  : 'Otimizando imagens...'}
+            </span>
+          ) : (
+            'Adicionar Produto'
+          )}
         </button>
       </form>
     </div>

@@ -1,3 +1,4 @@
+// client/src/context/AppContext.jsx
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -70,6 +71,12 @@ export const AppContextProvider = ({ children }) => {
       url.includes('/api/product/update') ||
       url.includes('/api/product/delete') ||
       url.includes('/api/product/stock') ||
+      // 🔧 FIX iPHONE: /reorder é protegida por authSeller no backend mas
+      // não estava nesta lista — sem o header x-seller-token, o Safari/iOS
+      // (que bloqueia cookies cross-site) recebia 401 ao salvar a ordem.
+      url.includes('/api/product/reorder') ||
+      // 🏷️ Etiquetas Melhor Envio (admin)
+      url.includes('/api/shipping/label') ||
       url.includes('/api/wsl/admin') ||
       url.includes('/api/blog/admin')
     );

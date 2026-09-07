@@ -1,3 +1,4 @@
+// server/controllers/productController.js
 import { v2 as cloudinary } from 'cloudinary';
 import crypto from 'crypto';
 import Product from '../models/Product.js';
@@ -18,6 +19,88 @@ const setNoCacheHeaders = res => {
 const setMutationHeaders = res => {
   setNoCacheHeaders(res);
   res.setHeader('Surrogate-Control', 'no-store');
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🔧 FIX SKU — helpers
+// ═══════════════════════════════════════════════════════════════════════
+// sanitizeSku: retorna o SKU limpo (trim + uppercase) ou null se vazio.
+// O campo NUNCA deve ser gravado como null no documento (índice sparse
+// indexa null explícito → E11000 no 2º produto sem SKU).
+const sanitizeSku = value => {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim().toUpperCase();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+// friendlyError: traduz erros técnicos do Mongo em mensagens legíveis
+// para o admin, em vez de mostrar "E11000 duplicate key error..." no toast.
+const friendlyError = error => {
+  if (error?.code === 11000) {
+    const dupField = Object.keys(error.keyPattern || {})[0];
+    if (dupField === 'sku') {
+      return 'Já existe um produto com este SKU. Use um código diferente.';
+    }
+    return 'Já existe um registro com este valor único.';
+  }
+  if (error?.name === 'CastError') {
+    return 'ID de produto inválido.';
+  }
+  if (error?.name === 'ValidationError') {
+    const first = Object.values(error.errors || {})[0];
+    return first?.message || 'Dados do produto inválidos.';
+  }
+  return error?.message || 'Erro interno';
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🔧 FIX: validação server-side — antes a API confiava 100% no frontend
+// (JSON.parse direto e gravação sem checagem). Agora dados malformados
+// são barrados com mensagem clara antes de tocar no banco/Cloudinary.
+// ═══════════════════════════════════════════════════════════════════════
+const parseProductData = raw => {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { error: 'Dados do produto malformados' };
+    }
+    return { data: parsed };
+  } catch {
+    return { error: 'Dados do produto malformados' };
+  }
+};
+
+const validateProductData = productData => {
+  const name = String(productData.name || '').trim();
+  if (!name) return 'Nome do produto é obrigatório';
+  if (name.length > 200) return 'Nome do produto muito longo (máx. 200)';
+
+  if (!productData.group) return 'Grupo é obrigatório';
+  if (!productData.category) return 'Categoria é obrigatória';
+
+  const price = Number(productData.price);
+  const offerPrice = Number(productData.offerPrice);
+  if (!Number.isFinite(price) || price <= 0) {
+    return 'Preço original inválido';
+  }
+  if (!Number.isFinite(offerPrice) || offerPrice <= 0) {
+    return 'Preço de venda inválido';
+  }
+  if (offerPrice > price) {
+    return 'Preço de venda não pode ser maior que o preço original';
+  }
+
+  const stock = Number(productData.stock);
+  if (!Number.isFinite(stock) || stock < 0) return 'Estoque inválido';
+
+  if (
+    productData.description !== undefined &&
+    !Array.isArray(productData.description)
+  ) {
+    return 'Descrição inválida';
+  }
+
+  return null; // ok
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -42,7 +125,19 @@ export const addProduct = async (req, res) => {
   try {
     setMutationHeaders(res);
 
-    let productData = JSON.parse(req.body.productData);
+    // 🔧 FIX: parse seguro + validação ANTES de subir qualquer arquivo
+    // ao Cloudinary (evita assets órfãos quando os dados são inválidos)
+    const parsed = parseProductData(req.body.productData);
+    if (parsed.error) {
+      return res.json({ success: false, message: parsed.error });
+    }
+    let productData = parsed.data;
+
+    const validationError = validateProductData(productData);
+    if (validationError) {
+      return res.json({ success: false, message: validationError });
+    }
+
     const images = req.files?.images || [];
     const videoFile = req.files?.video?.[0] || null;
 
@@ -73,8 +168,14 @@ export const addProduct = async (req, res) => {
     const inStock =
       productData.inStock !== undefined ? productData.inStock : true;
 
+    // 🔧 FIX SKU: nunca gravar sku: null — se vazio, o campo fica ausente
+    // (o índice sparse ignora documentos sem o campo, mas indexa null).
+    const cleanSku = sanitizeSku(productData.sku);
+    delete productData.sku;
+
     await Product.create({
       ...productData,
+      ...(cleanSku ? { sku: cleanSku } : {}),
       image: imagesUrl,
       video: videoUrl,
       stock,
@@ -84,7 +185,7 @@ export const addProduct = async (req, res) => {
     res.json({ success: true, message: 'Produto adicionado com sucesso' });
   } catch (error) {
     console.log(error.message);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: friendlyError(error) });
   }
 };
 
@@ -478,7 +579,20 @@ export const updateProduct = async (req, res) => {
     setMutationHeaders(res);
 
     const { id } = req.body;
-    let productData = JSON.parse(req.body.productData);
+
+    // 🔧 FIX: parse seguro + validação ANTES de deletar/subir qualquer
+    // asset — dados inválidos não podem mais destruir imagens existentes
+    const parsed = parseProductData(req.body.productData);
+    if (parsed.error) {
+      return res.json({ success: false, message: parsed.error });
+    }
+    let productData = parsed.data;
+
+    const validationError = validateProductData(productData);
+    if (validationError) {
+      return res.json({ success: false, message: validationError });
+    }
+
     const newImageFiles = req.files?.images || [];
     const videoFile = req.files?.video?.[0] || null;
 
@@ -594,16 +708,33 @@ export const updateProduct = async (req, res) => {
     // inStock = "publicado" (controlado só pelo toggle do admin).
     // Se o payload enviar inStock, respeita. Senão, mantém o valor existente.
 
-    await Product.findByIdAndUpdate(id, {
-      ...productData,
-      image: finalImageUrls,
-      video: videoUrl,
-    });
+    // 🔧 FIX SKU: o modal de edição enviava sku: null, que era gravado
+    // explicitamente e colidia no índice unique+sparse (E11000 dup key
+    // { sku: null }). Agora: SKU vazio → $unset (campo removido do doc);
+    // SKU preenchido → $set normalizado.
+    const cleanSku = sanitizeSku(productData.sku);
+    delete productData.sku;
+
+    const updateOps = {
+      $set: {
+        ...productData,
+        image: finalImageUrls,
+        video: videoUrl,
+      },
+    };
+
+    if (cleanSku) {
+      updateOps.$set.sku = cleanSku;
+    } else {
+      updateOps.$unset = { sku: 1 };
+    }
+
+    await Product.findByIdAndUpdate(id, updateOps);
 
     res.json({ success: true, message: 'Produto atualizado com sucesso' });
   } catch (error) {
     console.log(error.message);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: friendlyError(error) });
   }
 };
 
@@ -625,6 +756,24 @@ export const deleteProduct = async (req, res) => {
         await cloudinary.uploader.destroy(publicId);
       } catch (error) {
         console.log('Erro ao excluir imagem do Cloudinary:', error.message);
+      }
+    }
+
+    // 🔧 FIX: o vídeo NÃO era apagado ao excluir o produto — cada produto
+    // com vídeo deixava o arquivo órfão no Cloudinary para sempre (vídeo
+    // é o que mais pesa na quota). Mesmo padrão de publicId do update.
+    if (product.video) {
+      try {
+        const videoPublicId = product.video
+          .split('/')
+          .slice(-2)
+          .join('/')
+          .split('.')[0];
+        await cloudinary.uploader.destroy(videoPublicId, {
+          resource_type: 'video',
+        });
+      } catch (error) {
+        console.log('Erro ao excluir vídeo do Cloudinary:', error.message);
       }
     }
 

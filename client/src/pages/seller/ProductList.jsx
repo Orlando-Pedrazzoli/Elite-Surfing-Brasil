@@ -1,3 +1,4 @@
+// client/src/pages/seller/ProductList.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { groups, getCategoriesByGroup } from '../../assets/assets';
@@ -131,6 +132,10 @@ const ColorBall = ({
 const ProductList = () => {
   const { products, currency, axios, fetchProducts } = useAppContext();
   const [updatingProducts, setUpdatingProducts] = useState(new Set());
+  // 🔧 FIX: edição local de estoque — o input não dispara mais uma request
+  // por tecla digitada (digitar "25" salvava 2 e depois 25, com refreshes
+  // concorrentes revertendo o valor na tela). Agora salva no blur/Enter.
+  const [stockEdits, setStockEdits] = useState({});
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -504,6 +509,23 @@ const ProductList = () => {
   // 🆕 Atualizar stock NUNCA altera inStock (publicação).
   //    Produto publicado com stock=0 continua publicado (mostra como "Esgotado" no site).
   const updateStockQuick = async (productId, newStock) => {
+    // 🔧 FIX: guard anti-concorrência (mesmo padrão do toggleStock) — evita
+    // requests paralelas e respostas fora de ordem sobrescrevendo a UI
+    if (updatingProducts.has(productId)) return;
+
+    // Se o valor não mudou, só limpa o rascunho local e sai
+    const current = allProducts.find(p => p._id === productId);
+    if (current && (current.stock || 0) === newStock) {
+      setStockEdits(prev => {
+        const updated = { ...prev };
+        delete updated[productId];
+        return updated;
+      });
+      return;
+    }
+
+    setUpdatingProducts(prev => new Set(prev).add(productId));
+
     const previousProducts = allProducts;
     setAllProducts(prev =>
       prev.map(p => (p._id === productId ? { ...p, stock: newStock } : p)),
@@ -524,6 +546,18 @@ const ProductList = () => {
     } catch (error) {
       setAllProducts(previousProducts);
       toast.error('Erro ao atualizar estoque');
+    } finally {
+      // Limpa o rascunho local e libera o produto
+      setStockEdits(prev => {
+        const updated = { ...prev };
+        delete updated[productId];
+        return updated;
+      });
+      setUpdatingProducts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
     }
   };
 
@@ -1270,13 +1304,38 @@ const ProductList = () => {
                               </button>
                               <input
                                 type='number'
-                                value={currentStock}
-                                onChange={e => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  if (val >= 0)
-                                    updateStockQuick(product._id, val);
+                                // 🔧 FIX: valor do rascunho local enquanto
+                                // digita; só salva no blur ou Enter
+                                value={
+                                  stockEdits[product._id] !== undefined
+                                    ? stockEdits[product._id]
+                                    : currentStock
+                                }
+                                onChange={e =>
+                                  setStockEdits(prev => ({
+                                    ...prev,
+                                    [product._id]: e.target.value,
+                                  }))
+                                }
+                                onBlur={e => {
+                                  const val = Math.max(
+                                    0,
+                                    parseInt(e.target.value) || 0,
+                                  );
+                                  updateStockQuick(product._id, val);
                                 }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.target.blur();
+                                  }
+                                }}
+                                disabled={updatingProducts.has(product._id)}
                                 className={`w-12 h-7 text-center border rounded text-sm font-medium ${
+                                  updatingProducts.has(product._id)
+                                    ? 'opacity-50 cursor-wait'
+                                    : ''
+                                } ${
                                   currentStock === 0
                                     ? 'border-red-300 bg-red-50 text-red-600'
                                     : isLowStock

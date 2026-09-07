@@ -1,3 +1,4 @@
+// client/src/pages/seller/Orders.jsx
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import {
@@ -41,6 +42,56 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [labelOrder, setLabelOrder] = useState(null);
+
+  // ═══ 🏷️ MELHOR ENVIO — Etiqueta em 1 clique ═══
+  // Fluxo no backend: carrinho ME → checkout (saldo) → geração → PDF.
+  // Retomável: se parar (ex: saldo insuficiente), clicar de novo continua.
+  const [meProcessingId, setMeProcessingId] = useState(null);
+
+  const processMeLabel = async order => {
+    if (meProcessingId) return;
+
+    // CPF é obrigatório para a Declaração de Conteúdo — se o pedido não
+    // tem, pede ao admin antes de chamar a API
+    let recipientDocument = null;
+    if (!order.address?.cpf) {
+      const typed = window.prompt(
+        'Este pedido não tem CPF do destinatário (obrigatório para a etiqueta).\nDigite o CPF do cliente (só números):',
+      );
+      if (!typed) return;
+      recipientDocument = typed;
+    }
+
+    setMeProcessingId(order._id);
+    const toastId = toast.loading('Processando etiqueta no Melhor Envio...');
+
+    try {
+      const { data } = await axios.post('/api/shipping/label/process', {
+        orderId: order._id,
+        recipientDocument,
+      });
+
+      if (data.success) {
+        toast.success(data.message, { id: toastId, duration: 5000 });
+        if (data.labelUrl) {
+          window.open(data.labelUrl, '_blank', 'noopener');
+        }
+        await fetchOrders();
+      } else {
+        toast.error(data.message, { id: toastId, duration: 8000 });
+        await fetchOrders(); // atualiza meStatus parcial (ex: 'cart')
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          'Erro ao processar etiqueta',
+        { id: toastId },
+      );
+    } finally {
+      setMeProcessingId(null);
+    }
+  };
 
   // ✅ NOVO: Status simplificados (5 status em português)
   const statusOptions = [
@@ -663,6 +714,36 @@ const Orders = () => {
                         >
                           <Printer className='w-5 h-5' />
                         </button>
+
+                        {/* 🏷️ MELHOR ENVIO — comprar/gerar/imprimir etiqueta */}
+                        {order.shippingServiceId && (
+                          <button
+                            onClick={() => processMeLabel(order)}
+                            disabled={meProcessingId === order._id}
+                            className={`p-2 rounded-lg transition-colors ${
+                              meProcessingId === order._id
+                                ? 'text-gray-300 cursor-wait'
+                                : order.meStatus === 'printed'
+                                  ? 'text-green-600 hover:bg-green-50'
+                                  : order.meStatus
+                                    ? 'text-amber-500 hover:bg-amber-50'
+                                    : 'text-gray-500 hover:text-orange-600 hover:bg-orange-50'
+                            }`}
+                            title={
+                              order.meStatus === 'printed'
+                                ? `Etiqueta ME emitida${order.meTrackingCode ? ` — ${order.meTrackingCode}` : ''} (clique para reimprimir)`
+                                : order.meStatus
+                                  ? 'Etiqueta ME em andamento — clique para continuar'
+                                  : 'Comprar etiqueta no Melhor Envio'
+                            }
+                          >
+                            {meProcessingId === order._id ? (
+                              <Loader2 className='w-5 h-5 animate-spin' />
+                            ) : (
+                              <Truck className='w-5 h-5' />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -827,6 +908,12 @@ const Orders = () => {
                             {order.shippingCarrier
                               ? ` (${order.shippingCarrier})`
                               : ''}
+                          </span>
+                        )}
+                        {/* 🏷️ Código de rastreio do Melhor Envio */}
+                        {order.meTrackingCode && (
+                          <span className='inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs font-mono font-medium rounded border border-green-200'>
+                            📦 {order.meTrackingCode}
                           </span>
                         )}
                       </div>

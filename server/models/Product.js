@@ -1,3 +1,4 @@
+// server/models/Product.js
 import mongoose from 'mongoose';
 const productSchema = new mongoose.Schema(
   {
@@ -10,11 +11,16 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     // 🆕 SKU - Código do produto (único)
+    // 🔧 FIX: removido `default: null`. Índice sparse só ignora documentos
+    // onde o campo está AUSENTE — com default null, o campo era gravado
+    // explicitamente como null e o 2º produto sem SKU disparava
+    // "E11000 duplicate key error ... dup key: { sku: null }".
+    // Agora o campo simplesmente não existe quando o SKU não é informado
+    // (o controller também faz $unset no update quando o SKU é apagado).
     sku: {
       type: String,
       unique: true,
       sparse: true,
-      default: null,
     },
     // 🆕 Peso líquido em gramas (para cálculo de frete)
     weight: {
@@ -24,7 +30,7 @@ const productSchema = new mongoose.Schema(
     // 🆕 Dimensões da embalagem em cm (para cálculo de frete)
     dimensions: {
       length: { type: Number, default: null }, // comprimento cm
-      width: { type: Number, default: null },  // largura cm
+      width: { type: Number, default: null }, // largura cm
       height: { type: Number, default: null }, // altura cm
     },
     price: {
@@ -122,16 +128,18 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Índices para performance
 productSchema.index({ category: 1, inStock: 1 });
 productSchema.index({ productFamily: 1 });
 productSchema.index({ group: 1 });
-productSchema.index({ sku: 1 });
-productSchema.index({ tags: 1 });            // 🆕 Para queries por tag
-productSchema.index({ freeShipping: 1 });     // 🆕 Para filtro de frete grátis
+// 🔧 FIX: removido productSchema.index({ sku: 1 }) — o `unique: true` no
+// campo já cria o índice sku_1. Declarar os dois gerava o warning de
+// índice duplicado do Mongoose e trabalho redundante no Atlas.
+productSchema.index({ tags: 1 }); // 🆕 Para queries por tag
+productSchema.index({ freeShipping: 1 }); // 🆕 Para filtro de frete grátis
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;
