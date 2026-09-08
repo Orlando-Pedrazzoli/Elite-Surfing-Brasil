@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { SEO } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
 import AddressFormModal from '../components/AddressFormModal';
+import ReturningCustomerCard from '../components/ReturningCustomerCard';
 import ShippingCalculator from '../components/ShippingCalculator';
 import MercadoPagoCardPayment from '../components/MercadoPagoCardPayment';
 import OtpVerificationModal from '../components/OtpVerificationModal';
@@ -1376,6 +1377,9 @@ const Cart = () => {
                   </div>
                 </div>
               )}
+
+              {/* ═══ 🔑 CLIENTE RECORRENTE — login sem senha ═══ */}
+              {!user && <ReturningCustomerCard />}
 
               {/* ═══ Endereço de Entrega ═══ */}
               <div className='mb-6 border-b pb-6 border-gray-200'>

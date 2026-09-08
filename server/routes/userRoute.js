@@ -10,6 +10,7 @@ import {
   convertGuestToUser,
   checkEmailExists,
   loginAndLinkOrder,
+  loginWithOtp,
 } from '../controllers/userController.js';
 import authUser from '../middlewares/authUser.js';
 
@@ -22,9 +23,10 @@ userRouter.post('/register', register);
 userRouter.post('/login', login);
 
 // 🆕 Rotas de Guest Checkout / Pós-Venda
-userRouter.post('/convert-guest', convertGuestToUser);    // Criar conta a partir de guest
-userRouter.post('/check-email', checkEmailExists);         // Verificar se email já existe
-userRouter.post('/login-link-order', loginAndLinkOrder);   // 🆕 Login + vincular pedidos
+userRouter.post('/convert-guest', convertGuestToUser); // Criar conta a partir de guest
+userRouter.post('/check-email', checkEmailExists); // Verificar se email já existe
+userRouter.post('/login-link-order', loginAndLinkOrder); // 🆕 Login + vincular pedidos
+userRouter.post('/login-otp', loginWithOtp); // 🔑 Login sem senha via código OTP
 
 // =============================================================================
 // ROTAS PROTEGIDAS (requerem autenticação)
