@@ -77,6 +77,8 @@ export const AppContextProvider = ({ children }) => {
       url.includes('/api/product/reorder') ||
       // 🏷️ Etiquetas Melhor Envio (admin)
       url.includes('/api/shipping/label') ||
+      // 💰 Saldo da carteira Melhor Envio (admin)
+      url.includes('/api/shipping/balance') ||
       url.includes('/api/wsl/admin') ||
       url.includes('/api/blog/admin')
     );

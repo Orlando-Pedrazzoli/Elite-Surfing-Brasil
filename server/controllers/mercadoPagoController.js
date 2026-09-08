@@ -152,11 +152,16 @@ const computeServerAmount = async ({
   discountPercentage = 0,
   shippingCost = 0,
   applyPixDiscount = false,
+  isPickup = false,
 }) => {
   const safeDiscount = Math.min(
     Math.max(Number(discountPercentage) || 0, 0),
     MAX_DISCOUNT_PCT,
   );
+
+  // 🛡️ Frete: retirada no local = SEMPRE 0; nunca aceitar valor negativo
+  // (um shippingCost negativo enviado pelo cliente reduziria o total)
+  const safeShipping = isPickup ? 0 : Math.max(0, Number(shippingCost) || 0);
 
   let productData = [];
   let subtotal = 0;
@@ -176,7 +181,7 @@ const computeServerAmount = async ({
   let amount = subtotal;
   if (safeDiscount > 0) amount = amount * (1 - safeDiscount / 100);
   if (applyPixDiscount) amount = amount * 0.9; // PIX 10% OFF
-  amount = amount + Number(shippingCost || 0);
+  amount = amount + safeShipping;
 
   return {
     productData,
@@ -190,6 +195,7 @@ const computeServerAmount = async ({
 // =============================================================================
 const buildOrderDoc = (req, paymentType, computedAmount, extra = {}) => {
   const b = req.body;
+  const isPickup = !!b.isPickup;
   const doc = {
     items: b.items,
     amount: computedAmount,
@@ -200,11 +206,15 @@ const buildOrderDoc = (req, paymentType, computedAmount, extra = {}) => {
     discountAmount: b.discountAmount || 0,
     discountPercentage: b.discountPercentage || 0,
     originalAmount: b.originalAmount || computedAmount,
-    shippingCost: b.shippingCost || 0,
+    // 🏷️ CPF do pagamento persistido no pedido (fallback p/ etiqueta ME)
+    customerDocument: String(b.customerDocument || '').replace(/\D/g, ''),
+    // 🏬 Retirada no local: frete 0, sem serviceId ME (evita etiqueta no admin)
+    isPickup,
+    shippingCost: isPickup ? 0 : Math.max(0, Number(b.shippingCost) || 0),
     shippingMethod: b.shippingMethod || '',
     shippingCarrier: b.shippingCarrier || '',
-    shippingDeliveryDays: b.shippingDeliveryDays || 0,
-    shippingServiceId: b.shippingServiceId || '',
+    shippingDeliveryDays: isPickup ? 0 : b.shippingDeliveryDays || 0,
+    shippingServiceId: isPickup ? '' : b.shippingServiceId || '',
     ...extra,
   };
   if (b.isGuestOrder) {
@@ -264,6 +274,7 @@ export const createCardPayment = async (req, res) => {
       items,
       discountPercentage,
       shippingCost,
+      isPickup: !!req.body.isPickup,
       applyPixDiscount: false,
     });
 
@@ -403,6 +414,7 @@ export const createPixPayment = async (req, res) => {
       items,
       discountPercentage,
       shippingCost,
+      isPickup: !!req.body.isPickup,
       applyPixDiscount: true,
     });
 
@@ -544,6 +556,7 @@ export const createBoletoPayment = async (req, res) => {
       items,
       discountPercentage,
       shippingCost,
+      isPickup: !!req.body.isPickup,
       applyPixDiscount: false,
     });
 

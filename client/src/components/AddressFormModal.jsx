@@ -1,5 +1,18 @@
+// client/src/components/AddressFormModal.jsx
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, User, Mail, Phone, Home, Building, Hash, Loader2, Check, FileText } from 'lucide-react';
+import {
+  X,
+  MapPin,
+  User,
+  Mail,
+  Phone,
+  Home,
+  Building,
+  Hash,
+  Loader2,
+  Check,
+  FileText,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Estados do Brasil
@@ -33,13 +46,13 @@ const brazilStates = [
   { value: 'TO', label: 'Tocantins' },
 ];
 
-const AddressFormModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+const AddressFormModal = ({
+  isOpen,
+  onClose,
+  onSave,
   initialAddress = null,
   isGuest = false,
-  isLoading = false 
+  isLoading = false,
 }) => {
   const [address, setAddress] = useState({
     firstName: '',
@@ -56,7 +69,7 @@ const AddressFormModal = ({
     country: 'Brasil',
     phone: '',
   });
-  
+
   const [errors, setErrors] = useState({});
   const [focusedField, setFocusedField] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -97,13 +110,15 @@ const AddressFormModal = ({
   }, [initialAddress]);
 
   // ========== CEP AUTO-FILL via ViaCEP ==========
-  const fetchAddressByCep = async (cep) => {
+  const fetchAddressByCep = async cep => {
     const cleanCep = cep.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
     setIsFetchingCep(true);
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const response = await fetch(
+        `https://viacep.com.br/ws/${cleanCep}/json/`,
+      );
       const data = await response.json();
 
       if (data.erro) {
@@ -130,13 +145,12 @@ const AddressFormModal = ({
       });
 
       toast.success('Endereço preenchido pelo CEP!');
-      
+
       // Focar no campo número após preencher
       setTimeout(() => {
         const numberInput = document.querySelector('input[name="number"]');
         if (numberInput) numberInput.focus();
       }, 100);
-
     } catch (error) {
       console.error('Erro ao buscar CEP:', error);
     } finally {
@@ -145,7 +159,7 @@ const AddressFormModal = ({
   };
 
   // ========== FORMATADORES ==========
-  const formatCep = (value) => {
+  const formatCep = value => {
     const digits = value.replace(/\D/g, '').slice(0, 8);
     if (digits.length > 5) {
       return `${digits.slice(0, 5)}-${digits.slice(5)}`;
@@ -153,7 +167,7 @@ const AddressFormModal = ({
     return digits;
   };
 
-  const formatCpf = (value) => {
+  const formatCpf = value => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
     if (digits.length > 9) {
       return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
@@ -165,7 +179,7 @@ const AddressFormModal = ({
     return digits;
   };
 
-  const formatPhone = (value) => {
+  const formatPhone = value => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
     if (digits.length > 6) {
       return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
@@ -175,11 +189,11 @@ const AddressFormModal = ({
     return digits;
   };
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    
+
     let formattedValue = value;
-    
+
     // Aplicar formatação
     if (name === 'zipcode') {
       formattedValue = formatCep(value);
@@ -193,9 +207,9 @@ const AddressFormModal = ({
     } else if (name === 'phone') {
       formattedValue = formatPhone(value);
     }
-    
+
     setAddress(prev => ({ ...prev, [name]: formattedValue }));
-    
+
     // Limpar erro ao digitar
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
@@ -203,23 +217,23 @@ const AddressFormModal = ({
   };
 
   // ========== VALIDAÇÃO ==========
-  const validateCpf = (cpf) => {
+  const validateCpf = cpf => {
     const digits = cpf.replace(/\D/g, '');
     if (digits.length !== 11) return false;
     if (/^(\d)\1{10}$/.test(digits)) return false;
-    
+
     let sum = 0;
     for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
     let check = 11 - (sum % 11);
     if (check >= 10) check = 0;
     if (parseInt(digits[9]) !== check) return false;
-    
+
     sum = 0;
     for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
     check = 11 - (sum % 11);
     if (check >= 10) check = 0;
     if (parseInt(digits[10]) !== check) return false;
-    
+
     return true;
   };
 
@@ -233,7 +247,11 @@ const AddressFormModal = ({
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email)) {
       newErrors.email = 'Email inválido';
     }
-    if (address.cpf && !validateCpf(address.cpf)) {
+    // 🏷️ CPF obrigatório: exigido pelo Melhor Envio (Declaração de
+    // Conteúdo/DC-e) — sem ele o admin não consegue emitir a etiqueta.
+    if (!address.cpf.trim()) {
+      newErrors.cpf = 'CPF obrigatório';
+    } else if (!validateCpf(address.cpf)) {
       newErrors.cpf = 'CPF inválido';
     }
     if (!address.zipcode.trim()) {
@@ -243,7 +261,8 @@ const AddressFormModal = ({
     }
     if (!address.street.trim()) newErrors.street = 'Rua obrigatória';
     if (!address.number.trim()) newErrors.number = 'Número obrigatório';
-    if (!address.neighborhood.trim()) newErrors.neighborhood = 'Bairro obrigatório';
+    if (!address.neighborhood.trim())
+      newErrors.neighborhood = 'Bairro obrigatório';
     if (!address.city.trim()) newErrors.city = 'Cidade obrigatória';
     if (!address.state) newErrors.state = 'Estado obrigatório';
     if (!address.phone.trim()) {
@@ -259,9 +278,9 @@ const AddressFormModal = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = e => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Por favor, corrija os erros no formulário');
       return;
@@ -277,27 +296,29 @@ const AddressFormModal = ({
 
   if (!isOpen) return null;
 
-  const inputClasses = (fieldName) => `
+  const inputClasses = fieldName => `
     w-full pl-11 pr-4 py-3 rounded-xl border-2 transition-all duration-200 outline-none text-gray-900 placeholder:text-gray-400
-    ${errors[fieldName] 
-      ? 'border-red-300 bg-red-50' 
-      : focusedField === fieldName
-        ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
-        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+    ${
+      errors[fieldName]
+        ? 'border-red-300 bg-red-50'
+        : focusedField === fieldName
+          ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
     }
   `;
 
-  const inputClassesNoIcon = (fieldName) => `
+  const inputClassesNoIcon = fieldName => `
     w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 outline-none text-gray-900 placeholder:text-gray-400
-    ${errors[fieldName] 
-      ? 'border-red-300 bg-red-50' 
-      : focusedField === fieldName
-        ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
-        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+    ${
+      errors[fieldName]
+        ? 'border-red-300 bg-red-50'
+        : focusedField === fieldName
+          ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
     }
   `;
 
-  const iconClasses = (fieldName) => `
+  const iconClasses = fieldName => `
     absolute left-4 top-1/2 -translate-y-1/2 transition-colors w-5 h-5
     ${errors[fieldName] ? 'text-red-400' : focusedField === fieldName ? 'text-primary' : 'text-gray-400'}
   `;
@@ -325,7 +346,7 @@ const AddressFormModal = ({
           >
             <X className='w-5 h-5' />
           </button>
-          
+
           <div className='flex items-center gap-3'>
             <div className='w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center'>
               <MapPin className='w-6 h-6' />
@@ -335,19 +356,20 @@ const AddressFormModal = ({
                 {initialAddress ? 'Editar Endereço' : 'Endereço de Entrega'}
               </h2>
               <p className='text-white/80 text-sm'>
-                {isGuest 
-                  ? 'Adicione seus dados para continuar' 
-                  : 'Preencha os dados de entrega'
-                }
+                {isGuest
+                  ? 'Adicione seus dados para continuar'
+                  : 'Preencha os dados de entrega'}
               </p>
             </div>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className='p-5 overflow-y-auto max-h-[calc(95vh-180px)]'>
+        <form
+          onSubmit={handleSubmit}
+          className='p-5 overflow-y-auto max-h-[calc(95vh-180px)]'
+        >
           <div className='space-y-4'>
-            
             {/* Nome e Sobrenome */}
             <div className='grid grid-cols-2 gap-3'>
               <div>
@@ -368,10 +390,12 @@ const AddressFormModal = ({
                   />
                 </div>
                 {errors.firstName && (
-                  <p className='text-xs text-red-500 mt-1'>{errors.firstName}</p>
+                  <p className='text-xs text-red-500 mt-1'>
+                    {errors.firstName}
+                  </p>
                 )}
               </div>
-              
+
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                   Sobrenome *
@@ -422,7 +446,7 @@ const AddressFormModal = ({
             <div className='grid grid-cols-2 gap-3'>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
-                  CPF
+                  CPF *
                 </label>
                 <div className='relative'>
                   <FileText className={iconClasses('cpf')} />
@@ -442,7 +466,7 @@ const AddressFormModal = ({
                   <p className='text-xs text-red-500 mt-1'>{errors.cpf}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                   Celular *
@@ -470,7 +494,9 @@ const AddressFormModal = ({
             {/* Divisor - Endereço */}
             <div className='flex items-center gap-2 pt-2'>
               <Home className='w-4 h-4 text-primary' />
-              <span className='text-sm font-semibold text-gray-700'>Endereço</span>
+              <span className='text-sm font-semibold text-gray-700'>
+                Endereço
+              </span>
               <div className='flex-1 h-px bg-gray-200'></div>
             </div>
 
@@ -499,7 +525,9 @@ const AddressFormModal = ({
               {errors.zipcode && (
                 <p className='text-xs text-red-500 mt-1'>{errors.zipcode}</p>
               )}
-              <p className='text-xs text-gray-400 mt-1'>Digite o CEP para preencher automaticamente</p>
+              <p className='text-xs text-gray-400 mt-1'>
+                Digite o CEP para preencher automaticamente
+              </p>
             </div>
 
             {/* Rua e Número */}
@@ -525,7 +553,7 @@ const AddressFormModal = ({
                   <p className='text-xs text-red-500 mt-1'>{errors.street}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                   Número *
@@ -563,7 +591,7 @@ const AddressFormModal = ({
                   className={inputClassesNoIcon('complement')}
                 />
               </div>
-              
+
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                   Bairro *
@@ -582,7 +610,9 @@ const AddressFormModal = ({
                   />
                 </div>
                 {errors.neighborhood && (
-                  <p className='text-xs text-red-500 mt-1'>{errors.neighborhood}</p>
+                  <p className='text-xs text-red-500 mt-1'>
+                    {errors.neighborhood}
+                  </p>
                 )}
               </div>
             </div>
@@ -610,7 +640,7 @@ const AddressFormModal = ({
                   <p className='text-xs text-red-500 mt-1'>{errors.city}</p>
                 )}
               </div>
-              
+
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1.5'>
                   Estado *
@@ -626,7 +656,7 @@ const AddressFormModal = ({
                     className={`${inputClasses('state')} cursor-pointer`}
                   >
                     <option value=''>Selecionar...</option>
-                    {brazilStates.map((state) => (
+                    {brazilStates.map(state => (
                       <option key={state.value} value={state.value}>
                         {state.label}
                       </option>
@@ -663,7 +693,8 @@ const AddressFormModal = ({
               <p className='text-sm text-blue-700 flex items-start gap-2'>
                 <span className='text-lg'>💡</span>
                 <span>
-                  Você pode comprar sem criar conta. Após a compra, poderá criar sua conta para acompanhar o pedido.
+                  Você pode comprar sem criar conta. Após a compra, poderá criar
+                  sua conta para acompanhar o pedido.
                 </span>
               </p>
             </div>

@@ -26,9 +26,11 @@ import {
   QrCode,
   FileText,
   Trash2,
+  Wallet,
+  Plus,
+  ExternalLink,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ShippingLabel from '../../components/seller/ShippingLabel';
 
 const Orders = () => {
   const { currency, axios } = useAppContext();
@@ -41,20 +43,131 @@ const Orders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [labelOrder, setLabelOrder] = useState(null);
 
   // ═══ 🏷️ MELHOR ENVIO — Etiqueta em 1 clique ═══
   // Fluxo no backend: carrinho ME → checkout (saldo) → geração → PDF.
   // Retomável: se parar (ex: saldo insuficiente), clicar de novo continua.
   const [meProcessingId, setMeProcessingId] = useState(null);
 
+  // ═══ 💰 MELHOR ENVIO — Saldo da carteira ═══
+  const [meBalance, setMeBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpValue, setTopUpValue] = useState('100');
+  const [topUpLoading, setTopUpLoading] = useState(false);
+  const [topUpPaymentUrl, setTopUpPaymentUrl] = useState(null);
+
+  // ═══ 🏷️ MELHOR ENVIO — Visualizador de etiqueta no painel ═══
+  const [labelPdf, setLabelPdf] = useState(null); // { order, blobUrl }
+  const [labelPdfLoadingId, setLabelPdfLoadingId] = useState(null);
+
+  const fetchMeBalance = async ({ silent = true } = {}) => {
+    setBalanceLoading(true);
+    try {
+      const { data } = await axios.get('/api/shipping/balance');
+      if (data.success) {
+        setMeBalance(data);
+        if (!silent) toast.success('Saldo atualizado!');
+      } else if (!silent) {
+        toast.error(data.message || 'Erro ao consultar saldo');
+      }
+    } catch (error) {
+      if (!silent) {
+        toast.error(
+          error.response?.data?.message || 'Erro ao consultar saldo ME',
+        );
+      }
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
+
+  const handleTopUp = async () => {
+    const value = Number(String(topUpValue).replace(',', '.'));
+    if (!value || value < 5) {
+      toast.error('Valor mínimo: R$ 5,00');
+      return;
+    }
+    setTopUpLoading(true);
+    try {
+      const { data } = await axios.post('/api/shipping/balance/add', {
+        value,
+        slug: 'pix',
+      });
+      if (data.success && data.paymentUrl) {
+        setTopUpPaymentUrl(data.paymentUrl);
+        window.open(data.paymentUrl, '_blank', 'noopener');
+        toast.success(data.message, { duration: 6000 });
+      } else {
+        toast.error(data.message || 'Erro ao gerar cobrança PIX', {
+          duration: 8000,
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || 'Erro ao gerar cobrança PIX',
+      );
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
+  // Abre o PDF da etiqueta DENTRO do painel (modal com iframe via blob).
+  // O backend faz proxy do PDF público do ME — não depende de sessão ME.
+  const viewLabelPdf = async order => {
+    if (labelPdfLoadingId) return;
+    setLabelPdfLoadingId(order._id);
+    const toastId = toast.loading('A carregar etiqueta...');
+    try {
+      const response = await axios.get(`/api/shipping/label/pdf/${order._id}`, {
+        responseType: 'blob',
+      });
+      const blobUrl = URL.createObjectURL(
+        new Blob([response.data], { type: 'application/pdf' }),
+      );
+      setLabelPdf({ order, blobUrl });
+      toast.dismiss(toastId);
+    } catch (error) {
+      // Erros vêm como JSON dentro de um blob — ler como texto
+      let message = 'Erro ao carregar etiqueta';
+      try {
+        const text = await error.response?.data?.text?.();
+        if (text) message = JSON.parse(text).message || message;
+      } catch {
+        message = error.message || message;
+      }
+      toast.error(message, { id: toastId, duration: 8000 });
+    } finally {
+      setLabelPdfLoadingId(null);
+    }
+  };
+
+  const closeLabelPdf = () => {
+    if (labelPdf?.blobUrl) URL.revokeObjectURL(labelPdf.blobUrl);
+    setLabelPdf(null);
+  };
+
+  const printLabelPdf = () => {
+    const iframe = document.getElementById('me-label-iframe');
+    try {
+      iframe?.contentWindow?.focus();
+      iframe?.contentWindow?.print();
+    } catch {
+      // Fallback (alguns browsers bloqueiam print de blob em iframe)
+      if (labelPdf?.blobUrl) {
+        window.open(labelPdf.blobUrl, '_blank', 'noopener');
+      }
+    }
+  };
+
   const processMeLabel = async order => {
     if (meProcessingId) return;
 
-    // CPF é obrigatório para a Declaração de Conteúdo — se o pedido não
-    // tem, pede ao admin antes de chamar a API
+    // CPF é obrigatório para a Declaração de Conteúdo. Ordem de busca:
+    // 1) CPF do endereço  2) CPF do pagamento (order.customerDocument)
+    // 3) prompt manual — só para pedidos antigos sem nenhum dos dois
     let recipientDocument = null;
-    if (!order.address?.cpf) {
+    if (!order.address?.cpf && !order.customerDocument) {
       const typed = window.prompt(
         'Este pedido não tem CPF do destinatário (obrigatório para a etiqueta).\nDigite o CPF do cliente (só números):',
       );
@@ -73,13 +186,14 @@ const Orders = () => {
 
       if (data.success) {
         toast.success(data.message, { id: toastId, duration: 5000 });
-        if (data.labelUrl) {
-          window.open(data.labelUrl, '_blank', 'noopener');
-        }
         await fetchOrders();
+        fetchMeBalance(); // saldo desceu após a compra
+        // Abre a etiqueta DENTRO do painel
+        await viewLabelPdf(order);
       } else {
         toast.error(data.message, { id: toastId, duration: 8000 });
         await fetchOrders(); // atualiza meStatus parcial (ex: 'cart')
+        fetchMeBalance();
       }
     } catch (error) {
       toast.error(
@@ -314,6 +428,7 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchMeBalance(); // 💰 saldo Melhor Envio ao abrir o painel
   }, []);
 
   // ✅ NOVO: Stats backward compatible (6 cards em vez de 7)
@@ -361,13 +476,58 @@ const Orders = () => {
                 Gerencie e acompanhe todos os pedidos da loja
               </p>
             </div>
-            <button
-              onClick={fetchOrders}
-              className='flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors shadow-sm'
-            >
-              <RefreshCw className='w-4 h-4' />
-              Atualizar
-            </button>
+            <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3'>
+              {/* 💰 SALDO MELHOR ENVIO */}
+              <div className='flex items-center gap-3 px-4 py-2 bg-white border border-orange-200 rounded-xl shadow-sm'>
+                <div className='w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0'>
+                  <Wallet className='w-5 h-5 text-orange-600' />
+                </div>
+                <div className='min-w-0'>
+                  <p className='text-[11px] text-gray-500 leading-tight'>
+                    Saldo Melhor Envio
+                  </p>
+                  <p
+                    className={`text-lg font-bold leading-tight ${
+                      meBalance && meBalance.balance < 20
+                        ? 'text-red-600'
+                        : 'text-gray-900'
+                    }`}
+                  >
+                    {meBalance
+                      ? `R$ ${Number(meBalance.balance).toFixed(2).replace('.', ',')}`
+                      : '—'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => fetchMeBalance({ silent: false })}
+                  disabled={balanceLoading}
+                  className='p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors'
+                  title='Atualizar saldo'
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${balanceLoading ? 'animate-spin' : ''}`}
+                  />
+                </button>
+                <button
+                  onClick={() => {
+                    setTopUpPaymentUrl(null);
+                    setShowTopUp(true);
+                  }}
+                  className='flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors whitespace-nowrap'
+                >
+                  <Plus className='w-4 h-4' />
+                  Saldo
+                </button>
+              </div>
+
+              <button
+                onClick={fetchOrders}
+                className='flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors shadow-sm'
+              >
+                <RefreshCw className='w-4 h-4' />
+                Atualizar
+              </button>
+            </div>
           </div>
         </div>
 
@@ -707,19 +867,18 @@ const Orders = () => {
                         >
                           <Eye className='w-5 h-5' />
                         </button>
-                        <button
-                          onClick={() => setLabelOrder(order)}
-                          className='p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
-                          title='Imprimir etiqueta'
-                        >
-                          <Printer className='w-5 h-5' />
-                        </button>
-
-                        {/* 🏷️ MELHOR ENVIO — comprar/gerar/imprimir etiqueta */}
+                        {/* 🏷️ MELHOR ENVIO — comprar/gerar/visualizar etiqueta */}
                         {order.shippingServiceId && (
                           <button
-                            onClick={() => processMeLabel(order)}
-                            disabled={meProcessingId === order._id}
+                            onClick={() =>
+                              order.meStatus === 'printed'
+                                ? viewLabelPdf(order)
+                                : processMeLabel(order)
+                            }
+                            disabled={
+                              meProcessingId === order._id ||
+                              labelPdfLoadingId === order._id
+                            }
                             className={`p-2 rounded-lg transition-colors ${
                               meProcessingId === order._id
                                 ? 'text-gray-300 cursor-wait'
@@ -731,13 +890,14 @@ const Orders = () => {
                             }`}
                             title={
                               order.meStatus === 'printed'
-                                ? `Etiqueta ME emitida${order.meTrackingCode ? ` — ${order.meTrackingCode}` : ''} (clique para reimprimir)`
+                                ? `Etiqueta ME emitida${order.meTrackingCode ? ` — ${order.meTrackingCode}` : ''} (clique para ver/imprimir)`
                                 : order.meStatus
                                   ? 'Etiqueta ME em andamento — clique para continuar'
                                   : 'Comprar etiqueta no Melhor Envio'
                             }
                           >
-                            {meProcessingId === order._id ? (
+                            {meProcessingId === order._id ||
+                            labelPdfLoadingId === order._id ? (
                               <Loader2 className='w-5 h-5 animate-spin' />
                             ) : (
                               <Truck className='w-5 h-5' />
@@ -908,6 +1068,12 @@ const Orders = () => {
                             {order.shippingCarrier
                               ? ` (${order.shippingCarrier})`
                               : ''}
+                          </span>
+                        )}
+                        {/* 🏬 Retirada no Local — NÃO enviar */}
+                        {order.isPickup && (
+                          <span className='inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded border border-blue-200'>
+                            🏬 RETIRADA NO LOCAL
                           </span>
                         )}
                         {/* 🏷️ Código de rastreio do Melhor Envio */}
@@ -1168,6 +1334,12 @@ const Orders = () => {
                           </span>
                         </div>
                       )}
+                      {selectedOrder.isPickup && (
+                        <div className='flex justify-between text-blue-700 font-medium'>
+                          <span>🏬 Retirada no Local (Barra da Tijuca/RJ)</span>
+                          <span>GRÁTIS</span>
+                        </div>
+                      )}
                       {selectedOrder.shippingCost > 0 && (
                         <div className='flex justify-between text-gray-600'>
                           <span>
@@ -1213,8 +1385,174 @@ const Orders = () => {
         </div>
       )}
 
-      {labelOrder && (
-        <ShippingLabel order={labelOrder} onClose={() => setLabelOrder(null)} />
+      {/* ═══ 🏷️ MODAL — ETIQUETA MELHOR ENVIO (PDF dentro do painel) ═══ */}
+      {labelPdf && (
+        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden'>
+            <div className='flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50'>
+              <div className='flex items-center gap-3 min-w-0'>
+                <div className='w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0'>
+                  <FileText className='w-5 h-5 text-orange-600' />
+                </div>
+                <div className='min-w-0'>
+                  <p className='font-bold text-gray-900 truncate'>
+                    Etiqueta Melhor Envio — Pedido #
+                    {String(labelPdf.order._id).slice(-8).toUpperCase()}
+                  </p>
+                  {labelPdf.order.meTrackingCode && (
+                    <p className='text-xs text-gray-500'>
+                      Rastreio: {labelPdf.order.meTrackingCode}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className='flex items-center gap-2'>
+                <button
+                  onClick={printLabelPdf}
+                  className='flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors'
+                >
+                  <Printer className='w-4 h-4' />
+                  Imprimir
+                </button>
+                <a
+                  href={labelPdf.blobUrl}
+                  download={`etiqueta-${String(labelPdf.order._id).slice(-8)}.pdf`}
+                  className='p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors'
+                  title='Baixar PDF'
+                >
+                  <ExternalLink className='w-5 h-5' />
+                </a>
+                <button
+                  onClick={closeLabelPdf}
+                  className='p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                  title='Fechar'
+                >
+                  <X className='w-5 h-5' />
+                </button>
+              </div>
+            </div>
+            <iframe
+              id='me-label-iframe'
+              src={labelPdf.blobUrl}
+              title='Etiqueta Melhor Envio'
+              className='flex-1 w-full bg-gray-100'
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ═══ 💰 MODAL — ADICIONAR SALDO MELHOR ENVIO (PIX) ═══ */}
+      {showTopUp && (
+        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden'>
+            <div className='flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50'>
+              <div className='flex items-center gap-3'>
+                <div className='w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center'>
+                  <Wallet className='w-5 h-5 text-orange-600' />
+                </div>
+                <p className='font-bold text-gray-900'>
+                  Adicionar Saldo — Melhor Envio
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTopUp(false)}
+                className='p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+              >
+                <X className='w-5 h-5' />
+              </button>
+            </div>
+
+            <div className='p-5 space-y-4'>
+              <div className='flex items-center justify-between text-sm'>
+                <span className='text-gray-500'>Saldo atual:</span>
+                <span className='font-bold text-gray-900'>
+                  {meBalance
+                    ? `R$ ${Number(meBalance.balance).toFixed(2).replace('.', ',')}`
+                    : '—'}
+                </span>
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Valor da recarga (PIX)
+                </label>
+                <div className='flex gap-2 mb-2'>
+                  {[50, 100, 200, 500].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setTopUpValue(String(v))}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        Number(topUpValue) === v
+                          ? 'bg-orange-600 text-white border-orange-600'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400'
+                      }`}
+                    >
+                      R$ {v}
+                    </button>
+                  ))}
+                </div>
+                <div className='relative'>
+                  <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm'>
+                    R$
+                  </span>
+                  <input
+                    type='number'
+                    min='5'
+                    step='0.01'
+                    value={topUpValue}
+                    onChange={e => setTopUpValue(e.target.value)}
+                    className='w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none'
+                  />
+                </div>
+              </div>
+
+              {topUpPaymentUrl ? (
+                <div className='bg-green-50 border border-green-200 rounded-lg p-4 space-y-3'>
+                  <p className='text-sm text-green-800 font-medium'>
+                    ✅ Cobrança PIX gerada! Pague o QR Code para creditar o
+                    saldo (crédito em segundos).
+                  </p>
+                  <a
+                    href={topUpPaymentUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors'
+                  >
+                    <QrCode className='w-4 h-4' />
+                    Abrir QR Code PIX
+                  </a>
+                  <button
+                    onClick={async () => {
+                      await fetchMeBalance({ silent: false });
+                    }}
+                    className='flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors'
+                  >
+                    <RefreshCw className='w-4 h-4' />
+                    Já paguei — atualizar saldo
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleTopUp}
+                  disabled={topUpLoading}
+                  className='flex items-center justify-center gap-2 w-full py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-60'
+                >
+                  {topUpLoading ? (
+                    <Loader2 className='w-5 h-5 animate-spin' />
+                  ) : (
+                    <QrCode className='w-5 h-5' />
+                  )}
+                  Gerar PIX de recarga
+                </button>
+              )}
+
+              <p className='text-xs text-gray-400 text-center'>
+                A cobrança é gerada pelo próprio Melhor Envio (gateway oficial).
+                O saldo credita automaticamente após o pagamento.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

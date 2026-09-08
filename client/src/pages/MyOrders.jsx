@@ -1,3 +1,4 @@
+// client/src/pages/MyOrders.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
@@ -347,14 +348,27 @@ const MyOrders = () => {
                     </div>
 
                     {/* Shipping Info */}
-                    {order.shippingCost > 0 && (
+                    {order.isPickup ? (
+                      <div className='text-sm text-gray-700 mb-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg'>
+                        <p className='font-semibold text-blue-800'>
+                          🏬 Retirada no Local — GRÁTIS
+                        </p>
+                        <p className='text-xs text-blue-700 mt-1 leading-relaxed'>
+                          Avenida das Américas, 12.900 — Sala 203C
+                          <br />
+                          Edifício Argentina Americas Avenue
+                          <br />
+                          Barra da Tijuca, Rio de Janeiro/RJ — CEP: 22790-702
+                        </p>
+                      </div>
+                    ) : order.shippingCost > 0 ? (
                       <div className='text-sm text-gray-600 mb-2'>
                         🚚 Frete: {currency} {order.shippingCost.toFixed(2)}
                         {order.shippingCarrier
                           ? ` (${order.shippingCarrier})`
                           : ''}
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Promo Code Info */}
                     {order.promoCode && (

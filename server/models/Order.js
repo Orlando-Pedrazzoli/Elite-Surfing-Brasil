@@ -31,6 +31,11 @@ const orderSchema = new mongoose.Schema(
     shippingCarrier: { type: String, default: '' },
     shippingDeliveryDays: { type: Number, default: 0 },
     shippingServiceId: { type: String, default: '' },
+    // 🏷️ CPF do cliente informado no pagamento (fallback para a etiqueta
+    // ME quando o endereço não tiver CPF — pedidos antigos/legados)
+    customerDocument: { type: String, default: '' },
+    // 🏬 Retirada no Local (Barra da Tijuca/RJ) — sem frete, sem etiqueta ME
+    isPickup: { type: Boolean, default: false },
     pixDiscount: { type: Number, default: 0 },
     paidAt: { type: Date, default: null },
 

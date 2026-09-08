@@ -420,17 +420,85 @@ export const generateLabels = async shipmentIds => {
 };
 
 // ─── Passo 4: URL de impressão do PDF ──────────────────────────────────
+// mode "public": o link do PDF funciona SEM estar logado no Melhor Envio.
+// Essencial para exibir a etiqueta dentro do painel admin (iframe/proxy) —
+// com "private" o browser do admin precisaria de sessão ativa no ME.
 
 export const printLabels = async shipmentIds => {
   try {
     const { data } = await me.post('/shipment/print', {
-      mode: 'private',
+      mode: 'public',
       orders: shipmentIds,
     });
     if (!data?.url) {
       throw new Error('Impressão não retornou URL');
     }
     return data.url;
+  } catch (error) {
+    throw new Error(extractMeError(error));
+  }
+};
+
+// ─── Download do PDF da etiqueta (para proxy no painel admin) ──────────
+// Baixa o PDF do link público e devolve os bytes. O painel exibe via
+// blob no iframe — zero dependência de cookies/sessão do ME no browser.
+
+export const downloadLabelPdf = async labelUrl => {
+  try {
+    const { data, headers } = await axios.get(labelUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+      maxRedirects: 5,
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/pdf,*/*' },
+    });
+    const contentType = String(headers['content-type'] || '');
+    if (!contentType.includes('pdf')) {
+      throw new Error(
+        'O Melhor Envio ainda não disponibilizou o PDF (geração assíncrona). Tente novamente em alguns segundos.',
+      );
+    }
+    return Buffer.from(data);
+  } catch (error) {
+    if (error.message.includes('PDF')) throw error;
+    throw new Error(
+      `Falha ao baixar o PDF da etiqueta: ${extractMeError(error)}`,
+    );
+  }
+};
+
+// ─── 💰 Carteira Melhor Envio ──────────────────────────────────────────
+
+/**
+ * Consulta o saldo da carteira do Melhor Envio.
+ * GET /api/v2/me/balance → { balance, reserved, debts }
+ */
+export const getMeWalletBalance = async () => {
+  try {
+    const { data } = await me.get('/balance');
+    return {
+      balance: Number(data.balance || 0),
+      reserved: Number(data.reserved || 0),
+      debts: Number(data.debts || 0),
+    };
+  } catch (error) {
+    throw new Error(extractMeError(error));
+  }
+};
+
+/**
+ * Insere crédito na carteira do Melhor Envio via PIX ou boleto.
+ * POST /api/v2/me/balance
+ *   { gateway: 'yapay-transparente', slug: 'pix' | 'boleto', value }
+ * Retorno inclui link para o QR Code (pix) ou PDF (boleto).
+ */
+export const addMeWalletBalance = async (value, slug = 'pix') => {
+  try {
+    const { data } = await me.post('/balance', {
+      gateway: 'yapay-transparente',
+      slug,
+      value: Number(Number(value).toFixed(2)),
+    });
+    return data;
   } catch (error) {
     throw new Error(extractMeError(error));
   }

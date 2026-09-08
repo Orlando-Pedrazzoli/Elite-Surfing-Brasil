@@ -14,6 +14,9 @@ import {
   generateLabels,
   printLabels,
   getShipmentInfo,
+  downloadLabelPdf,
+  getMeWalletBalance,
+  addMeWalletBalance,
   meDelay,
 } from '../services/melhorEnvioLabelService.js';
 import Product from '../models/Product.js';
@@ -304,7 +307,10 @@ export const processShippingLabel = async (req, res) => {
         address,
         products,
         invoiceKey: invoiceKey || null,
-        recipientDocument: recipientDocument || null,
+        // Cascata de CPF: prompt do admin → CPF do pagamento (pedido) →
+        // CPF do endereço (dentro do buildRecipient). Cobre pedidos
+        // antigos criados antes do CPF ser obrigatório no checkout.
+        recipientDocument: recipientDocument || order.customerDocument || null,
       });
 
       order.meShipmentIds = cartResult.shipmentIds;
@@ -419,6 +425,122 @@ export const refreshLabelTracking = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erro ao consultar rastreio:', error.message);
+    return res.json({ success: false, message: error.message });
+  }
+};
+
+// =============================================================================
+// 🏷️ GET /api/shipping/label/pdf/:orderId — PDF da etiqueta (authSeller)
+// =============================================================================
+// Proxy do PDF: gera SEMPRE uma URL de impressão fresca no ME (URLs expiram),
+// baixa o PDF no servidor e devolve os bytes ao painel. O admin visualiza a
+// etiqueta DENTRO do painel, sem sessão do Melhor Envio no browser.
+// =============================================================================
+
+export const getLabelPdf = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order || !order.meShipmentIds?.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pedido sem etiqueta do Melhor Envio',
+      });
+    }
+
+    if (!['generated', 'printed'].includes(order.meStatus)) {
+      return res.status(409).json({
+        success: false,
+        message: `Etiqueta ainda não gerada (status: ${order.meStatus || 'nenhum'}). Clique em "Etiqueta ME" para concluir a compra.`,
+      });
+    }
+
+    // URL fresca (reimpressão é gratuita e idempotente no ME)
+    const labelUrl = await printLabels(order.meShipmentIds);
+    if (labelUrl !== order.meLabelUrl) {
+      order.meLabelUrl = labelUrl;
+      await order.save();
+    }
+
+    const pdfBuffer = await downloadLabelPdf(labelUrl);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="etiqueta-${String(order._id).slice(-8)}.pdf"`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(pdfBuffer);
+  } catch (error) {
+    console.error('❌ Erro ao servir PDF da etiqueta:', error.message);
+    return res.status(502).json({ success: false, message: error.message });
+  }
+};
+
+// =============================================================================
+// 💰 GET /api/shipping/balance — Saldo da carteira ME (authSeller)
+// =============================================================================
+
+export const getMeBalance = async (req, res) => {
+  try {
+    const wallet = await getMeWalletBalance();
+    return res.json({ success: true, ...wallet });
+  } catch (error) {
+    console.error('❌ Erro ao consultar saldo ME:', error.message);
+    return res.json({ success: false, message: error.message });
+  }
+};
+
+// =============================================================================
+// 💰 POST /api/shipping/balance/add — Adicionar saldo via PIX/boleto (authSeller)
+// =============================================================================
+// Body: { value, slug? }  (slug: 'pix' padrão | 'boleto')
+// Retorna o link do QR Code PIX (ou PDF do boleto) gerado pelo ME.
+// =============================================================================
+
+export const addMeBalance = async (req, res) => {
+  try {
+    const { value, slug } = req.body;
+
+    const amount = Number(value);
+    if (!amount || isNaN(amount) || amount < 5) {
+      return res.json({
+        success: false,
+        message: 'Informe um valor válido (mínimo R$ 5,00).',
+      });
+    }
+    if (amount > 10000) {
+      return res.json({
+        success: false,
+        message: 'Valor máximo por recarga: R$ 10.000,00.',
+      });
+    }
+
+    const method = slug === 'boleto' ? 'boleto' : 'pix';
+    const result = await addMeWalletBalance(amount, method);
+
+    // A resposta do ME inclui link para QR Code (pix) ou PDF (boleto).
+    // Formato pode variar — extraímos a primeira URL encontrada.
+    const paymentUrl =
+      result?.link ||
+      result?.url ||
+      result?.qr_code_url ||
+      result?.digitable ||
+      result?.transaction?.link ||
+      null;
+
+    return res.json({
+      success: true,
+      message:
+        method === 'pix'
+          ? 'Cobrança PIX gerada! Pague o QR Code para creditar o saldo.'
+          : 'Boleto gerado! O saldo credita após a compensação.',
+      paymentUrl,
+      raw: result,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao adicionar saldo ME:', error.message);
     return res.json({ success: false, message: error.message });
   }
 };

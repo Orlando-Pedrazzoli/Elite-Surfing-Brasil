@@ -1,3 +1,4 @@
+// client/src/pages/Cart.jsx
 import useMetaPixel from '../hooks/useMetaPixel';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
@@ -28,6 +29,7 @@ import {
   X,
   Tag,
   Trash2,
+  Store,
 } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 
@@ -69,6 +71,54 @@ const Cart = () => {
 
   // ═══ FRETE — Melhor Envio ═══
   const [selectedShipping, setSelectedShipping] = useState(null);
+
+  // ═══ 🏬 RETIRADA NO LOCAL — Barra da Tijuca/RJ ═══
+  // 'shipping' = entrega via Melhor Envio | 'pickup' = retirada grátis
+  const [deliveryMode, setDeliveryMode] = useState('shipping');
+
+  const PICKUP_ADDRESS = {
+    street: 'Avenida das Américas, 12.900',
+    complement: 'Sala 203C — Edifício Argentina Americas Avenue',
+    district: 'Barra da Tijuca, Rio de Janeiro/RJ',
+    cep: 'CEP: 22790-702',
+  };
+
+  // Opção sintética de "frete" para retirada: preço 0, sem serviceId do
+  // Melhor Envio (isPickup evita que o admin tente comprar etiqueta ME).
+  const PICKUP_OPTION = {
+    id: 'pickup',
+    serviceId: '',
+    name: 'Retirada no Local',
+    carrier: 'Retirada na Loja',
+    price: 0,
+    deliveryDays: 0,
+    isPickup: true,
+    icon: '🏬',
+  };
+
+  const handleDeliveryModeChange = mode => {
+    if (mode === deliveryMode) return;
+    setDeliveryMode(mode);
+    if (mode === 'pickup') {
+      setSelectedShipping(PICKUP_OPTION);
+    } else {
+      // Volta para envio: força nova seleção de frete
+      setSelectedShipping(null);
+    }
+  };
+
+  // Campos de envio para TODOS os payloads de pagamento (cartão/PIX/boleto).
+  // Centralizado para garantir consistência — retirada envia serviceId vazio.
+  const buildShippingFields = () => ({
+    shippingCost: getShippingCost(),
+    shippingMethod: selectedShipping.name,
+    shippingCarrier: selectedShipping.carrier,
+    shippingDeliveryDays: selectedShipping.deliveryDays || 0,
+    shippingServiceId: selectedShipping.isPickup
+      ? ''
+      : selectedShipping.serviceId || selectedShipping.id,
+    isPickup: !!selectedShipping.isPickup,
+  });
 
   // ═══ CPF para Mercado Pago (boleto + fallback do cartão) ═══
   const [customerDocument, setCustomerDocument] = useState('');
@@ -377,7 +427,7 @@ const Cart = () => {
       throw new Error('no_address');
     }
     if (!selectedShipping) {
-      toast.error('Por favor, calcule e selecione uma opção de frete.');
+      toast.error('Selecione uma opção de frete ou escolha Retirada no Local.');
       throw new Error('no_shipping');
     }
     const stockErrors = validateStockBeforeCheckout();
@@ -418,11 +468,7 @@ const Cart = () => {
         customerEmail,
         customerPhone,
         customerDocument: cpf,
-        shippingCost: getShippingCost(),
-        shippingMethod: selectedShipping.name,
-        shippingCarrier: selectedShipping.carrier,
-        shippingDeliveryDays: selectedShipping.deliveryDays,
-        shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
+        ...buildShippingFields(),
       };
 
       let endpoint;
@@ -521,7 +567,9 @@ const Cart = () => {
       return toast.error('Seu carrinho está vazio.');
     }
     if (!selectedShipping) {
-      return toast.error('Por favor, calcule e selecione uma opção de frete.');
+      return toast.error(
+        'Selecione uma opção de frete ou escolha Retirada no Local.',
+      );
     }
     const stockErrors = validateStockBeforeCheckout();
     if (stockErrors.length > 0) {
@@ -567,11 +615,7 @@ const Cart = () => {
           customerEmail,
           customerPhone,
           customerDocument: customerDocument.replace(/\D/g, ''),
-          shippingCost: shipping,
-          shippingMethod: selectedShipping.name,
-          shippingCarrier: selectedShipping.carrier,
-          shippingDeliveryDays: selectedShipping.deliveryDays,
-          shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
+          ...buildShippingFields(),
         };
 
         let pixEndpoint;
@@ -650,11 +694,7 @@ const Cart = () => {
         customerEmail,
         customerPhone,
         customerDocument: customerDocument.replace(/\D/g, ''),
-        shippingCost: shipping,
-        shippingMethod: selectedShipping.name,
-        shippingCarrier: selectedShipping.carrier,
-        shippingDeliveryDays: selectedShipping.deliveryDays,
-        shippingServiceId: selectedShipping.serviceId || selectedShipping.id,
+        ...buildShippingFields(),
       };
 
       let endpoint;
@@ -1445,61 +1485,131 @@ const Cart = () => {
                 )}
               </div>
 
-              {/* ═══ FRETE — Melhor Envio ═══ */}
+              {/* ═══ ENTREGA — Frete ou Retirada no Local ═══ */}
               {hasAddress() && (
                 <div className='mb-6 border-b pb-6 border-gray-200'>
                   <div className='flex items-center gap-2 mb-4'>
                     <Package className='w-5 h-5 text-primary' />
-                    <h3 className='font-semibold text-gray-700'>
-                      {getSubtotal() - getPromoDiscount() >= 199
-                        ? 'Frete — Confirme o método de envio'
-                        : 'Frete'}
-                    </h3>
+                    <h3 className='font-semibold text-gray-700'>Entrega</h3>
                   </div>
 
-                  <ShippingCalculator
-                    cartProducts={cartArray}
-                    onShippingSelect={handleShippingSelect}
-                    subtotal={getSubtotal() - getPromoDiscount()}
-                    addressCep={currentAddress?.zipcode || ''}
-                  />
+                  {/* Toggle: Receber em casa vs Retirar no local */}
+                  <div className='grid grid-cols-2 gap-2 mb-4'>
+                    <button
+                      type='button'
+                      onClick={() => handleDeliveryModeChange('shipping')}
+                      className={`flex items-center justify-center gap-2 py-3 px-3 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
+                        deliveryMode === 'shipping'
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Truck className='w-4 h-4 flex-shrink-0' />
+                      Receber em casa
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => handleDeliveryModeChange('pickup')}
+                      className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ${
+                        deliveryMode === 'pickup'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className='flex items-center gap-2'>
+                        <Store className='w-4 h-4 flex-shrink-0' />
+                        Retirar no local
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold ${
+                          deliveryMode === 'pickup'
+                            ? 'text-green-600'
+                            : 'text-green-500'
+                        }`}
+                      >
+                        GRÁTIS
+                      </span>
+                    </button>
+                  </div>
 
-                  {selectedShipping && (
-                    <div className='mt-3 p-3 bg-green-50 border border-green-200 rounded-lg'>
-                      <div className='flex items-center justify-between'>
-                        <div className='flex items-center gap-2'>
-                          <span>{selectedShipping.icon}</span>
-                          <div>
-                            <p className='text-sm font-medium text-green-800'>
-                              {selectedShipping.carrier} —{' '}
-                              {selectedShipping.name}
-                              {selectedShipping.freeShipping && (
-                                <span className='ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800'>
-                                  🎉 FRETE GRÁTIS
-                                </span>
-                              )}
-                            </p>
-                            <p className='text-xs text-green-600'>
-                              {selectedShipping.deliveryText}
-                            </p>
-                          </div>
+                  {deliveryMode === 'pickup' ? (
+                    /* ═══ CARD DE RETIRADA — Barra da Tijuca/RJ ═══ */
+                    <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
+                      <div className='flex items-start gap-3'>
+                        <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                          <Store className='w-5 h-5 text-green-600' />
                         </div>
-                        {selectedShipping.freeShipping ? (
-                          <div className='flex flex-col items-end'>
-                            <span className='text-xs text-gray-400 line-through'>
-                              {formatBRL(selectedShipping.originalPrice)}
-                            </span>
-                            <span className='text-sm font-bold text-green-700'>
-                              GRÁTIS
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center gap-2 flex-wrap'>
+                            <p className='text-sm font-bold text-green-800'>
+                              Retirada no Local
+                            </p>
+                            <span className='inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800'>
+                              SEM FRETE
                             </span>
                           </div>
-                        ) : (
-                          <span className='text-sm font-bold text-green-800'>
-                            {formatBRL(selectedShipping.price)}
-                          </span>
-                        )}
+                          <div className='mt-1.5 text-sm text-green-800 leading-relaxed'>
+                            <p className='font-medium'>
+                              {PICKUP_ADDRESS.street}
+                            </p>
+                            <p>{PICKUP_ADDRESS.complement}</p>
+                            <p>{PICKUP_ADDRESS.district}</p>
+                            <p>{PICKUP_ADDRESS.cep}</p>
+                          </div>
+                          <p className='mt-2 text-xs text-green-600'>
+                            Após a confirmação do pagamento, entraremos em
+                            contato para combinar a retirada.
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <ShippingCalculator
+                        cartProducts={cartArray}
+                        onShippingSelect={handleShippingSelect}
+                        subtotal={getSubtotal() - getPromoDiscount()}
+                        addressCep={currentAddress?.zipcode || ''}
+                      />
+
+                      {selectedShipping && !selectedShipping.isPickup && (
+                        <div className='mt-3 p-3 bg-green-50 border border-green-200 rounded-lg'>
+                          <div className='flex items-center justify-between'>
+                            <div className='flex items-center gap-2'>
+                              <span>{selectedShipping.icon}</span>
+                              <div>
+                                <p className='text-sm font-medium text-green-800'>
+                                  {selectedShipping.carrier} —{' '}
+                                  {selectedShipping.name}
+                                  {selectedShipping.freeShipping && (
+                                    <span className='ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-200 text-green-800'>
+                                      🎉 FRETE GRÁTIS
+                                    </span>
+                                  )}
+                                </p>
+                                <p className='text-xs text-green-600'>
+                                  {selectedShipping.deliveryText}
+                                </p>
+                              </div>
+                            </div>
+                            {selectedShipping.freeShipping ? (
+                              <div className='flex flex-col items-end'>
+                                <span className='text-xs text-gray-400 line-through'>
+                                  {formatBRL(selectedShipping.originalPrice)}
+                                </span>
+                                <span className='text-sm font-bold text-green-700'>
+                                  GRÁTIS
+                                </span>
+                              </div>
+                            ) : (
+                              <span className='text-sm font-bold text-green-800'>
+                                {formatBRL(selectedShipping.price)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -1897,7 +2007,15 @@ const Cart = () => {
                   </div>
                 )}
 
-                {selectedShipping && (
+                {selectedShipping && selectedShipping.isPickup ? (
+                  <div className='flex justify-between items-center mb-3 text-green-600'>
+                    <span className='flex items-center gap-1'>
+                      <Store className='w-4 h-4' />
+                      Retirada no Local:
+                    </span>
+                    <span className='font-bold text-lg'>GRÁTIS</span>
+                  </div>
+                ) : selectedShipping ? (
                   <div
                     className={`flex justify-between items-center mb-3 ${selectedShipping.freeShipping ? 'text-green-600' : 'text-gray-700'}`}
                   >
@@ -1920,7 +2038,7 @@ const Cart = () => {
                       </span>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 <div className='flex justify-between font-bold text-xl mt-5 pt-3 border-t border-gray-200'>
                   <span>Total:</span>
