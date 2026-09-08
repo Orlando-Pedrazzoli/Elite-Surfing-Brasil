@@ -730,6 +730,14 @@ export const getAllOrders = async (req, res) => {
           isPaid: false,
           status: { $nin: ['Cancelled', 'Cancelado'] },
         },
+        // ✅ 08/09/2026: PIX e boleto do Mercado Pago AGUARDANDO pagamento
+        // também aparecem no admin (com badge "não pago") — visibilidade do
+        // funil e suporte ao cliente que ligou sobre um pedido pendente
+        {
+          paymentType: { $in: ['mercadopago_pix', 'mercadopago_boleto'] },
+          isPaid: false,
+          status: { $nin: ['Cancelled', 'Cancelado'] },
+        },
       ],
     })
       .populate('items.product address')

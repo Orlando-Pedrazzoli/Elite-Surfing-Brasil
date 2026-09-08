@@ -1,3 +1,4 @@
+// client/src/components/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import {
@@ -37,6 +38,12 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
 
+  // 🔑 "Esqueci minha senha" — recuperação via código OTP
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   // Animação de entrada
   const [isVisible, setIsVisible] = useState(false);
 
@@ -63,6 +70,10 @@ const Login = () => {
     setPassword('');
     setShowPassword(false);
     setAcceptTerms(false);
+    setOtpSent(false);
+    setOtp('');
+    setNewPassword('');
+    setConfirmNewPassword('');
   }, [state]);
 
   const handleClose = () => {
@@ -72,6 +83,87 @@ const Login = () => {
 
   const onSubmitHandler = async event => {
     event.preventDefault();
+
+    // ═══ 🔑 ESQUECI MINHA SENHA (via código OTP) ═══
+    if (state === 'forgot') {
+      const cleanEmail = email.toLowerCase().trim();
+
+      // Fase 1: verificar conta + enviar o código
+      if (!otpSent) {
+        setIsSubmitting(true);
+        try {
+          const check = await axios.post('/api/user/check-email', {
+            email: cleanEmail,
+          });
+          if (!check.data.success || !check.data.exists) {
+            toast.error(
+              check.data.exists === false
+                ? 'Não encontramos uma conta com este email.'
+                : check.data.message || 'Erro ao verificar email.',
+            );
+            return;
+          }
+          const send = await axios.post('/api/otp/send', {
+            email: cleanEmail,
+          });
+          if (send.data.success) {
+            setOtpSent(true);
+            toast.success('Código enviado! Confira seu email.', {
+              icon: '📧',
+            });
+          } else {
+            toast.error(send.data.message || 'Erro ao enviar código.');
+          }
+        } catch (error) {
+          toast.error(
+            error.response?.data?.message || 'Erro ao enviar código.',
+          );
+        } finally {
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
+      // Fase 2: código + nova senha → redefine e já entra logado
+      if (newPassword.length < 6) {
+        toast.error('A nova senha deve ter no mínimo 6 caracteres.');
+        return;
+      }
+      if (newPassword !== confirmNewPassword) {
+        toast.error('A confirmação não confere com a nova senha.');
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const { data } = await axios.post('/api/user/reset-password', {
+          email: cleanEmail,
+          otp: otp.replace(/\D/g, ''),
+          newPassword,
+        });
+        if (data.success) {
+          handleClose();
+          setUser(data.user);
+          if (data.token) setAuthToken(data.token);
+          saveUserToStorage(data.user);
+          const serverCart = data.user.cartItems || {};
+          setCartItems(serverCart);
+          saveCartToStorage(serverCart);
+          toast.success(
+            `Senha redefinida! Bem-vindo de volta, ${data.user.name.split(' ')[0]}!`,
+            { icon: '🔑', duration: 4000 },
+          );
+        } else {
+          toast.error(data.message || 'Erro ao redefinir a senha.');
+        }
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || 'Erro ao redefinir a senha.',
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
     if (state === 'register' && !acceptTerms) {
       toast.error('Aceite os termos e condições para continuar');
@@ -111,12 +203,16 @@ const Login = () => {
 
         // ✅ Usar APENAS os cartItems do servidor
         const serverCart = data.user.cartItems || {};
-        
+
         // Atualizar estado e localStorage com os dados do servidor
         setCartItems(serverCart);
         saveCartToStorage(serverCart);
-        
-        console.log('🛒 Carrinho restaurado do servidor:', Object.keys(serverCart).length, 'itens');
+
+        console.log(
+          '🛒 Carrinho restaurado do servidor:',
+          Object.keys(serverCart).length,
+          'itens',
+        );
 
         // Mensagem de boas-vindas personalizada
         const userName = data.user.name.split(' ')[0];
@@ -145,7 +241,7 @@ const Login = () => {
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          'Algo deu errado. Tente novamente.'
+          'Algo deu errado. Tente novamente.',
       );
     } finally {
       setIsSubmitting(false);
@@ -213,15 +309,17 @@ const Login = () => {
               <div>
                 <div className='flex items-center gap-3 mb-6'>
                   <div className='w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-lg'>
-                    <img 
-                      src='/logo.png' 
-                      alt='Elite Surfing Logo' 
+                    <img
+                      src='/logo.png'
+                      alt='Elite Surfing Logo'
                       className='w-10 h-10 object-contain'
                     />
                   </div>
                   <div>
                     <h1 className='text-xl font-bold'>Elite Surfing</h1>
-                    <p className='text-white/70 text-xs'>Loja de Surf - Equipamentos e Acessórios</p>
+                    <p className='text-white/70 text-xs'>
+                      Loja de Surf - Equipamentos e Acessórios
+                    </p>
                   </div>
                 </div>
               </div>
@@ -229,12 +327,18 @@ const Login = () => {
               {/* Benefícios */}
               <div className='space-y-4'>
                 <h2 className='text-2xl font-bold leading-tight'>
-                  {state === 'login' ? 'Bem-vindo de volta!' : 'Junte-se a nós!'}
+                  {state === 'login'
+                    ? 'Bem-vindo de volta!'
+                    : state === 'forgot'
+                      ? 'Recupere seu acesso'
+                      : 'Junte-se a nós!'}
                 </h2>
                 <p className='text-white/80 text-sm'>
                   {state === 'login'
                     ? 'Entre na sua conta para continuar sua jornada de surf.'
-                    : 'Crie sua conta e aproveite benefícios exclusivos.'}
+                    : state === 'forgot'
+                      ? 'Enviamos um código para o seu email — sem complicação.'
+                      : 'Crie sua conta e aproveite benefícios exclusivos.'}
                 </p>
 
                 {/* Features grid */}
@@ -256,9 +360,9 @@ const Login = () => {
 
               {/* Footer com Logo pequeno */}
               <div className='flex items-center gap-2 text-white/50 text-xs'>
-                <img 
-                  src='/logo.png' 
-                  alt='Elite Surfing' 
+                <img
+                  src='/logo.png'
+                  alt='Elite Surfing'
                   className='w-4 h-4 object-contain opacity-50'
                 />
                 <p>© 2026 Elite Surfing Brasil</p>
@@ -271,14 +375,16 @@ const Login = () => {
             {/* Header Mobile com Logo */}
             <div className='md:hidden text-center mb-6'>
               <div className='inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 shadow-sm'>
-                <img 
-                  src='/logo.png' 
-                  alt='Elite Surfing Logo' 
+                <img
+                  src='/logo.png'
+                  alt='Elite Surfing Logo'
                   className='w-10 h-10 object-contain'
                 />
               </div>
               <h1 className='text-xl font-bold text-gray-900'>Elite Surfing</h1>
-              <p className='text-sm text-gray-500'>Loja de Surf - Equipamentos e Acessórios</p>
+              <p className='text-sm text-gray-500'>
+                Loja de Surf - Equipamentos e Acessórios
+              </p>
             </div>
 
             {/* Tabs */}
@@ -287,7 +393,7 @@ const Login = () => {
                 type='button'
                 onClick={() => !isSubmitting && setState('login')}
                 className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  state === 'login'
+                  state !== 'register'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
@@ -312,12 +418,20 @@ const Login = () => {
             {/* Título */}
             <div className='mb-6'>
               <h2 className='text-2xl font-bold text-gray-900'>
-                {state === 'login' ? 'Bem-vindo de volta' : 'Criar nova conta'}
+                {state === 'login'
+                  ? 'Bem-vindo de volta'
+                  : state === 'forgot'
+                    ? 'Esqueci minha senha'
+                    : 'Criar nova conta'}
               </h2>
               <p className='text-gray-500 mt-1'>
                 {state === 'login'
                   ? 'Entre com suas credenciais para continuar'
-                  : 'Preencha os dados abaixo para se cadastrar'}
+                  : state === 'forgot'
+                    ? otpSent
+                      ? 'Digite o código recebido e defina a nova senha'
+                      : 'Informe seu email para receber o código de recuperação'
+                    : 'Preencha os dados abaixo para se cadastrar'}
               </p>
             </div>
 
@@ -374,7 +488,9 @@ const Login = () => {
                 <div className='relative'>
                   <div
                     className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                      focusedField === 'email' ? 'text-primary' : 'text-gray-400'
+                      focusedField === 'email'
+                        ? 'text-primary'
+                        : 'text-gray-400'
                     }`}
                   >
                     <Mail className='w-5 h-5' />
@@ -399,63 +515,130 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Campo Senha */}
-              <div className='space-y-2'>
-                <label
-                  htmlFor='password'
-                  className='block text-sm font-medium text-gray-700'
-                >
-                  Senha
-                </label>
-                <div className='relative'>
-                  <div
-                    className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                      focusedField === 'password'
-                        ? 'text-primary'
-                        : 'text-gray-400'
-                    }`}
-                  >
-                    <Lock className='w-5 h-5' />
+              {/* 🔑 RECUPERAÇÃO — código OTP + nova senha */}
+              {state === 'forgot' && otpSent && (
+                <>
+                  <div className='space-y-2'>
+                    <label className='block text-sm font-medium text-gray-700'>
+                      Código de verificação
+                    </label>
+                    <input
+                      type='text'
+                      inputMode='numeric'
+                      value={otp}
+                      onChange={e =>
+                        setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+                      }
+                      placeholder='000000'
+                      maxLength={6}
+                      className='w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-gray-300 focus:border-primary focus:bg-primary/5 outline-none text-center text-lg font-mono tracking-[0.4em] transition-all duration-200'
+                      disabled={isSubmitting}
+                    />
+                    <p className='text-xs text-gray-500'>
+                      Enviado para{' '}
+                      <span className='font-medium text-gray-700'>{email}</span>
+                    </p>
                   </div>
-                  <input
-                    id='password'
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    placeholder='••••••••'
-                    className={`w-full pl-12 pr-12 py-3.5 rounded-xl border-2 transition-all duration-200 outline-none text-gray-900 placeholder:text-gray-400 ${
-                      focusedField === 'password'
-                        ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
-                        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                    }`}
-                    required
-                    disabled={isSubmitting}
-                    autoComplete={
-                      state === 'login' ? 'current-password' : 'new-password'
-                    }
-                    minLength={state === 'register' ? 6 : undefined}
-                  />
-                  <button
-                    type='button'
-                    onClick={() => setShowPassword(!showPassword)}
-                    className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors'
-                    tabIndex={-1}
+                  <div className='space-y-2'>
+                    <label className='block text-sm font-medium text-gray-700'>
+                      Nova senha
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder='Mínimo 6 caracteres'
+                      minLength={6}
+                      autoComplete='new-password'
+                      className='w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-gray-300 focus:border-primary focus:bg-primary/5 outline-none transition-all duration-200'
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <label className='block text-sm font-medium text-gray-700'>
+                      Confirmar nova senha
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmNewPassword}
+                      onChange={e => setConfirmNewPassword(e.target.value)}
+                      placeholder='Repita a nova senha'
+                      minLength={6}
+                      autoComplete='new-password'
+                      className='w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 bg-gray-50 hover:border-gray-300 focus:border-primary focus:bg-primary/5 outline-none transition-all duration-200'
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      type='button'
+                      onClick={() => setShowPassword(v => !v)}
+                      className='text-xs text-gray-500 hover:text-gray-700 transition-colors'
+                      tabIndex={-1}
+                    >
+                      {showPassword ? 'Ocultar senhas' : 'Mostrar senhas'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Campo Senha */}
+              {state !== 'forgot' && (
+                <div className='space-y-2'>
+                  <label
+                    htmlFor='password'
+                    className='block text-sm font-medium text-gray-700'
                   >
-                    {showPassword ? (
-                      <EyeOff className='w-5 h-5' />
-                    ) : (
-                      <Eye className='w-5 h-5' />
-                    )}
-                  </button>
+                    Senha
+                  </label>
+                  <div className='relative'>
+                    <div
+                      className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                        focusedField === 'password'
+                          ? 'text-primary'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      <Lock className='w-5 h-5' />
+                    </div>
+                    <input
+                      id='password'
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder='••••••••'
+                      className={`w-full pl-12 pr-12 py-3.5 rounded-xl border-2 transition-all duration-200 outline-none text-gray-900 placeholder:text-gray-400 ${
+                        focusedField === 'password'
+                          ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+                          : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                      }`}
+                      required
+                      disabled={isSubmitting}
+                      autoComplete={
+                        state === 'login' ? 'current-password' : 'new-password'
+                      }
+                      minLength={state === 'register' ? 6 : undefined}
+                    />
+                    <button
+                      type='button'
+                      onClick={() => setShowPassword(!showPassword)}
+                      className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors'
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className='w-5 h-5' />
+                      ) : (
+                        <Eye className='w-5 h-5' />
+                      )}
+                    </button>
+                  </div>
+                  {state === 'register' && (
+                    <p className='text-xs text-gray-500 mt-1'>
+                      Mínimo de 6 caracteres
+                    </p>
+                  )}
                 </div>
-                {state === 'register' && (
-                  <p className='text-xs text-gray-500 mt-1'>
-                    Mínimo de 6 caracteres
-                  </p>
-                )}
-              </div>
+              )}
 
               {/* Opções extras */}
               {state === 'login' ? (
@@ -489,8 +672,15 @@ const Login = () => {
                       Lembrar de mim
                     </span>
                   </label>
+                  <button
+                    type='button'
+                    onClick={() => !isSubmitting && setState('forgot')}
+                    className='text-sm text-primary hover:underline font-medium'
+                  >
+                    Esqueci minha senha
+                  </button>
                 </div>
-              ) : (
+              ) : state === 'register' ? (
                 <div className='space-y-3'>
                   <label className='flex items-start gap-3 cursor-pointer group'>
                     <div className='relative mt-0.5'>
@@ -537,7 +727,7 @@ const Login = () => {
                     </span>
                   </label>
                 </div>
-              )}
+              ) : null}
 
               {/* Botão Submit */}
               <button
@@ -545,14 +735,20 @@ const Login = () => {
                 disabled={
                   isSubmitting ||
                   !email ||
-                  !password ||
-                  (state === 'register' && (!name || !acceptTerms))
+                  (state === 'forgot'
+                    ? otpSent &&
+                      (otp.length !== 6 || !newPassword || !confirmNewPassword)
+                    : !password ||
+                      (state === 'register' && (!name || !acceptTerms)))
                 }
                 className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
                   isSubmitting ||
                   !email ||
-                  !password ||
-                  (state === 'register' && (!name || !acceptTerms))
+                  (state === 'forgot'
+                    ? otpSent &&
+                      (otp.length !== 6 || !newPassword || !confirmNewPassword)
+                    : !password ||
+                      (state === 'register' && (!name || !acceptTerms)))
                     ? 'bg-gray-300 cursor-not-allowed'
                     : 'bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0'
                 }`}
@@ -561,7 +757,13 @@ const Login = () => {
                   <>
                     <Loader2 className='w-5 h-5 animate-spin' />
                     <span>
-                      {state === 'login' ? 'Entrando...' : 'Criando conta...'}
+                      {state === 'login'
+                        ? 'Entrando...'
+                        : state === 'forgot'
+                          ? otpSent
+                            ? 'Redefinindo...'
+                            : 'Enviando código...'
+                          : 'Criando conta...'}
                     </span>
                   </>
                 ) : (
@@ -570,6 +772,15 @@ const Login = () => {
                       <>
                         <Lock className='w-5 h-5' />
                         <span>Entrar</span>
+                      </>
+                    ) : state === 'forgot' ? (
+                      <>
+                        <Lock className='w-5 h-5' />
+                        <span>
+                          {otpSent
+                            ? 'Redefinir senha e entrar'
+                            : 'Enviar código'}
+                        </span>
                       </>
                     ) : (
                       <>
@@ -580,6 +791,17 @@ const Login = () => {
                   </>
                 )}
               </button>
+
+              {/* 🔑 Voltar ao login (modo recuperação) */}
+              {state === 'forgot' && (
+                <button
+                  type='button'
+                  onClick={() => !isSubmitting && setState('login')}
+                  className='w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors'
+                >
+                  ← Voltar ao login
+                </button>
+              )}
             </form>
 
             {/* Divider */}
@@ -589,9 +811,7 @@ const Login = () => {
               </div>
               <div className='relative flex justify-center text-sm'>
                 <span className='px-4 bg-white text-gray-500'>
-                  {state === 'login'
-                    ? 'Novo por aqui?'
-                    : 'Já tem uma conta?'}
+                  {state === 'login' ? 'Novo por aqui?' : 'Já tem uma conta?'}
                 </span>
               </div>
             </div>

@@ -801,34 +801,49 @@ const Orders = () => {
                       </div>
 
                       <div className='flex items-center gap-3 flex-wrap'>
-                        {/* Payment Badge */}
-                        <div
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                            order.paymentType === 'pix_manual'
-                              ? pixPending
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-green-100 text-green-800'
-                              : order.paymentType === 'COD'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {order.paymentType === 'pix_manual' ? (
-                            <QrCode className='w-3.5 h-3.5' />
-                          ) : order.paymentType === 'COD' ? (
-                            <Banknote className='w-3.5 h-3.5' />
-                          ) : (
-                            <CreditCard className='w-3.5 h-3.5' />
-                          )}
-                          {order.paymentType === 'pix_manual'
+                        {/* Payment Badge — reconhece Mercado Pago e destaca não pago */}
+                        {(() => {
+                          const t = order.paymentType;
+                          const isPix =
+                            t === 'pix_manual' || t === 'mercadopago_pix';
+                          const isBoleto = t === 'mercadopago_boleto';
+                          const label = isPix
                             ? 'PIX'
-                            : order.paymentType === 'COD'
-                              ? 'COD'
-                              : 'Online'}
-                          {order.isPaid && (
-                            <CheckCircle className='w-3.5 h-3.5 ml-1' />
-                          )}
-                        </div>
+                            : isBoleto
+                              ? 'Boleto'
+                              : t === 'COD'
+                                ? 'COD'
+                                : t?.includes('card')
+                                  ? 'Cartão'
+                                  : 'Online';
+                          const awaiting = !order.isPaid && t !== 'COD';
+                          return (
+                            <div
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+                                awaiting || t === 'COD'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {isPix ? (
+                                <QrCode className='w-3.5 h-3.5' />
+                              ) : isBoleto ? (
+                                <FileText className='w-3.5 h-3.5' />
+                              ) : t === 'COD' ? (
+                                <Banknote className='w-3.5 h-3.5' />
+                              ) : (
+                                <CreditCard className='w-3.5 h-3.5' />
+                              )}
+                              {label}
+                              {awaiting && (
+                                <span className='font-bold'>• NÃO PAGO</span>
+                              )}
+                              {order.isPaid && (
+                                <CheckCircle className='w-3.5 h-3.5 ml-1' />
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Guest Badge */}
                         {order.isGuestOrder && (

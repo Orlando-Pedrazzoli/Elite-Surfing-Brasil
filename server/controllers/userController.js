@@ -539,3 +539,89 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+// =============================================================================
+// 🔑 RESET PASSWORD VIA OTP : POST /api/user/reset-password
+// =============================================================================
+// "Esqueci minha senha" — o cliente recebe o código de 6 dígitos no email
+// (mesma infra do guest checkout / login sem senha: rate limit, expiração,
+// máx. 5 tentativas), define a nova senha e JÁ ENTRA logado: verificar o
+// OTP prova a posse do email, não há motivo para pedir login de novo.
+// =============================================================================
+export const resetPasswordWithOtp = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.json({
+        success: false,
+        message: 'Email, código e nova senha são obrigatórios.',
+      });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+
+    if (!/^\d{6}$/.test(String(otp))) {
+      return res.json({
+        success: false,
+        message: 'O código deve ter 6 dígitos.',
+      });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.json({
+        success: false,
+        message: 'A nova senha deve ter no mínimo 6 caracteres.',
+      });
+    }
+
+    // 1. Verificar o OTP (consome o código)
+    const result = await OtpVerification.verifyOTP(
+      normalizedEmail,
+      String(otp),
+    );
+    if (!result.valid) {
+      return res.json({ success: false, message: result.reason });
+    }
+
+    // 2. Buscar a conta
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.json({
+        success: false,
+        noAccount: true,
+        message: 'Não encontramos uma conta com este email.',
+      });
+    }
+
+    // 3. Redefinir a senha
+    user.password = await bcrypt.hash(String(newPassword), 10);
+    await user.save();
+
+    // 4. Sessão imediata (mesmo mecanismo do login)
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+    res.cookie('token', token, getCookieOptions());
+
+    console.log('🔑 Senha redefinida via OTP:', user.email);
+
+    return res.json({
+      success: true,
+      message: 'Senha redefinida com sucesso!',
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        cartItems: user.cartItems || {},
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('❌ Erro no resetPasswordWithOtp:', error.message);
+    return res.json({
+      success: false,
+      message: 'Erro ao redefinir a senha. Tente novamente.',
+    });
+  }
+};
