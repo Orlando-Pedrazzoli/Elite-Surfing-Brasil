@@ -153,13 +153,19 @@ const ReturningCustomerCard = () => {
       // Sessão (mesmo mecanismo do login por senha)
       if (data.token) setAuthToken(data.token);
       saveUserToStorage(data.user);
+
+      // 🔑 Sinaliza ao Cart: se a conta não tiver endereço salvo, abrir
+      // o formulário semi-preenchido (nome + email) logo após o login.
+      // O Cart limpa a flag em todos os caminhos.
+      sessionStorage.setItem('rc_prompt_address', '1');
+
       setUser(data.user);
 
       const firstName = data.user.name?.split(' ')[0] || '';
-      toast.success(
-        `Bem-vindo de volta, ${firstName}! Seus endereços foram carregados.`,
-        { icon: '👋', duration: 4000 },
-      );
+      toast.success(`Bem-vindo de volta, ${firstName}!`, {
+        icon: '👋',
+        duration: 4000,
+      });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Erro ao fazer login.');
     } finally {

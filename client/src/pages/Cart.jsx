@@ -263,6 +263,8 @@ const Cart = () => {
       if (data.success) {
         setAddresses(data.addresses);
         if (data.addresses.length > 0) {
+          // Conta com endereços — nada a pedir ao cliente
+          sessionStorage.removeItem('rc_prompt_address');
           const savedGuestAddress = localStorage.getItem(
             'guest_checkout_address',
           );
@@ -284,6 +286,18 @@ const Cart = () => {
           }
         } else if (guestAddress) {
           saveGuestAddressToServer(guestAddress);
+        } else if (sessionStorage.getItem('rc_prompt_address')) {
+          // 🔑 Cliente acabou de logar via OTP e a conta ainda NÃO tem
+          // endereço salvo → abre o formulário semi-preenchido (nome +
+          // email do cadastro). Ele completa o endereço uma vez e, nas
+          // próximas compras, entra com tudo 100% preenchido.
+          sessionStorage.removeItem('rc_prompt_address');
+          toast(
+            'Complete seu endereço de entrega — fica salvo para as próximas compras!',
+            { icon: '📍', duration: 5000 },
+          );
+          setEditingAddress(null);
+          setShowAddressModal(true);
         }
       }
     } catch (error) {
@@ -874,6 +888,21 @@ const Cart = () => {
     setShowAddressModal(true);
   };
 
+  // 🔑 Pré-preenche o modal com os dados do cadastro (nome + email) para
+  // clientes logados sem endereço salvo — ele completa só o endereço e,
+  // na próxima compra, o formulário vem 100% preenchido.
+  const getUserPrefill = () => {
+    if (!user) return null;
+    const parts = String(user.name || '')
+      .trim()
+      .split(/\s+/);
+    return {
+      firstName: parts[0] || '',
+      lastName: parts.slice(1).join(' ') || '',
+      email: user.email || '',
+    };
+  };
+
   const handleEditAddress = address => {
     setEditingAddress(address);
     setShowAddressModal(true);
@@ -1102,9 +1131,7 @@ const Cart = () => {
           setEditingAddress(null);
         }}
         onSave={handleSaveAddress}
-        initialAddress={
-          editingAddress || (user?.email ? { email: user.email } : null)
-        }
+        initialAddress={editingAddress || getUserPrefill()}
         isGuest={!user}
         isLoading={isAddressLoading}
       />
