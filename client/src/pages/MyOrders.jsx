@@ -10,7 +10,7 @@ const MyOrders = () => {
   const [myOrders, setMyOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { currency, axios, user } = useAppContext();
+  const { currency, axios, user, navigate } = useAppContext();
 
   const fetchMyOrders = useCallback(async () => {
     if (!user?._id) {
@@ -27,14 +27,23 @@ const MyOrders = () => {
       });
 
       if (data.success) {
-        // ✅ FIX 11/03: Filtrar pedidos — agora inclui pagarme_card
+        // ✅ FIX 08/09/2026: o filtro antigo não reconhecia os paymentTypes
+        // do Mercado Pago (mercadopago_card/pix/boleto) e devolvia `false`
+        // — TODOS os pedidos MP ficavam invisíveis para o cliente. Agora:
+        //   • pedidos pagos de qualquer método aparecem
+        //   • PIX/boleto AGUARDANDO pagamento aparecem (com botão de pagar)
+        const AWAITING_TYPES = [
+          'mercadopago_pix',
+          'mercadopago_boleto',
+          'pix_manual',
+        ];
         const validOrders = data.orders.filter(order => {
           if (order.paymentType === 'COD') return true;
-          if (order.paymentType === 'Online') return order.isPaid === true;
-          if (order.paymentType === 'pix_manual') return order.isPaid === true;
-          if (order.paymentType === 'pagarme_card')
-            return order.isPaid === true;
-          return false;
+          if (order.isPaid) return true;
+          return (
+            AWAITING_TYPES.includes(order.paymentType) &&
+            !['Cancelado', 'Cancelled'].includes(order.status)
+          );
         });
 
         setMyOrders(validOrders);
@@ -485,21 +494,65 @@ const MyOrders = () => {
                         </span>
                       </div>
 
-                      {/* ✅ FIX 11/03: Inclui pagarme_card nos badges de pagamento */}
-                      <div className='flex gap-2'>
-                        {(order.paymentType === 'Online' ||
-                          order.paymentType === 'pix_manual' ||
-                          order.paymentType === 'pagarme_card') &&
-                          order.isPaid && (
-                            <span className='text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium'>
-                              ✅ Pagamento Confirmado
-                            </span>
-                          )}
+                      {/* ✅ FIX 08/09/2026: badges por estado de pagamento */}
+                      <div className='flex flex-wrap items-center gap-2'>
+                        {order.isPaid && order.paymentType !== 'COD' && (
+                          <span className='text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium'>
+                            ✅ Pagamento Confirmado
+                          </span>
+                        )}
                         {order.paymentType === 'COD' && (
                           <span className='text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium'>
                             💰 Pagar na Entrega
                           </span>
                         )}
+
+                        {/* ⏳ AGUARDANDO PAGAMENTO — retomar PIX/boleto */}
+                        {!order.isPaid &&
+                          ['mercadopago_pix', 'mercadopago_boleto'].includes(
+                            order.paymentType,
+                          ) &&
+                          (order.mpExpiresAt &&
+                          new Date(order.mpExpiresAt).getTime() < Date.now() ? (
+                            <span className='text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full font-medium'>
+                              ⌛ Pagamento expirado — faça um novo pedido
+                            </span>
+                          ) : (
+                            <>
+                              <span className='text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full font-medium'>
+                                ⏳ Aguardando Pagamento
+                              </span>
+                              {order.paymentType === 'mercadopago_pix' ? (
+                                <button
+                                  onClick={() =>
+                                    navigate(`/pix-payment/${order._id}`)
+                                  }
+                                  className='text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-full transition-colors animate-pulse'
+                                >
+                                  💠 Pagar com PIX
+                                </button>
+                              ) : (
+                                order.mpBoletoUrl && (
+                                  <a
+                                    href={order.mpBoletoUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    className='text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-full transition-colors'
+                                  >
+                                    📄 Ver Boleto
+                                  </a>
+                                )
+                              )}
+                            </>
+                          ))}
+
+                        {/* ⏳ PIX manual — aguarda confirmação do admin */}
+                        {!order.isPaid &&
+                          order.paymentType === 'pix_manual' && (
+                            <span className='text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full font-medium'>
+                              ⏳ Aguardando confirmação do PIX
+                            </span>
+                          )}
                       </div>
                     </div>
                   </div>

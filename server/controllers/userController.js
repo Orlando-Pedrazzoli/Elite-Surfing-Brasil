@@ -260,7 +260,14 @@ export const checkEmailExists = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erro ao verificar email:', error);
-    res.json({ success: false, message: error.message });
+    // ⚠️ Nunca expor error.message cru ao cliente (pode conter detalhes
+    // internos de TLS/Mongo). Log completo no servidor, mensagem amigável
+    // no browser.
+    res.json({
+      success: false,
+      message:
+        'Não foi possível verificar o email agora. Tente novamente em instantes.',
+    });
   }
 };
 
@@ -437,5 +444,98 @@ export const loginWithOtp = async (req, res) => {
   } catch (error) {
     console.error('❌ Erro no loginWithOtp:', error.message);
     return res.json({ success: false, message: 'Erro interno no login.' });
+  }
+};
+
+// =============================================================================
+// 👤 UPDATE PROFILE : POST /api/user/update-profile  (authUser)
+// =============================================================================
+// Minha Conta — por ora apenas o nome é editável. O email é a chave da
+// conta (login, OTP, pedidos) — alterá-lo exigiria reverificação, fica
+// para uma fase futura.
+// =============================================================================
+export const updateProfile = async (req, res) => {
+  try {
+    const { userId, name } = req.body;
+
+    const cleanName = String(name || '').trim();
+    if (cleanName.length < 3 || !cleanName.includes(' ')) {
+      return res.json({
+        success: false,
+        message: 'Informe nome e sobrenome.',
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { name: cleanName },
+      { new: true },
+    ).select('-password');
+
+    if (!user) {
+      return res.json({ success: false, message: 'Usuário não encontrado.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Dados atualizados!',
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        cartItems: user.cartItems || {},
+      },
+    });
+  } catch (error) {
+    console.error('❌ Erro no updateProfile:', error.message);
+    return res.json({
+      success: false,
+      message: 'Erro ao atualizar os dados. Tente novamente.',
+    });
+  }
+};
+
+// =============================================================================
+// 🔒 CHANGE PASSWORD : POST /api/user/change-password  (authUser)
+// =============================================================================
+export const changePassword = async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.json({
+        success: false,
+        message: 'Informe a senha atual e a nova senha.',
+      });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.json({
+        success: false,
+        message: 'A nova senha deve ter no mínimo 6 caracteres.',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.json({ success: false, message: 'Usuário não encontrado.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.json({ success: false, message: 'Senha atual incorreta.' });
+    }
+
+    user.password = await bcrypt.hash(String(newPassword), 10);
+    await user.save();
+
+    console.log('🔒 Senha alterada para:', user.email);
+    return res.json({ success: true, message: 'Senha alterada com sucesso!' });
+  } catch (error) {
+    console.error('❌ Erro no changePassword:', error.message);
+    return res.json({
+      success: false,
+      message: 'Erro ao alterar a senha. Tente novamente.',
+    });
   }
 };

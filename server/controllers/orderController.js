@@ -604,17 +604,36 @@ export const getUserOrders = async (req, res) => {
       req.user?.id || req.user?._id || req.query.userId || req.body.userId;
     const guestEmail = req.query.guestEmail || req.body.guestEmail;
 
+    // ✅ 08/09/2026: incluir pedidos AGUARDANDO PAGAMENTO (PIX/boleto
+    // gerados e não pagos, não cancelados) — padrão Mercado Livre: o
+    // cliente vê o pedido pendente e pode concluir o pagamento.
+    const PENDING_PAYMENT_TYPES = [
+      'mercadopago_pix',
+      'mercadopago_boleto',
+      'pix_manual',
+    ];
+    const paidOrAwaitingPayment = {
+      $or: [
+        { isPaid: true },
+        {
+          isPaid: false,
+          paymentType: { $in: PENDING_PAYMENT_TYPES },
+          status: { $nin: ['Cancelado', 'Cancelled'] },
+        },
+      ],
+    };
+
     let query;
     if (guestEmail) {
       query = {
         isGuestOrder: true,
         guestEmail: guestEmail,
-        isPaid: true,
+        ...paidOrAwaitingPayment,
       };
     } else if (userId) {
       query = {
         userId,
-        isPaid: true,
+        ...paidOrAwaitingPayment,
       };
     } else {
       return res.json({
@@ -624,6 +643,9 @@ export const getUserOrders = async (req, res) => {
     }
 
     const orders = await Order.find(query)
+      // QR code base64 é uma imagem PNG inteira — pesado demais para a
+      // listagem. A página /pix-payment busca sob demanda.
+      .select('-mpPixQrCodeBase64')
       .populate({
         path: 'items.product',
         select: 'name image category offerPrice weight color colorCode',
@@ -799,5 +821,77 @@ export const updateOrderStatus = async (req, res) => {
   } catch (error) {
     console.error('❌ Erro ao atualizar status:', error);
     res.json({ success: false, message: error.message });
+  }
+};
+
+// =============================================================================
+// 🆕 GET PENDING PAYMENT DATA : GET /api/order/pending-payment/:orderId
+// =============================================================================
+// Recupera os dados de pagamento de um pedido Mercado Pago AINDA NÃO PAGO
+// (QR Code PIX / boleto). Permite ao cliente retomar o pagamento a partir
+// de "Meus Pedidos" mesmo que tenha fechado a aba (o /pix-payment deixava
+// de funcionar sem o localStorage). Público por orderId — mesmo nível de
+// exposição da página de sucesso (/order/details/:orderId).
+// =============================================================================
+export const getPendingPaymentById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId).select(
+      'isPaid status paymentType amount mpPixQrCode mpPixQrCodeBase64 mpPixTicketUrl mpBoletoUrl mpBoletoBarcode mpExpiresAt',
+    );
+
+    if (!order) {
+      return res.json({ success: false, message: 'Pedido não encontrado' });
+    }
+
+    if (order.isPaid) {
+      // Já foi pago — o front redireciona para a página de sucesso
+      return res.json({ success: true, isPaid: true });
+    }
+
+    if (['Cancelado', 'Cancelled'].includes(order.status)) {
+      return res.json({ success: false, message: 'Pedido cancelado.' });
+    }
+
+    if (
+      !['mercadopago_pix', 'mercadopago_boleto'].includes(order.paymentType)
+    ) {
+      return res.json({
+        success: false,
+        message: 'Este pedido não possui pagamento pendente recuperável.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      isPaid: false,
+      paymentType: order.paymentType,
+      amount: order.amount,
+      pix:
+        order.paymentType === 'mercadopago_pix'
+          ? {
+              qrCode: order.mpPixQrCode,
+              qrCodeBase64: order.mpPixQrCodeBase64,
+              ticketUrl: order.mpPixTicketUrl,
+              expiresAt: order.mpExpiresAt,
+            }
+          : null,
+      boleto:
+        order.paymentType === 'mercadopago_boleto'
+          ? {
+              url: order.mpBoletoUrl,
+              barcode: order.mpBoletoBarcode,
+              expiresAt: order.mpExpiresAt,
+            }
+          : null,
+      expiresAt: order.mpExpiresAt,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao recuperar pagamento pendente:', error.message);
+    return res.json({
+      success: false,
+      message: 'Erro ao recuperar dados de pagamento.',
+    });
   }
 };

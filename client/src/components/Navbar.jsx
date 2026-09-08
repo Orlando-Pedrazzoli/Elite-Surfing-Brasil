@@ -1,6 +1,17 @@
+// client/src/components/Navbar.jsx
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Lock, LogOut, Menu, ChevronDown, ChevronRight, User, Package, Star, Search } from 'lucide-react';
+import {
+  Lock,
+  LogOut,
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  User,
+  Package,
+  Star,
+  Search,
+} from 'lucide-react';
 import { assets, groups, categories } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
 
@@ -60,6 +71,16 @@ const quilhaSublinks = [
   { text: 'Chave / Parafuso', path: 'Chave-Parafuso' },
 ];
 
+// 🔑 Iniciais do cliente para o avatar (ex: "Orlando Pedrazzoli" → "OP")
+const getInitials = name => {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/);
+  const first = parts[0]?.[0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase() || 'ES';
+};
+
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -98,7 +119,10 @@ const Navbar = () => {
       if (searchQuery && searchQuery.length > 0) {
         setSearchQuery('');
       }
-    } else if (currentPath.includes('/products/') && currentPath.split('/').length > 2) {
+    } else if (
+      currentPath.includes('/products/') &&
+      currentPath.split('/').length > 2
+    ) {
       if (searchQuery && searchQuery.length > 0) {
         setSearchQuery('');
       }
@@ -134,7 +158,7 @@ const Navbar = () => {
   const isTransparent = isHomepage && !scrolled;
 
   // Obter sublinks por slug
-  const getSublinks = (slug) => {
+  const getSublinks = slug => {
     if (slug === 'sarcofagos') return sarcofagoSublinks;
     if (slug === 'decks') return null;
     if (slug === 'quilhas') return quilhaSublinks;
@@ -151,7 +175,6 @@ const Navbar = () => {
           ${isTransparent ? 'bg-transparent border-white/10' : 'bg-white border-gray-200 shadow-sm'}`}
       >
         <div className='flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-3'>
-
           {/* ===== MOBILE: Hamburger (Left) ===== */}
           <button
             onClick={() => setOpen(!open)}
@@ -180,20 +203,27 @@ const Navbar = () => {
 
           {/* ===== DESKTOP: Department Links (Center) ===== */}
           <div className='hidden lg:flex items-center justify-center gap-6 xl:gap-8 flex-1 mx-8'>
-            {NAV_DEPARTMENTS.map((dept) => {
+            {NAV_DEPARTMENTS.map(dept => {
               const isAllDepts = dept.slug === null;
               const isDecks = dept.slug === 'decks';
               const isBlog = dept.noDropdown;
-              const sublinks = (isAllDepts || isBlog) ? null : getSublinks(dept.slug);
-              const collectionPath = dept.path || (dept.slug ? `/collections/${dept.slug}` : '/products');
-              const hasDropdown = !isBlog && (isAllDepts || isDecks || (sublinks && sublinks.length > 0));
+              const sublinks =
+                isAllDepts || isBlog ? null : getSublinks(dept.slug);
+              const collectionPath =
+                dept.path ||
+                (dept.slug ? `/collections/${dept.slug}` : '/products');
+              const hasDropdown =
+                !isBlog &&
+                (isAllDepts || isDecks || (sublinks && sublinks.length > 0));
 
               return (
                 <div key={dept.label} className='relative group'>
                   <Link
                     to={collectionPath}
                     className={`flex items-center gap-1 text-xs font-semibold tracking-wider uppercase py-1 transition-colors whitespace-nowrap ${
-                      isTransparent ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-primary'
+                      isTransparent
+                        ? 'text-white/90 hover:text-white'
+                        : 'text-gray-700 hover:text-primary'
                     }`}
                   >
                     {dept.label}
@@ -206,13 +236,17 @@ const Navbar = () => {
                   {isAllDepts && (
                     <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
                       <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
-                        {groups.map((group) => (
+                        {groups.map(group => (
                           <Link
                             key={group.id}
                             to={`/collections/${group.slug}`}
                             className='flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
                           >
-                            <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
+                            <img
+                              src={group.image}
+                              alt={group.name}
+                              className='w-8 h-8 rounded object-cover'
+                            />
                             <span>{group.name}</span>
                           </Link>
                         ))}
@@ -232,10 +266,13 @@ const Navbar = () => {
                         >
                           Ver Todos
                         </Link>
-                        {deckTypes.map((deckType) => {
+                        {deckTypes.map(deckType => {
                           if (deckType.children) {
                             return (
-                              <div key={deckType.text} className='relative group/sub'>
+                              <div
+                                key={deckType.text}
+                                className='relative group/sub'
+                              >
                                 <Link
                                   to={deckType.filterPath}
                                   className='flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
@@ -251,7 +288,7 @@ const Navbar = () => {
                                     >
                                       Ver Todos Shortboard
                                     </Link>
-                                    {deckType.children.map((child) => (
+                                    {deckType.children.map(child => (
                                       <Link
                                         key={child.path}
                                         to={`/products/${child.path}`}
@@ -280,27 +317,31 @@ const Navbar = () => {
                   )}
 
                   {/* Dropdown: Subcategorias normais (Leashes, Capas, Sarcófagos, Quilhas, Acessórios) */}
-                  {!isAllDepts && !isDecks && !isBlog && sublinks && sublinks.length > 0 && (
-                    <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
-                      <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
-                        <Link
-                          to={collectionPath}
-                          className='block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors border-b border-gray-100'
-                        >
-                          Ver Todos
-                        </Link>
-                        {sublinks.map((sub) => (
+                  {!isAllDepts &&
+                    !isDecks &&
+                    !isBlog &&
+                    sublinks &&
+                    sublinks.length > 0 && (
+                      <div className='invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 pt-2 transition-all duration-200 z-50'>
+                        <div className='bg-white shadow-xl border border-gray-200 rounded-lg py-2 min-w-[220px]'>
                           <Link
-                            key={sub.path}
-                            to={`/products/${sub.path}`}
-                            className='block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
+                            to={collectionPath}
+                            className='block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors border-b border-gray-100'
                           >
-                            {sub.text}
+                            Ver Todos
                           </Link>
-                        ))}
+                          {sublinks.map(sub => (
+                            <Link
+                              key={sub.path}
+                              to={`/products/${sub.path}`}
+                              className='block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/10 hover:text-primary transition-colors'
+                            >
+                              {sub.text}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               );
             })}
@@ -316,9 +357,13 @@ const Navbar = () => {
               }`}
               title='Buscar produtos'
             >
-              <Search className={`w-5 h-5 transition-colors ${
-                isTransparent ? 'text-white' : 'text-gray-600 hover:text-primary'
-              }`} />
+              <Search
+                className={`w-5 h-5 transition-colors ${
+                  isTransparent
+                    ? 'text-white'
+                    : 'text-gray-600 hover:text-primary'
+                }`}
+              />
             </button>
 
             {/* Admin */}
@@ -330,9 +375,13 @@ const Navbar = () => {
                 }`}
                 title='Área de Administração'
               >
-                <Lock className={`w-5 h-5 transition-colors ${
-                  isTransparent ? 'text-white' : 'text-gray-600 group-hover:text-primary'
-                }`} />
+                <Lock
+                  className={`w-5 h-5 transition-colors ${
+                    isTransparent
+                      ? 'text-white'
+                      : 'text-gray-600 group-hover:text-primary'
+                  }`}
+                />
                 {isSeller && (
                   <span className='absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-white'></span>
                 )}
@@ -341,7 +390,9 @@ const Navbar = () => {
                 <div className='hidden group-hover:block absolute top-full right-0 pt-2 z-50'>
                   <div className='bg-white shadow-lg border border-gray-200 py-2 w-48 rounded-md text-sm'>
                     <div className='px-4 py-2 border-b border-gray-100'>
-                      <p className='font-semibold text-gray-800'>Painel Admin</p>
+                      <p className='font-semibold text-gray-800'>
+                        Painel Admin
+                      </p>
                       <p className='text-xs text-gray-500'>Sessão ativa</p>
                     </div>
                     <button
@@ -357,12 +408,17 @@ const Navbar = () => {
             </div>
 
             {/* Cart */}
-            <div onClick={handleCartClick} className='relative cursor-pointer p-2'>
+            <div
+              onClick={handleCartClick}
+              className='relative cursor-pointer p-2'
+            >
               <img
                 src={assets.nav_cart_icon}
                 alt='Carrinho de compras'
                 className={`w-6 transition-all duration-300 ${
-                  isTransparent ? 'invert brightness-0 opacity-100' : 'opacity-80'
+                  isTransparent
+                    ? 'invert brightness-0 opacity-100'
+                    : 'opacity-80'
                 }`}
               />
               {getCartCount() > 0 && (
@@ -375,28 +431,49 @@ const Navbar = () => {
             {/* User */}
             <div className='relative group'>
               <button
-                onClick={() => !user && setShowUserLogin(true)}
-                className={`relative p-2 rounded-full transition-all duration-200 cursor-pointer ${
+                onClick={() =>
+                  user ? navigate('/minha-conta') : setShowUserLogin(true)
+                }
+                className={`relative p-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                   isTransparent ? 'hover:bg-white/10' : 'hover:bg-gray-100'
                 }`}
                 aria-label={user ? 'Minha conta' : 'Entrar'}
               >
-                <User
-                  className={`w-6 h-6 transition-colors ${isTransparent ? 'text-white' : 'text-gray-700'}`}
-                  fill={user ? (isTransparent ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)') : 'none'}
-                />
-                {user && (
-                  <span className='absolute bottom-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white'></span>
+                {user ? (
+                  /* 🔑 LOGADO — iniciais + anel verde (sinal claro de sessão) */
+                  <span className='flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dull text-white text-xs font-bold ring-2 ring-green-500 shadow-[0_0_10px_rgba(34,197,94,0.45)] transition-transform duration-200 group-hover:scale-110 select-none'>
+                    {getInitials(user.name)}
+                  </span>
+                ) : (
+                  <User
+                    className={`w-6 h-6 transition-colors ${isTransparent ? 'text-white' : 'text-gray-700'}`}
+                    fill='none'
+                  />
                 )}
               </button>
               {user && (
                 <div className='hidden group-hover:block absolute top-full right-0 pt-2 z-50'>
                   <div className='bg-white shadow-xl border border-gray-200 rounded-xl py-2 w-52 text-sm'>
-                    <div className='px-4 py-3 border-b border-gray-100'>
-                      <p className='font-semibold text-gray-800 truncate'>{user.name}</p>
-                      <p className='text-xs text-gray-400 mt-0.5'>Minha conta</p>
-                    </div>
+                    <button
+                      onClick={() => navigate('/minha-conta')}
+                      className='w-full px-4 py-3 border-b border-gray-100 text-left hover:bg-gray-50 transition-colors'
+                    >
+                      <p className='font-semibold text-gray-800 truncate'>
+                        {user.name}
+                      </p>
+                      <p className='text-xs text-green-600 mt-0.5 flex items-center gap-1'>
+                        <span className='w-1.5 h-1.5 bg-green-500 rounded-full'></span>
+                        Conectado
+                      </p>
+                    </button>
                     <div className='py-1'>
+                      <button
+                        onClick={() => navigate('/minha-conta')}
+                        className='w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors'
+                      >
+                        <User className='w-4 h-4 text-gray-400' />
+                        <span>Minha Conta</span>
+                      </button>
                       <button
                         onClick={() => navigate('/my-orders')}
                         className='w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700 transition-colors'
@@ -434,7 +511,9 @@ const Navbar = () => {
                 src={assets.nav_cart_icon}
                 alt='Carrinho de compras'
                 className={`w-6 transition-all duration-300 ${
-                  isTransparent ? 'invert brightness-0 opacity-100' : 'opacity-80'
+                  isTransparent
+                    ? 'invert brightness-0 opacity-100'
+                    : 'opacity-80'
                 }`}
               />
               {getCartCount() > 0 && (
@@ -467,8 +546,19 @@ const Navbar = () => {
                 className='p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors'
                 aria-label='Fechar menu'
               >
-                <svg xmlns='http://www.w3.org/2000/svg' className='h-6 w-6' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  className='h-6 w-6'
+                  fill='none'
+                  viewBox='0 0 24 24'
+                  stroke='currentColor'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M6 18L18 6M6 6l12 12'
+                  />
                 </svg>
               </button>
             </div>
@@ -476,7 +566,10 @@ const Navbar = () => {
             {/* Search Mobile */}
             <div className='p-4 border-b border-gray-100'>
               <button
-                onClick={() => { setOpen(false); navigate('/products'); }}
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/products');
+                }}
                 className='w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-full text-gray-500 hover:border-primary transition-colors'
               >
                 <Search className='w-5 h-5' />
@@ -491,7 +584,9 @@ const Navbar = () => {
                   to='/'
                   className={({ isActive }) =>
                     `block py-3 px-2 text-base font-medium border-b border-gray-100 transition-colors ${
-                      isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                      isActive
+                        ? 'text-primary'
+                        : 'text-gray-700 hover:text-primary'
                     }`
                   }
                   onClick={() => handleNavLinkClick('/')}
@@ -500,11 +595,12 @@ const Navbar = () => {
                 </NavLink>
 
                 {/* Departamentos + Blog */}
-                {NAV_DEPARTMENTS.map((dept) => {
+                {NAV_DEPARTMENTS.map(dept => {
                   const isAllDepts = dept.slug === null;
                   const isDecks = dept.slug === 'decks';
                   const isBlog = dept.noDropdown;
-                  const sublinks = (isAllDepts || isBlog) ? null : getSublinks(dept.slug);
+                  const sublinks =
+                    isAllDepts || isBlog ? null : getSublinks(dept.slug);
                   const isExpanded = mobileExpanded === dept.label;
 
                   // BLOG: link direto sem accordion
@@ -515,7 +611,9 @@ const Navbar = () => {
                         to={dept.path}
                         className={({ isActive }) =>
                           `block py-3 px-2 text-base font-medium border-b border-gray-100 transition-colors ${
-                            isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                            isActive
+                              ? 'text-primary'
+                              : 'text-gray-700 hover:text-primary'
                           }`
                         }
                         onClick={() => handleNavLinkClick(dept.path)}
@@ -534,13 +632,18 @@ const Navbar = () => {
                         }}
                         className='flex items-center justify-between w-full py-3 px-2 text-base font-medium text-gray-700 hover:text-primary transition-colors'
                       >
-                        <span>{dept.label.charAt(0) + dept.label.slice(1).toLowerCase()}</span>
+                        <span>
+                          {dept.label.charAt(0) +
+                            dept.label.slice(1).toLowerCase()}
+                        </span>
                         <ChevronDown
                           className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         />
                       </button>
 
-                      <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}
+                      >
                         <div className='pl-4 pb-3 space-y-1'>
                           {/* DEPARTAMENTOS */}
                           {isAllDepts && (
@@ -553,14 +656,22 @@ const Navbar = () => {
                                 <ChevronRight className='w-4 h-4' />
                                 <span>Ver Todos os Produtos</span>
                               </Link>
-                              {groups.map((group) => (
+                              {groups.map(group => (
                                 <Link
                                   key={group.id}
                                   to={`/collections/${group.slug}`}
-                                  onClick={() => handleNavLinkClick(`/collections/${group.slug}`)}
+                                  onClick={() =>
+                                    handleNavLinkClick(
+                                      `/collections/${group.slug}`,
+                                    )
+                                  }
                                   className='flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                                 >
-                                  <img src={group.image} alt={group.name} className='w-8 h-8 rounded object-cover' />
+                                  <img
+                                    src={group.image}
+                                    alt={group.name}
+                                    className='w-8 h-8 rounded object-cover'
+                                  />
                                   <span>{group.name}</span>
                                 </Link>
                               ))}
@@ -572,42 +683,63 @@ const Navbar = () => {
                             <>
                               <Link
                                 to='/collections/decks'
-                                onClick={() => handleNavLinkClick('/collections/decks')}
+                                onClick={() =>
+                                  handleNavLinkClick('/collections/decks')
+                                }
                                 className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                               >
                                 <ChevronRight className='w-4 h-4' />
                                 <span>Ver Todos</span>
                               </Link>
-                              {deckTypes.map((deckType) => {
+                              {deckTypes.map(deckType => {
                                 if (deckType.children) {
-                                  const isSubExpanded = mobileSubExpanded === 'shortboard';
+                                  const isSubExpanded =
+                                    mobileSubExpanded === 'shortboard';
                                   return (
                                     <div key={deckType.text}>
                                       <button
-                                        onClick={() => setMobileSubExpanded(isSubExpanded ? null : 'shortboard')}
+                                        onClick={() =>
+                                          setMobileSubExpanded(
+                                            isSubExpanded ? null : 'shortboard',
+                                          )
+                                        }
                                         className='flex items-center justify-between w-full py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                                       >
                                         <div className='flex items-center gap-2'>
-                                          <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-90' : ''}`} />
+                                          <ChevronRight
+                                            className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-90' : ''}`}
+                                          />
                                           <span>{deckType.text}</span>
                                         </div>
-                                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                        <ChevronDown
+                                          className={`w-4 h-4 transition-transform duration-200 ${isSubExpanded ? 'rotate-180' : ''}`}
+                                        />
                                       </button>
-                                      <div className={`overflow-hidden transition-all duration-300 ${isSubExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                      <div
+                                        className={`overflow-hidden transition-all duration-300 ${isSubExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
+                                      >
                                         <div className='pl-6 space-y-1 py-1'>
                                           <Link
                                             to={deckType.filterPath}
-                                            onClick={() => handleNavLinkClick(deckType.filterPath)}
+                                            onClick={() =>
+                                              handleNavLinkClick(
+                                                deckType.filterPath,
+                                              )
+                                            }
                                             className='flex items-center gap-2 py-2 px-3 text-sm text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                                           >
                                             <ChevronRight className='w-3 h-3' />
                                             <span>Ver Todos Shortboard</span>
                                           </Link>
-                                          {deckType.children.map((child) => (
+                                          {deckType.children.map(child => (
                                             <Link
                                               key={child.path}
                                               to={`/products/${child.path}`}
-                                              onClick={() => handleNavLinkClick(`/products/${child.path}`)}
+                                              onClick={() =>
+                                                handleNavLinkClick(
+                                                  `/products/${child.path}`,
+                                                )
+                                              }
                                               className='flex items-center gap-2 py-2 px-3 text-sm text-gray-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                                             >
                                               <ChevronRight className='w-3 h-3' />
@@ -623,7 +755,11 @@ const Navbar = () => {
                                   <Link
                                     key={deckType.text}
                                     to={`/products/${deckType.path}`}
-                                    onClick={() => handleNavLinkClick(`/products/${deckType.path}`)}
+                                    onClick={() =>
+                                      handleNavLinkClick(
+                                        `/products/${deckType.path}`,
+                                      )
+                                    }
                                     className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                                   >
                                     <ChevronRight className='w-4 h-4' />
@@ -639,23 +775,32 @@ const Navbar = () => {
                             <>
                               <Link
                                 to={`/collections/${dept.slug}`}
-                                onClick={() => handleNavLinkClick(`/collections/${dept.slug}`)}
+                                onClick={() =>
+                                  handleNavLinkClick(
+                                    `/collections/${dept.slug}`,
+                                  )
+                                }
                                 className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
                               >
                                 <ChevronRight className='w-4 h-4' />
                                 <span>Ver Todos</span>
                               </Link>
-                              {sublinks && sublinks.map((sub) => (
-                                <Link
-                                  key={sub.path}
-                                  to={`/products/${sub.path}`}
-                                  onClick={() => handleNavLinkClick(`/products/${sub.path}`)}
-                                  className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
-                                >
-                                  <ChevronRight className='w-4 h-4' />
-                                  <span>{sub.text}</span>
-                                </Link>
-                              ))}
+                              {sublinks &&
+                                sublinks.map(sub => (
+                                  <Link
+                                    key={sub.path}
+                                    to={`/products/${sub.path}`}
+                                    onClick={() =>
+                                      handleNavLinkClick(
+                                        `/products/${sub.path}`,
+                                      )
+                                    }
+                                    className='flex items-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors'
+                                  >
+                                    <ChevronRight className='w-4 h-4' />
+                                    <span>{sub.text}</span>
+                                  </Link>
+                                ))}
                             </>
                           )}
                         </div>
@@ -668,7 +813,9 @@ const Navbar = () => {
                   to='/contact'
                   className={({ isActive }) =>
                     `block py-3 px-2 text-base font-medium border-b border-gray-100 transition-colors ${
-                      isActive ? 'text-primary' : 'text-gray-700 hover:text-primary'
+                      isActive
+                        ? 'text-primary'
+                        : 'text-gray-700 hover:text-primary'
                     }`
                   }
                   onClick={() => handleNavLinkClick('/contact')}
@@ -683,7 +830,9 @@ const Navbar = () => {
                   <Lock className='w-5 h-5' />
                   <span>Área Admin</span>
                   {isSeller && (
-                    <span className='ml-auto text-xs bg-green-500 text-white px-2 py-0.5 rounded-full'>Ativo</span>
+                    <span className='ml-auto text-xs bg-green-500 text-white px-2 py-0.5 rounded-full'>
+                      Ativo
+                    </span>
                   )}
                 </button>
 
@@ -702,24 +851,47 @@ const Navbar = () => {
               <div className='p-4 border-t border-gray-100'>
                 {user ? (
                   <div className='space-y-3'>
-                    <div className='flex items-center gap-3 p-3 bg-gray-50 rounded-lg'>
-                      <div className='relative'>
-                        <div className='w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center'>
-                          <User className='w-5 h-5 text-gray-500' />
-                        </div>
-                        <span className='absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white'></span>
-                      </div>
+                    <button
+                      onClick={() => handleNavLinkClick('/minha-conta')}
+                      className='w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left'
+                    >
+                      <span className='flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dull text-white text-sm font-bold ring-2 ring-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)] select-none flex-shrink-0'>
+                        {getInitials(user.name)}
+                      </span>
                       <div className='flex-1 min-w-0'>
-                        <p className='font-medium text-gray-800 text-sm truncate'>{user.name}</p>
-                        <p className='text-xs text-gray-400'>Conta ativa</p>
+                        <p className='font-medium text-gray-800 text-sm truncate'>
+                          {user.name}
+                        </p>
+                        <p className='text-xs text-green-600 flex items-center gap-1'>
+                          <span className='w-1.5 h-1.5 bg-green-500 rounded-full'></span>
+                          Conectado
+                        </p>
                       </div>
-                    </div>
+                      <ChevronRight className='w-4 h-4 text-gray-300' />
+                    </button>
+
+                    <NavLink
+                      to='/minha-conta'
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 py-2.5 px-3 text-sm font-medium rounded-lg transition-colors ${
+                          isActive
+                            ? 'text-primary bg-primary/10'
+                            : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                        }`
+                      }
+                      onClick={() => handleNavLinkClick('/minha-conta')}
+                    >
+                      <User className='w-4 h-4 text-gray-400' />
+                      Minha Conta
+                    </NavLink>
 
                     <NavLink
                       to='/my-orders'
                       className={({ isActive }) =>
                         `flex items-center gap-3 py-2.5 px-3 text-sm font-medium rounded-lg transition-colors ${
-                          isActive ? 'text-primary bg-primary/10' : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                          isActive
+                            ? 'text-primary bg-primary/10'
+                            : 'text-gray-700 hover:text-primary hover:bg-gray-50'
                         }`
                       }
                       onClick={() => handleNavLinkClick('/my-orders')}
@@ -732,7 +904,9 @@ const Navbar = () => {
                       to='/write-review'
                       className={({ isActive }) =>
                         `flex items-center gap-3 py-2.5 px-3 text-sm font-medium rounded-lg transition-colors ${
-                          isActive ? 'text-primary bg-primary/10' : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                          isActive
+                            ? 'text-primary bg-primary/10'
+                            : 'text-gray-700 hover:text-primary hover:bg-gray-50'
                         }`
                       }
                       onClick={() => handleNavLinkClick('/write-review')}
@@ -751,7 +925,10 @@ const Navbar = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setOpen(false); setShowUserLogin(true); }}
+                    onClick={() => {
+                      setOpen(false);
+                      setShowUserLogin(true);
+                    }}
                     className='w-full py-3 bg-primary hover:bg-primary-dull text-white rounded-lg text-base font-semibold transition-colors'
                   >
                     Entrar / Cadastrar

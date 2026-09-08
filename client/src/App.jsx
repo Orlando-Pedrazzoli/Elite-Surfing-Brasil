@@ -1,3 +1,4 @@
+// client/src/App.jsx
 import React from 'react';
 import Navbar from './components/Navbar';
 import AnnouncementBar from './components/AnnouncementBar';
@@ -13,6 +14,7 @@ import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import AddAddress from './pages/AddAddress';
 import MyOrders from './pages/MyOrders';
+import MyAccount from './pages/MyAccount';
 import OrderSuccess from './pages/OrderSuccess';
 import WriteReview from './pages/WriteReview';
 import SellerLogin from './components/seller/SellerLogin';
@@ -130,6 +132,7 @@ const App = () => {
           <Route path='/add-address' element={<AddAddress />} />
           <Route path='/order-success/:orderId' element={<OrderSuccess />} />
           <Route path='/my-orders' element={<MyOrders />} />
+          <Route path='/minha-conta' element={<MyAccount />} />
           <Route path='/contact' element={<Contact />} />
           <Route path='/privacy' element={<Privacy />} />
           <Route path='/refund-policy' element={<RefundPolicy />} />

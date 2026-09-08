@@ -1,3 +1,4 @@
+// server/routes/orderRoute.js
 import express from 'express';
 import authUser from '../middlewares/authUser.js';
 import authSeller from '../middlewares/authSeller.js';
@@ -6,6 +7,7 @@ import {
   getUserOrders,
   updateOrderStatus,
   getOrderById,
+  getPendingPaymentById,
 } from '../controllers/orderController.js';
 
 const orderRouter = express.Router();
@@ -16,6 +18,9 @@ const orderRouter = express.Router();
 
 // Rota pública para ver detalhes de um pedido (página de sucesso)
 orderRouter.get('/details/:orderId', getOrderById);
+
+// 🆕 Retomar pagamento pendente (PIX/boleto MP) a partir de Meus Pedidos
+orderRouter.get('/pending-payment/:orderId', getPendingPaymentById);
 
 // =============================================================================
 // ROTAS DE USER AUTENTICADO

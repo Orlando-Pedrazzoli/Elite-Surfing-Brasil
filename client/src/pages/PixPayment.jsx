@@ -1,3 +1,4 @@
+// client/src/pages/PixPayment.jsx
 // ═══════════════════════════════════════════════════════════════
 // src/pages/PixPayment.jsx
 // PIX NATIVO MERCADO PAGO — QR dinâmico + Copia e Cola + polling
@@ -117,30 +118,66 @@ const PixPayment = () => {
   const pollRef = useRef(null);
 
   // ═══ CARREGAR DADOS DO PIX (gerados no backend) ═══
+  // 1º tenta o localStorage (fluxo normal do checkout); se não houver —
+  // cliente fechou a aba e voltou por "Meus Pedidos" — recupera pela API.
   useEffect(() => {
+    const applyPixData = parsed => {
+      setPixData(parsed);
+      if (parsed.expiresAt) {
+        const remaining = Math.max(
+          0,
+          Math.floor(
+            (new Date(parsed.expiresAt).getTime() - Date.now()) / 1000,
+          ),
+        );
+        setTimeLeft(remaining);
+        if (remaining <= 0) setIsExpired(true);
+      }
+    };
+
     const saved = localStorage.getItem('pix_payment_data');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.orderId === orderId) {
-          setPixData(parsed);
-          if (parsed.expiresAt) {
-            const remaining = Math.max(
-              0,
-              Math.floor(
-                (new Date(parsed.expiresAt).getTime() - Date.now()) / 1000,
-              ),
-            );
-            setTimeLeft(remaining);
-            if (remaining <= 0) setIsExpired(true);
-          }
+          applyPixData(parsed);
+          setIsLoading(false);
+          return;
         }
       } catch (e) {
         console.error('Erro ao carregar dados PIX:', e);
       }
     }
-    setIsLoading(false);
-  }, [orderId]);
+
+    // 🆕 Fallback: recuperar do servidor (retomada via Meus Pedidos)
+    const recoverFromApi = async () => {
+      try {
+        const { data } = await axios.get(
+          `/api/order/pending-payment/${orderId}`,
+        );
+        if (data.success && data.isPaid) {
+          navigate(
+            `/order-success/${orderId}?payment=mercadopago&method=pix${!user ? '&guest=true' : ''}`,
+          );
+          return;
+        }
+        if (data.success && data.pix?.qrCode) {
+          applyPixData({
+            orderId,
+            amount: data.amount,
+            pix: data.pix,
+            expiresAt: data.pix.expiresAt || data.expiresAt,
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao recuperar PIX do servidor:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    recoverFromApi();
+  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ═══ COUNTDOWN ═══
   useEffect(() => {
