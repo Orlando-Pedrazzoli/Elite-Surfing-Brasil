@@ -29,7 +29,9 @@ import {
   Wallet,
   Plus,
   ExternalLink,
+  Copy,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import toast from 'react-hot-toast';
 
 const Orders = () => {
@@ -55,7 +57,9 @@ const Orders = () => {
   const [showTopUp, setShowTopUp] = useState(false);
   const [topUpValue, setTopUpValue] = useState('100');
   const [topUpLoading, setTopUpLoading] = useState(false);
-  const [topUpPaymentUrl, setTopUpPaymentUrl] = useState(null);
+  // { pixCode: string|null (copia e cola EMV), paymentUrl: string|null (URL real) }
+  const [topUpPix, setTopUpPix] = useState(null);
+  const [pixCopied, setPixCopied] = useState(false);
 
   // ═══ 🏷️ MELHOR ENVIO — Visualizador de etiqueta no painel ═══
   const [labelPdf, setLabelPdf] = useState(null); // { order, blobUrl }
@@ -94,9 +98,12 @@ const Orders = () => {
         value,
         slug: 'pix',
       });
-      if (data.success && data.paymentUrl) {
-        setTopUpPaymentUrl(data.paymentUrl);
-        window.open(data.paymentUrl, '_blank', 'noopener');
+      if (data.success && (data.pixCode || data.paymentUrl)) {
+        setTopUpPix({
+          pixCode: data.pixCode || null,
+          paymentUrl: data.paymentUrl || null,
+        });
+        setPixCopied(false);
         toast.success(data.message, { duration: 6000 });
       } else {
         toast.error(data.message || 'Erro ao gerar cobrança PIX', {
@@ -109,6 +116,19 @@ const Orders = () => {
       );
     } finally {
       setTopUpLoading(false);
+    }
+  };
+
+  // Copia o código PIX "copia e cola" para a área de transferência
+  const copyPixCode = async () => {
+    if (!topUpPix?.pixCode) return;
+    try {
+      await navigator.clipboard.writeText(topUpPix.pixCode);
+      setPixCopied(true);
+      toast.success('Código PIX copiado!');
+      setTimeout(() => setPixCopied(false), 4000);
+    } catch {
+      toast.error('Não foi possível copiar automaticamente.');
     }
   };
 
@@ -510,7 +530,8 @@ const Orders = () => {
                 </button>
                 <button
                   onClick={() => {
-                    setTopUpPaymentUrl(null);
+                    setTopUpPix(null);
+                    setPixCopied(false);
                     setShowTopUp(true);
                   }}
                   className='flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors whitespace-nowrap'
@@ -1521,21 +1542,43 @@ const Orders = () => {
                 </div>
               </div>
 
-              {topUpPaymentUrl ? (
+              {topUpPix ? (
                 <div className='bg-green-50 border border-green-200 rounded-lg p-4 space-y-3'>
                   <p className='text-sm text-green-800 font-medium'>
-                    ✅ Cobrança PIX gerada! Pague o QR Code para creditar o
-                    saldo (crédito em segundos).
+                    ✅ Cobrança PIX gerada! Escaneie o QR Code no app do banco
+                    ou copie o código (crédito em segundos).
                   </p>
-                  <a
-                    href={topUpPaymentUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors'
-                  >
-                    <QrCode className='w-4 h-4' />
-                    Abrir QR Code PIX
-                  </a>
+                  {topUpPix.pixCode && (
+                    <>
+                      <div className='flex justify-center bg-white border border-green-200 rounded-lg p-3'>
+                        <QRCodeSVG
+                          value={topUpPix.pixCode}
+                          size={192}
+                          level='M'
+                        />
+                      </div>
+                      <button
+                        onClick={copyPixCode}
+                        className='flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors'
+                      >
+                        <Copy className='w-4 h-4' />
+                        {pixCopied
+                          ? 'Copiado!'
+                          : 'Copiar código PIX (copia e cola)'}
+                      </button>
+                    </>
+                  )}
+                  {topUpPix.paymentUrl && (
+                    <a
+                      href={topUpPix.paymentUrl}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors'
+                    >
+                      <ExternalLink className='w-4 h-4' />
+                      Abrir página de pagamento
+                    </a>
+                  )}
                   <button
                     onClick={async () => {
                       await fetchMeBalance({ silent: false });

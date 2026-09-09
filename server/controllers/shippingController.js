@@ -520,23 +520,35 @@ export const addMeBalance = async (req, res) => {
     const method = slug === 'boleto' ? 'boleto' : 'pix';
     const result = await addMeWalletBalance(amount, method);
 
-    // A resposta do ME inclui link para QR Code (pix) ou PDF (boleto).
-    // Formato pode variar — extraímos a primeira URL encontrada.
+    // A resposta do ME traz o código PIX "copia e cola" (payload EMV, começa
+    // com "000201") em `digitable`/`qr_code`, e opcionalmente uma URL de
+    // pagamento/boleto. São coisas DIFERENTES: o código EMV não é um link e
+    // nunca deve ser aberto como URL (causava aba em branco no painel).
+    const isHttpUrl = v => typeof v === 'string' && /^https?:\/\//i.test(v);
+    const isPixEmv = v => typeof v === 'string' && v.startsWith('000201');
+
     const paymentUrl =
-      result?.link ||
-      result?.url ||
-      result?.qr_code_url ||
-      result?.digitable ||
-      result?.transaction?.link ||
-      null;
+      [
+        result?.link,
+        result?.url,
+        result?.qr_code_url,
+        result?.redirect,
+        result?.transaction?.link,
+      ].find(isHttpUrl) || null;
+
+    const pixCode =
+      [result?.digitable, result?.qr_code, result?.qrcode, result?.code].find(
+        isPixEmv,
+      ) || null;
 
     return res.json({
       success: true,
       message:
         method === 'pix'
-          ? 'Cobrança PIX gerada! Pague o QR Code para creditar o saldo.'
+          ? 'Cobrança PIX gerada! Escaneie o QR Code ou copie o código para pagar.'
           : 'Boleto gerado! O saldo credita após a compensação.',
       paymentUrl,
+      pixCode,
       raw: result,
     });
   } catch (error) {
