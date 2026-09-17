@@ -46,6 +46,7 @@ import blogRouter from './routes/blogRoute.js';
 import wslRouter from './routes/wslRoute.js';
 import catalogRouter from './routes/catalogRoute.js';
 import partnerRouter from './routes/partnerRoute.js';
+import couponRouter from './routes/couponRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -299,6 +300,7 @@ app.use('/api/blog', readLimiter, blogRouter);
 app.use('/api/wsl', readLimiter, wslRouter);
 app.use('/api/v1/catalog', readLimiter, catalogRouter);
 app.use('/api/partner', partnerRouter);
+app.use('/api/coupon', couponRouter);
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');

@@ -797,6 +797,16 @@ export const updateOrderStatus = async (req, res) => {
       newStatus: status,
     });
 
+    // 🎫 Pedido cancelado → devolve a utilização do cupom (idempotente)
+    if (status === 'Cancelado' && previousStatus !== 'Cancelado') {
+      try {
+        const { releaseCoupon } = await import('../services/couponService.js');
+        await releaseCoupon(orderId);
+      } catch (err) {
+        console.error('⚠️ releaseCoupon falhou:', err.message);
+      }
+    }
+
     // Enviar notificação de status
     let notificationSent = false;
     if (previousStatus !== status && sendOrderStatusUpdateEmail) {

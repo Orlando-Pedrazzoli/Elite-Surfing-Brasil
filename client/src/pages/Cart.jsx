@@ -59,8 +59,10 @@ const Cart = () => {
   const [showAddressList, setShowAddressList] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  // ═══ 🎫 CUPOM — validado no servidor (/api/coupon/validate) ═══
   const [promoCode, setPromoCode] = useState('');
-  const [discountApplied, setDiscountApplied] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discountAmount, label, stackWithPix, partial, ... }
+  const [couponLoading, setCouponLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stockWarnings, setStockWarnings] = useState({});
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -129,9 +131,6 @@ const Cart = () => {
   const [emailVerificationToken, setEmailVerificationToken] = useState(null);
   const [verifiedEmail, setVerifiedEmail] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
-
-  const validPromoCodes = ['ELITE10', 'RIOSURFCHECK10', 'RAY10'];
-  const [appliedPromoCode, setAppliedPromoCode] = useState('');
 
   const isCartEmpty = !cartItems || Object.keys(cartItems).length === 0;
 
@@ -327,12 +326,16 @@ const Cart = () => {
   const getSubtotal = () => parseFloat(getCartAmount());
 
   const getPromoDiscount = () => {
-    if (!discountApplied) return 0;
-    return getSubtotal() * 0.1;
+    if (!appliedCoupon) return 0;
+    return Math.min(getSubtotal(), Number(appliedCoupon.discountAmount) || 0);
   };
 
+  // PIX só acumula se o cupom permitir (stackWithPix)
+  const isPixDiscountAvailable = () =>
+    !appliedCoupon || appliedCoupon.stackWithPix !== false;
+
   const getPixDiscount = () => {
-    if (paymentMethod !== 'pix') return 0;
+    if (paymentMethod !== 'pix' || !isPixDiscountAvailable()) return 0;
     const afterPromo = getSubtotal() - getPromoDiscount();
     return afterPromo * PIX_DISCOUNT;
   };
@@ -477,8 +480,7 @@ const Cart = () => {
         installments: formData.installments,
         payer: formData.payer,
         // ─── contexto do pedido (o valor é RECALCULADO no servidor) ───
-        discountPercentage: discountApplied ? 10 : 0,
-        promoCode: discountApplied ? appliedPromoCode : '',
+        promoCode: appliedCoupon?.code || '',
         customerName,
         customerEmail,
         customerPhone,
@@ -537,6 +539,9 @@ const Cart = () => {
         }
         return; // resolve → Brick conclui com sucesso
       }
+
+      // cupom rejeitado no servidor (expirou/esgotou entre a validação e o pagamento)
+      if (data.couponError) handleCouponRejected(data.message);
 
       // recusado
       toast.error(data.message || 'Falha no pagamento. Tente novamente.');
@@ -624,8 +629,7 @@ const Cart = () => {
             product: item._id,
             quantity: item.quantity,
           })),
-          discountPercentage: discountApplied ? 10 : 0,
-          promoCode: discountApplied ? appliedPromoCode : '',
+          promoCode: appliedCoupon?.code || '',
           customerName,
           customerEmail,
           customerPhone,
@@ -684,7 +688,8 @@ const Cart = () => {
 
           navigate(`/pix-payment/${data.orderId}`);
         } else {
-          toast.error(data.message || 'Erro ao criar pagamento PIX.');
+          if (data.couponError) handleCouponRejected(data.message);
+          else toast.error(data.message || 'Erro ao criar pagamento PIX.');
         }
 
         return;
@@ -701,10 +706,7 @@ const Cart = () => {
           product: item._id,
           quantity: item.quantity,
         })),
-        originalAmount: subtotal,
-        discountAmount: promoDisc,
-        discountPercentage: discountApplied ? 10 : 0,
-        promoCode: discountApplied ? appliedPromoCode : '',
+        promoCode: appliedCoupon?.code || '',
         customerName,
         customerEmail,
         customerPhone,
@@ -764,7 +766,9 @@ const Cart = () => {
         toast.success('Boleto gerado com sucesso!');
         navigate(`/boleto-payment/${data.orderId}`);
       } else {
-        toast.error(data.message || 'Erro ao gerar boleto. Tente novamente.');
+        if (data.couponError) handleCouponRejected(data.message);
+        else
+          toast.error(data.message || 'Erro ao gerar boleto. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro no pedido:', error);
@@ -796,23 +800,94 @@ const Cart = () => {
     }
   };
 
-  const handlePromoCode = () => {
+  // ═══════════════════════════════════════════════
+  // 🎫 CUPOM — validação server-side
+  // ═══════════════════════════════════════════════
+  const getCouponIdentityEmail = () =>
+    (user?.email || getGuestEmail() || '').toLowerCase().trim();
+
+  const buildCouponItems = () =>
+    cartArray.map(item => ({ product: item._id, quantity: item.quantity }));
+
+  const validateCouponOnServer = async code => {
+    const { data } = await axios.post('/api/coupon/validate', {
+      code,
+      items: buildCouponItems(),
+      email: getCouponIdentityEmail() || undefined,
+    });
+    return data;
+  };
+
+  const handlePromoCode = async () => {
     const inputCode = promoCode.trim().toUpperCase();
-    if (validPromoCodes.includes(inputCode)) {
-      setDiscountApplied(true);
-      setAppliedPromoCode(inputCode);
-      toast.success('Desconto de 10% aplicado!');
-    } else {
-      toast.error('Cupom inválido.');
+    if (!inputCode || couponLoading) return;
+    if (cartArray.length === 0) return toast.error('Seu carrinho está vazio.');
+
+    try {
+      setCouponLoading(true);
+      const data = await validateCouponOnServer(inputCode);
+      if (data.success) {
+        setAppliedCoupon(data.coupon);
+        setPromoCode('');
+        toast.success(
+          data.coupon.partial
+            ? `Cupom ${data.coupon.code} aplicado aos itens elegíveis!`
+            : data.message || `Cupom ${data.coupon.code} aplicado!`,
+        );
+      } else {
+        toast.error(data.message || 'Cupom inválido.');
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          'Erro ao validar o cupom. Tente novamente.',
+      );
+    } finally {
+      setCouponLoading(false);
     }
   };
 
   const handleRemovePromo = () => {
     setPromoCode('');
-    setDiscountApplied(false);
-    setAppliedPromoCode('');
+    setAppliedCoupon(null);
     toast('Cupom removido.');
   };
+
+  // Servidor rejeitou o cupom no momento do pagamento → remove e avisa
+  const handleCouponRejected = message => {
+    setAppliedCoupon(null);
+    toast.error(message || 'O cupom deixou de ser válido e foi removido.');
+  };
+
+  // Re-valida o cupom quando o carrinho ou o email mudam (o desconto
+  // depende dos itens elegíveis, pedido mínimo e limites por cliente)
+  const couponRevalidationKey = `${cartArray
+    .map(i => `${i._id}:${i.quantity}`)
+    .join('|')}#${getCouponIdentityEmail()}`;
+
+  useEffect(() => {
+    if (!appliedCoupon || cartArray.length === 0) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await validateCouponOnServer(appliedCoupon.code);
+        if (cancelled) return;
+        if (data.success) {
+          setAppliedCoupon(data.coupon);
+        } else {
+          setAppliedCoupon(null);
+          toast.error(`Cupom removido: ${data.message}`);
+        }
+      } catch {
+        /* mantém o cupom; o servidor valida de novo no pagamento */
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponRevalidationKey]);
 
   const getPaymentButtonText = () => {
     if (isProcessing) return 'Processando...';
@@ -1654,7 +1729,7 @@ const Cart = () => {
                   </h3>
                 </div>
 
-                {discountApplied ? (
+                {appliedCoupon ? (
                   <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg'>
                     <div className='flex items-center gap-2.5'>
                       <div className='w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
@@ -1663,15 +1738,21 @@ const Cart = () => {
                       <div>
                         <div className='flex items-center gap-2'>
                           <span className='text-sm font-bold text-green-800 tracking-wide'>
-                            {appliedPromoCode}
+                            {appliedCoupon.code}
                           </span>
                           <span className='text-xs bg-green-200 text-green-700 px-1.5 py-0.5 rounded font-semibold'>
-                            -10%
+                            {appliedCoupon.label}
                           </span>
                         </div>
                         <p className='text-xs text-green-600 mt-0.5'>
                           Economia de {formatBRL(getPromoDiscount())}
+                          {appliedCoupon.partial && ' · apenas itens elegíveis'}
                         </p>
+                        {appliedCoupon.stackWithPix === false && (
+                          <p className='text-[11px] text-amber-600 mt-0.5'>
+                            Este cupom não acumula com o desconto PIX.
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
@@ -1687,21 +1768,22 @@ const Cart = () => {
                     <input
                       type='text'
                       value={promoCode}
-                      onChange={e => setPromoCode(e.target.value)}
+                      onChange={e => setPromoCode(e.target.value.toUpperCase())}
                       onKeyDown={e => e.key === 'Enter' && handlePromoCode()}
                       placeholder='Digite o cupom'
+                      disabled={couponLoading}
                       className='flex-1 min-w-0 border border-gray-300 rounded-l-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700'
                     />
                     <button
                       onClick={handlePromoCode}
-                      disabled={!promoCode.trim()}
+                      disabled={!promoCode.trim() || couponLoading}
                       className={`px-5 py-2.5 rounded-r-lg transition-all duration-300 font-medium active:scale-95 flex-shrink-0 ${
-                        promoCode.trim()
+                        promoCode.trim() && !couponLoading
                           ? 'bg-primary text-white hover:bg-primary-dull'
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       }`}
                     >
-                      Aplicar
+                      {couponLoading ? 'Validando...' : 'Aplicar'}
                     </button>
                   </div>
                 )}
@@ -2017,16 +2099,18 @@ const Cart = () => {
                   </span>
                 </div>
 
-                {discountApplied && (
+                {appliedCoupon && (
                   <div className='flex justify-between items-center text-green-600 mb-3'>
-                    <span>Cupom ({appliedPromoCode} -10%):</span>
+                    <span>
+                      Cupom ({appliedCoupon.code} {appliedCoupon.label}):
+                    </span>
                     <span className='font-medium text-lg'>
                       -{formatBRL(getPromoDiscount())}
                     </span>
                   </div>
                 )}
 
-                {paymentMethod === 'pix' && (
+                {paymentMethod === 'pix' && isPixDiscountAvailable() && (
                   <div className='flex justify-between items-center text-primary mb-3'>
                     <span className='flex items-center gap-1'>
                       <QrCode className='w-4 h-4' />
@@ -2085,7 +2169,7 @@ const Cart = () => {
                   </p>
                 )}
 
-                {paymentMethod === 'pix' && (
+                {paymentMethod === 'pix' && isPixDiscountAvailable() && (
                   <p className='text-xs text-green-600 mt-1 text-right font-medium'>
                     Você economiza {formatBRL(getPixDiscount())} com PIX!
                   </p>

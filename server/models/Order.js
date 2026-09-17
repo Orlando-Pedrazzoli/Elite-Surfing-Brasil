@@ -22,9 +22,17 @@ const orderSchema = new mongoose.Schema(
     //   'mercadopago_card' | 'mercadopago_pix' | 'mercadopago_boleto'
     //   (legados: 'pix_manual' | 'pagarme_card' | 'pagarme_boleto')
     isPaid: { type: Boolean, required: true, default: false },
+    // 🎫 Cupom (valores calculados no servidor — ver couponService)
     promoCode: { type: String, default: null },
+    couponId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'coupon',
+      default: null,
+    },
     discountAmount: { type: Number, default: 0 },
+    // percentagem efetiva sobre o subtotal (cupons fixos → % equivalente)
     discountPercentage: { type: Number, default: 0 },
+    discountLabel: { type: String, default: '' }, // "-10%" | "-R$ 20,00"
     originalAmount: { type: Number, required: true },
     shippingCost: { type: Number, default: 0 },
     shippingMethod: { type: String, default: '' },

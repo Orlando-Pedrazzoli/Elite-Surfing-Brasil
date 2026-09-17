@@ -21,6 +21,13 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Address from '../models/Address.js';
 import nodemailer from 'nodemailer';
+import {
+  evaluateCoupon,
+  reserveCoupon,
+  releaseCoupon,
+  confirmRedemption,
+} from '../services/couponService.js';
+import { loadCartLines } from './couponController.js';
 
 // =============================================================================
 // CLIENTE MERCADO PAGO
@@ -37,8 +44,17 @@ const WEBHOOK_URL =
     ? `${process.env.BACKEND_URL}/api/mercadopago/webhook`
     : undefined);
 
-// Limite de desconto aceite vindo do client (defesa contra adulteração de cupom)
-const MAX_DISCOUNT_PCT = 20;
+// Desconto PIX (aplicado sobre o subtotal já com cupom, se o cupom permitir)
+const PIX_DISCOUNT_RATE = 0.1;
+
+// Erro de cupom no fluxo de pagamento → devolve mensagem clara ao checkout
+class CouponError extends Error {
+  constructor(message, reason) {
+    super(message);
+    this.name = 'CouponError';
+    this.reason = reason;
+  }
+}
 
 // =============================================================================
 // NOTIFICAÇÕES (carregamento defensivo, igual ao padrão do projeto)
@@ -144,56 +160,90 @@ const decrementProductStock = async items => {
 
 // =============================================================================
 // 🛡️ RECALCULAR O VALOR NO SERVIDOR (anti-tampering)
-//    Devolve { productData, computedAmount }
-//    pixDiscount aplica-se só ao fluxo PIX.
+//    O cupom é validado aqui, a partir da base de dados — o client envia
+//    apenas o CÓDIGO; nunca a percentagem/valor do desconto.
+//    Devolve { productData, computedAmount, subtotal, pricing, couponEval }
 // =============================================================================
 const computeServerAmount = async ({
   items,
-  discountPercentage = 0,
+  promoCode = '',
   shippingCost = 0,
   applyPixDiscount = false,
   isPickup = false,
+  userId = null,
+  email = null,
 }) => {
-  const safeDiscount = Math.min(
-    Math.max(Number(discountPercentage) || 0, 0),
-    MAX_DISCOUNT_PCT,
-  );
-
   // 🛡️ Frete: retirada no local = SEMPRE 0; nunca aceitar valor negativo
   // (um shippingCost negativo enviado pelo cliente reduziria o total)
   const safeShipping = isPickup ? 0 : Math.max(0, Number(shippingCost) || 0);
 
-  let productData = [];
-  let subtotal = 0;
-  for (const item of items) {
-    const product = await Product.findById(item.product);
-    if (!product) throw new Error(`Produto não encontrado: ${item.product}`);
-    const lineUnit = product.offerPrice;
-    productData.push({
-      id: product._id.toString(),
-      name: product.name,
-      price: lineUnit,
-      quantity: item.quantity,
-    });
-    subtotal += lineUnit * item.quantity;
+  const lines = await loadCartLines(items);
+  const requestedIds = (items || []).map(i =>
+    String(i.product?._id || i.product),
+  );
+  const loadedIds = new Set(lines.map(l => String(l.product._id)));
+  for (const id of requestedIds) {
+    if (!loadedIds.has(id)) throw new Error(`Produto não encontrado: ${id}`);
   }
 
-  let amount = subtotal;
-  if (safeDiscount > 0) amount = amount * (1 - safeDiscount / 100);
-  if (applyPixDiscount) amount = amount * 0.9; // PIX 10% OFF
-  amount = amount + safeShipping;
+  const productData = lines.map(({ product, quantity }) => ({
+    id: product._id.toString(),
+    name: product.name,
+    price: product.offerPrice,
+    quantity,
+  }));
+  const subtotal = round2(
+    lines.reduce((acc, l) => acc + l.product.offerPrice * l.quantity, 0),
+  );
+
+  // ─── Cupom (opcional) ───
+  let couponEval = null;
+  let discountAmount = 0;
+  const code = String(promoCode || '').trim();
+  if (code) {
+    couponEval = await evaluateCoupon({ code, lines, userId, email });
+    if (!couponEval.valid)
+      throw new CouponError(couponEval.message, couponEval.reason);
+    discountAmount = couponEval.discountAmount;
+  }
+
+  const afterCoupon = Math.max(0, subtotal - discountAmount);
+
+  // ─── PIX (só se o cupom permitir acumular) ───
+  const pixAllowed =
+    applyPixDiscount && (!couponEval || couponEval.stackWithPix);
+  const pixDiscount = pixAllowed ? round2(afterCoupon * PIX_DISCOUNT_RATE) : 0;
+
+  const computedAmount = round2(afterCoupon - pixDiscount + safeShipping);
 
   return {
     productData,
-    computedAmount: round2(amount),
-    subtotal: round2(subtotal),
+    computedAmount,
+    subtotal,
+    couponEval,
+    pricing: {
+      promoCode: couponEval ? couponEval.code : '',
+      discountAmount,
+      discountPercentage: couponEval ? couponEval.effectivePercentage : 0,
+      discountLabel: couponEval ? couponEval.label : '',
+      couponId: couponEval ? couponEval.coupon._id : null,
+      pixDiscount,
+      originalAmount: subtotal,
+    },
   };
 };
 
 // =============================================================================
 // CRIAR DOCUMENTO DE ENCOMENDA NO MONGO
 // =============================================================================
-const buildOrderDoc = (req, paymentType, computedAmount, extra = {}) => {
+//    `pricing` vem de computeServerAmount — o client NÃO dita descontos.
+const buildOrderDoc = (
+  req,
+  paymentType,
+  computedAmount,
+  pricing,
+  extra = {},
+) => {
   const b = req.body;
   const isPickup = !!b.isPickup;
   const doc = {
@@ -202,10 +252,13 @@ const buildOrderDoc = (req, paymentType, computedAmount, extra = {}) => {
     address: b.address,
     paymentType,
     isPaid: false,
-    promoCode: b.promoCode || '',
-    discountAmount: b.discountAmount || 0,
-    discountPercentage: b.discountPercentage || 0,
-    originalAmount: b.originalAmount || computedAmount,
+    promoCode: pricing.promoCode || '',
+    couponId: pricing.couponId || null,
+    discountAmount: pricing.discountAmount || 0,
+    discountPercentage: pricing.discountPercentage || 0,
+    discountLabel: pricing.discountLabel || '',
+    pixDiscount: pricing.pixDiscount || 0,
+    originalAmount: pricing.originalAmount ?? computedAmount,
     // 🏷️ CPF do pagamento persistido no pedido (fallback p/ etiqueta ME)
     customerDocument: String(b.customerDocument || '').replace(/\D/g, ''),
     // 🏬 Retirada no local: frete 0, sem serviceId ME (evita etiqueta no admin)
@@ -231,6 +284,23 @@ const buildOrderDoc = (req, paymentType, computedAmount, extra = {}) => {
 };
 
 // =============================================================================
+// 🎫 Reservar o cupom após criar a Order. Se falhar (limite atingido
+//    entre a validação e agora), apaga a Order e devolve erro ao checkout.
+// =============================================================================
+const reserveCouponOrFail = async (couponEval, order, identity) => {
+  if (!couponEval) return true;
+  const ok = await reserveCoupon(couponEval, order, identity);
+  if (!ok) {
+    await Order.findByIdAndDelete(order._id);
+    return false;
+  }
+  return true;
+};
+
+const COUPON_EXHAUSTED_MSG =
+  'Este cupom acabou de atingir o limite de utilizações. Remova-o e tente novamente.';
+
+// =============================================================================
 // 💳 CARTÃO — recebe o formData do Card Payment Brick
 // =============================================================================
 export const createCardPayment = async (req, res) => {
@@ -239,12 +309,13 @@ export const createCardPayment = async (req, res) => {
     const {
       items,
       address,
-      discountPercentage,
+      promoCode,
       shippingCost,
       customerName,
       customerEmail,
       customerDocument,
       isGuestOrder,
+      userId,
       // dados do Brick:
       token,
       issuer_id,
@@ -270,24 +341,45 @@ export const createCardPayment = async (req, res) => {
         message: 'Estoque insuficiente: ' + stock.errors.join(', '),
       });
 
-    const { productData, computedAmount } = await computeServerAmount({
-      items,
-      discountPercentage,
-      shippingCost,
-      isPickup: !!req.body.isPickup,
-      applyPixDiscount: false,
-    });
-
     const cpf = cleanDigits(
       customerDocument || brickPayer?.identification?.number,
     );
     const email = customerEmail || brickPayer?.email;
     const { first_name, last_name } = splitName(customerName);
+    const identity = { userId: isGuestOrder ? null : userId, email };
+
+    let computed;
+    try {
+      computed = await computeServerAmount({
+        items,
+        promoCode,
+        shippingCost,
+        isPickup: !!req.body.isPickup,
+        applyPixDiscount: false,
+        ...identity,
+      });
+    } catch (err) {
+      if (err instanceof CouponError)
+        return res.json({
+          success: false,
+          couponError: true,
+          message: err.message,
+        });
+      throw err;
+    }
+    const { productData, computedAmount, pricing, couponEval } = computed;
 
     const order = await Order.create(
-      buildOrderDoc(req, 'mercadopago_card', computedAmount),
+      buildOrderDoc(req, 'mercadopago_card', computedAmount, pricing),
     );
     console.log('✅ Order criada:', order._id, '| valor:', computedAmount);
+
+    if (!(await reserveCouponOrFail(couponEval, order, identity)))
+      return res.json({
+        success: false,
+        couponError: true,
+        message: COUPON_EXHAUSTED_MSG,
+      });
 
     const body = {
       transaction_amount: computedAmount,
@@ -316,6 +408,7 @@ export const createCardPayment = async (req, res) => {
       });
     } catch (mpErr) {
       console.error('❌ MP card error:', mpErr?.message, mpErr?.cause || '');
+      await releaseCoupon(order._id);
       await Order.findByIdAndDelete(order._id);
       return res.json({
         success: false,
@@ -339,6 +432,7 @@ export const createCardPayment = async (req, res) => {
         { new: true },
       ).populate('items.product');
       await decrementProductStock(updated.items);
+      await confirmRedemption(order._id);
       if (updated.userId && !updated.isGuestOrder)
         await User.findByIdAndUpdate(updated.userId, { cartItems: {} });
       await safeSendPaidNotifications(updated, email);
@@ -362,6 +456,7 @@ export const createCardPayment = async (req, res) => {
     }
 
     // rejected / cancelled
+    await releaseCoupon(order._id);
     await Order.findByIdAndDelete(order._id);
     return res.json({
       success: false,
@@ -387,12 +482,13 @@ export const createPixPayment = async (req, res) => {
     const {
       items,
       address,
-      discountPercentage,
+      promoCode,
       shippingCost,
       customerName,
       customerEmail,
       customerDocument,
       isGuestOrder,
+      userId,
     } = req.body;
 
     if (!items?.length)
@@ -410,23 +506,44 @@ export const createPixPayment = async (req, res) => {
         message: 'Estoque insuficiente: ' + stock.errors.join(', '),
       });
 
-    const { computedAmount } = await computeServerAmount({
-      items,
-      discountPercentage,
-      shippingCost,
-      isPickup: !!req.body.isPickup,
-      applyPixDiscount: true,
-    });
-
     const email = customerEmail;
     const cpf = cleanDigits(customerDocument);
     const { first_name, last_name } = splitName(customerName);
+    const identity = { userId: isGuestOrder ? null : userId, email };
+
+    let computed;
+    try {
+      computed = await computeServerAmount({
+        items,
+        promoCode,
+        shippingCost,
+        isPickup: !!req.body.isPickup,
+        applyPixDiscount: true,
+        ...identity,
+      });
+    } catch (err) {
+      if (err instanceof CouponError)
+        return res.json({
+          success: false,
+          couponError: true,
+          message: err.message,
+        });
+      throw err;
+    }
+    const { computedAmount, pricing, couponEval } = computed;
 
     const order = await Order.create(
-      buildOrderDoc(req, 'mercadopago_pix', computedAmount, {
+      buildOrderDoc(req, 'mercadopago_pix', computedAmount, pricing, {
         status: 'Aguardando Pagamento',
       }),
     );
+
+    if (!(await reserveCouponOrFail(couponEval, order, identity)))
+      return res.json({
+        success: false,
+        couponError: true,
+        message: COUPON_EXHAUSTED_MSG,
+      });
 
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
 
@@ -521,13 +638,14 @@ export const createBoletoPayment = async (req, res) => {
     const {
       items,
       address,
-      discountPercentage,
+      promoCode,
       shippingCost,
       customerName,
       customerEmail,
       customerPhone,
       customerDocument,
       isGuestOrder,
+      userId,
     } = req.body;
 
     if (!items?.length)
@@ -552,26 +670,47 @@ export const createBoletoPayment = async (req, res) => {
         message: 'Estoque insuficiente: ' + stock.errors.join(', '),
       });
 
-    const { productData, computedAmount } = await computeServerAmount({
-      items,
-      discountPercentage,
-      shippingCost,
-      isPickup: !!req.body.isPickup,
-      applyPixDiscount: false,
-    });
-
     const addressDoc = await Address.findById(address);
     if (!addressDoc)
       return res.json({ success: false, message: 'Endereço não encontrado.' });
 
     const email = customerEmail;
     const { first_name, last_name } = splitName(customerName);
+    const identity = { userId: isGuestOrder ? null : userId, email };
+
+    let computed;
+    try {
+      computed = await computeServerAmount({
+        items,
+        promoCode,
+        shippingCost,
+        isPickup: !!req.body.isPickup,
+        applyPixDiscount: false,
+        ...identity,
+      });
+    } catch (err) {
+      if (err instanceof CouponError)
+        return res.json({
+          success: false,
+          couponError: true,
+          message: err.message,
+        });
+      throw err;
+    }
+    const { productData, computedAmount, pricing, couponEval } = computed;
 
     const order = await Order.create(
-      buildOrderDoc(req, 'mercadopago_boleto', computedAmount, {
+      buildOrderDoc(req, 'mercadopago_boleto', computedAmount, pricing, {
         status: 'Aguardando Pagamento',
       }),
     );
+
+    if (!(await reserveCouponOrFail(couponEval, order, identity)))
+      return res.json({
+        success: false,
+        couponError: true,
+        message: COUPON_EXHAUSTED_MSG,
+      });
 
     // Vencimento: 3 dias úteis
     const due = new Date();
@@ -778,6 +917,7 @@ export const mercadoPagoWebhook = async (req, res) => {
         { new: true },
       ).populate('items.product');
       await decrementProductStock(updated.items);
+      await confirmRedemption(order._id);
       if (updated.userId && !updated.isGuestOrder)
         await User.findByIdAndUpdate(updated.userId, { cartItems: {} });
       await safeSendPaidNotifications(updated, updated.guestEmail);
@@ -787,8 +927,10 @@ export const mercadoPagoWebhook = async (req, res) => {
     ) {
       // PIX expirado / boleto cancelado / cartão recusado pós-análise
       await Order.findByIdAndUpdate(order._id, { status: 'Cancelado' });
+      await releaseCoupon(order._id);
     } else if (status === 'refunded' || status === 'charged_back') {
       await Order.findByIdAndUpdate(order._id, { status: 'Cancelado' });
+      await releaseCoupon(order._id);
     }
 
     return res.status(200).json({ received: true });

@@ -14,6 +14,7 @@ import {
   Users,
   ClipboardList,
   FileText,
+  Ticket,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -50,6 +51,13 @@ const SellerLayout = () => {
       name: 'Pedidos',
       path: '/seller/orders',
       icon: ShoppingCart,
+    },
+    // ─── Separador ───
+    { divider: true, label: 'MARKETING' },
+    {
+      name: 'Cupons',
+      path: '/seller/cupons',
+      icon: Ticket,
     },
     // ─── Separador ───
     { divider: true, label: 'CONTEUDO' },

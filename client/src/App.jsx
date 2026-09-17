@@ -47,6 +47,7 @@ import WslManager from './pages/seller/WslManager';
 // ✅ Vendas Diretas
 import Clientes from './pages/seller/Clientes';
 import VendasDiretas from './pages/seller/VendasDiretas';
+import Coupons from './pages/seller/Coupons';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
@@ -161,6 +162,8 @@ const App = () => {
             <Route path='add-product' element={<AddProduct />} />
             <Route path='product-list' element={<ProductList />} />
             <Route path='orders' element={<Orders />} />
+            {/* ─── Marketing ─── */}
+            <Route path='cupons' element={<Coupons />} />
             <Route path='blog' element={<BlogManager />} />
             <Route path='/seller/wsl' element={<WslManager />} />
             {/* ─── Vendas Diretas ─── */}
