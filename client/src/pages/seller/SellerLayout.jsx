@@ -15,6 +15,8 @@ import {
   ClipboardList,
   FileText,
   Ticket,
+  Instagram,
+  Sparkles,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -58,6 +60,19 @@ const SellerLayout = () => {
       name: 'Cupons',
       path: '/seller/cupons',
       icon: Ticket,
+    },
+    // ─── Separador ───
+    { divider: true, label: 'INSTAGRAM' },
+    {
+      name: 'Estúdio',
+      path: '/seller/instagram',
+      icon: Sparkles,
+      end: true,
+    },
+    {
+      name: 'Conteúdos',
+      path: '/seller/instagram/posts',
+      icon: Instagram,
     },
     // ─── Separador ───
     { divider: true, label: 'CONTEUDO' },

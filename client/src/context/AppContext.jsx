@@ -85,7 +85,9 @@ export const AppContextProvider = ({ children }) => {
       // 💰 Saldo da carteira Melhor Envio (admin)
       url.includes('/api/shipping/balance') ||
       url.includes('/api/wsl/admin') ||
-      url.includes('/api/blog/admin')
+      url.includes('/api/blog/admin') ||
+      // 📸 Estúdio Instagram (todas as rotas são admin)
+      url.includes('/api/social')
     );
   };
 

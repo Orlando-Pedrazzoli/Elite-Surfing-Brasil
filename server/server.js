@@ -47,6 +47,7 @@ import wslRouter from './routes/wslRoute.js';
 import catalogRouter from './routes/catalogRoute.js';
 import partnerRouter from './routes/partnerRoute.js';
 import couponRouter from './routes/couponRoute.js';
+import socialRouter from './routes/socialRoute.js'; // 📸 Estúdio Instagram
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -301,6 +302,7 @@ app.use('/api/wsl', readLimiter, wslRouter);
 app.use('/api/v1/catalog', readLimiter, catalogRouter);
 app.use('/api/partner', partnerRouter);
 app.use('/api/coupon', couponRouter);
+app.use('/api/social', socialRouter); // 📸 Estúdio Instagram (admin)
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');

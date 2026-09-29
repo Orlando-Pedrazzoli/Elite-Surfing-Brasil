@@ -48,6 +48,10 @@ import WslManager from './pages/seller/WslManager';
 import Clientes from './pages/seller/Clientes';
 import VendasDiretas from './pages/seller/VendasDiretas';
 import Coupons from './pages/seller/Coupons';
+// 📸 Estúdio Instagram
+import InstagramStudio from './pages/seller/InstagramStudio';
+import InstagramPosts from './pages/seller/InstagramPosts';
+import InstagramSettings from './pages/seller/InstagramSettings';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
@@ -164,6 +168,10 @@ const App = () => {
             <Route path='orders' element={<Orders />} />
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
+            {/* ─── Instagram ─── */}
+            <Route path='instagram' element={<InstagramStudio />} />
+            <Route path='instagram/posts' element={<InstagramPosts />} />
+            <Route path='instagram/settings' element={<InstagramSettings />} />
             <Route path='blog' element={<BlogManager />} />
             <Route path='/seller/wsl' element={<WslManager />} />
             {/* ─── Vendas Diretas ─── */}
