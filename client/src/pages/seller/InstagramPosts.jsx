@@ -15,7 +15,7 @@ import {
   buildFinalCaption,
   copyToClipboard,
 } from '../../utils/socialUtils';
-import { Sparkles, Trash2, Copy, ExternalLink, Search, Plus } from 'lucide-react';
+import { Sparkles, Trash2, Copy, ExternalLink, Search, Plus, Instagram } from 'lucide-react';
 
 const InstagramPosts = () => {
   const { axios } = useAppContext();
@@ -208,10 +208,19 @@ const InstagramPosts = () => {
                       <p className='text-[11px] text-gray-400 mt-1 truncate'>
                         {(p.products || []).map(x => x.name).join(' · ') || 'sem produto'}
                       </p>
+                      {p.status === 'failed' && p.lastError && (
+                        <p className='text-[11px] text-red-600 mt-1 line-clamp-2'>{p.lastError}</p>
+                      )}
                     </div>
                   </div>
                   <div className='mt-auto flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50/50'>
-                    <span className='text-[11px] text-gray-400'>{formatDateTime(p.createdAt)}</span>
+                    <span className='text-[11px] text-gray-400'>
+                      {p.status === 'scheduled' && p.scheduledAt
+                        ? `⏰ ${formatDateTime(p.scheduledAt)}`
+                        : p.status === 'published' && p.publishedAt
+                          ? `✓ ${formatDateTime(p.publishedAt)}`
+                          : formatDateTime(p.createdAt)}
+                    </span>
                     <div className='flex items-center gap-1'>
                       {p.caption && (
                         <button
@@ -223,6 +232,17 @@ const InstagramPosts = () => {
                         >
                           <Copy className='w-4 h-4' />
                         </button>
+                      )}
+                      {p.igPermalink && (
+                        <a
+                          href={p.igPermalink}
+                          target='_blank'
+                          rel='noreferrer'
+                          className='p-1.5 text-pink-600 hover:bg-pink-50 rounded'
+                          title='Ver no Instagram'
+                        >
+                          <Instagram className='w-4 h-4' />
+                        </a>
                       )}
                       <button
                         onClick={() => navigate(`/seller/instagram?post=${p._id}`)}

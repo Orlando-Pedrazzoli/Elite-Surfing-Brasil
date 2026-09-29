@@ -13,6 +13,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
 import PostPreview from '../../components/social/PostPreview';
+import VideoUploader from '../../components/social/VideoUploader';
+import PublishPanel from '../../components/social/PublishPanel';
 import {
   POST_TYPES,
   POST_GOALS,
@@ -376,11 +378,28 @@ const InstagramStudio = () => {
         return;
       }
       next = [...current, toMedia(tpl)];
+    } else if (type === 'reel') {
+      // No Reel a imagem é a CAPA: mantém o vídeo, troca a imagem
+      next = [...current.filter(m => m.kind === 'video'), toMedia(tpl)];
     } else {
+      // post / story: um único item (imagem substitui vídeo e vice-versa)
       next = [toMedia(tpl)];
     }
     updateDraft({ media: next });
   };
+
+  // Vídeo (reel / story) — vem do VideoUploader
+  const currentVideo = (draft?.media || []).find(m => m.kind === 'video') || null;
+  const setVideo = video => {
+    const current = draft.media || [];
+    const withoutVideo = current.filter(m => m.kind !== 'video');
+    if (!video) return updateDraft({ media: withoutVideo });
+    if (type === 'story') return updateDraft({ media: [video] }); // story: exclusivo
+    updateDraft({ media: [video, ...withoutVideo.slice(0, 1)] }); // reel: vídeo + capa
+  };
+
+  // Preview: reel usa o vídeo se existir; senão a capa
+  const previewVideoUrl = currentVideo?.url || null;
 
   const toMedia = tpl => ({
     url: tpl.url,
@@ -396,7 +415,7 @@ const InstagramStudio = () => {
   const hookCutMidWord =
     draft && draft.caption.length > HOOK_LIMIT && /\S/.test(draft.caption[HOOK_LIMIT] || '');
 
-  const previewImages = (draft?.media || []).map(m => m.url);
+  const previewImages = (draft?.media || []).filter(m => m.kind !== 'video').map(m => m.url);
   const primaryImage = previewImages[0] || post?.products?.[0]?.image?.[0] || null;
 
   // ═══════════════════════════════════════════════════════════════
@@ -687,6 +706,20 @@ const InstagramStudio = () => {
                   </div>
                 )}
 
+                {/* Vídeo (reel / story) */}
+                {(post.type === 'reel' || post.type === 'story') && (
+                  <VideoUploader
+                    axios={axios}
+                    video={currentVideo}
+                    onChange={setVideo}
+                    label={
+                      post.type === 'reel'
+                        ? 'Vídeo do Reel (MP4 9:16) — obrigatório'
+                        : 'Vídeo do Story (opcional — ou escolha uma imagem abaixo)'
+                    }
+                  />
+                )}
+
                 {/* Media */}
                 <MediaPicker
                   type={post.type}
@@ -719,6 +752,7 @@ const InstagramStudio = () => {
                   hashtags={draft.hashtags}
                   imageUrl={primaryImage}
                   imageUrls={previewImages}
+                  videoUrl={previewVideoUrl}
                   slides={draft.slides}
                   stories={draft.stories}
                   reelScript={draft.reelScript}
@@ -732,10 +766,10 @@ const InstagramStudio = () => {
                   >
                     <Copy className='w-4 h-4' /> Copiar legenda + hashtags
                   </button>
-                  {draft.media.length > 0 && (
+                  {draft.media.filter(m => m.kind === 'image').length > 0 && (
                     <button
                       onClick={() =>
-                        draft.media.forEach((m, i) =>
+                        draft.media.filter(m => m.kind === 'image').forEach((m, i) =>
                           setTimeout(
                             () =>
                               downloadCloudinaryImage(
@@ -749,7 +783,8 @@ const InstagramStudio = () => {
                       className='w-full py-2.5 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2'
                     >
                       <Download className='w-4 h-4' />
-                      Baixar {draft.media.length} imagem{draft.media.length > 1 ? 'ns' : ''}
+                      Baixar {draft.media.filter(m => m.kind === 'image').length} imagem
+                      {draft.media.filter(m => m.kind === 'image').length > 1 ? 'ns' : ''}
                     </button>
                   )}
                   {post.utm?.url && (
@@ -761,6 +796,24 @@ const InstagramStudio = () => {
                       <Link2 className='w-4 h-4' /> Copiar link do produto (UTM)
                     </button>
                   )}
+
+                  {/* 🚀 Fase 2 — publicar / agendar */}
+                  <div className='border-t border-gray-100 pt-2 mt-2'>
+                    <PublishPanel
+                      axios={axios}
+                      post={post}
+                      media={draft.media}
+                      dirty={dirty}
+                      connected={!!settings?.instagram?.connected}
+                      postingTimes={settings?.defaults?.postingTimes || []}
+                      onBeforePublish={() => save()}
+                      onPostUpdated={p => {
+                        setPost(p);
+                        setDraft(toDraft(p));
+                        setDirty(false);
+                      }}
+                    />
+                  </div>
 
                   <div className='border-t border-gray-100 pt-2 mt-2 space-y-2'>
                     <button
@@ -1279,7 +1332,13 @@ const MediaPicker = ({
       <p className='text-sm font-semibold text-gray-800'>
         Imagens{' '}
         <span className='text-gray-400 font-normal'>
-          ({type === 'carousel' ? 'selecione até 10, em ordem' : 'selecione 1'})
+          (
+          {type === 'carousel'
+            ? 'selecione até 10, em ordem'
+            : type === 'reel'
+              ? 'capa do Reel — opcional'
+              : 'selecione 1'}
+          )
         </span>
       </p>
       <div className='flex items-center gap-2'>

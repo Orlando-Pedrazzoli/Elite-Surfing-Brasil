@@ -35,6 +35,8 @@ import {
   buildProductTemplates,
   isCloudinaryUrl,
 } from '../services/instagram/mediaComposer.js';
+import { isMetaConfigured } from '../services/instagram/metaGraphService.js';
+import { isSecretBoxConfigured } from '../utils/secretBox.js';
 
 const SITE_URL = (process.env.SITE_URL || 'https://www.elitesurfing.com.br').replace(
   /\/$/,
@@ -72,6 +74,15 @@ export const health = async (req, res) => {
     models: getModelInfo(),
     logoConfigured: !!process.env.SOCIAL_LOGO_PUBLIC_ID,
     siteUrl: SITE_URL,
+    // Fase 2
+    metaConfigured: isMetaConfigured(),
+    encryptionConfigured: isSecretBoxConfigured(),
+    cronConfigured: !!process.env.CRON_SECRET,
+    cloudinaryUploadConfigured: !!(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    ),
   });
 };
 

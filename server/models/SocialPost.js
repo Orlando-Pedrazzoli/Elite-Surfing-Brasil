@@ -79,6 +79,7 @@ const mediaSchema = new mongoose.Schema(
     format: { type: String, default: '' }, // feed | portrait | story
     width: { type: Number, default: null },
     height: { type: Number, default: null },
+    duration: { type: Number, default: null }, // segundos (vídeo)
     sourceProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
   },
   { _id: false },
@@ -137,6 +138,9 @@ const socialPostSchema = new mongoose.Schema(
     igMediaId: { type: String, default: null },
     igPermalink: { type: String, default: null },
     lastError: { type: String, default: null },
+    // Controlo do fluxo de publicação (Fase 2)
+    publishAttempts: { type: Number, default: 0 },
+    publishingStartedAt: { type: Date, default: null },
 
     // ─── Métricas (Fase 3) ─────────────────────────────────────────
     metrics: {

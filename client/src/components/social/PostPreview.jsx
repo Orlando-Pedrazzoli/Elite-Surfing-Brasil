@@ -85,6 +85,7 @@ const PostPreview = ({
   hashtags,
   imageUrl,
   imageUrls = [],
+  videoUrl = null,
   slides = [],
   stories = [],
   reelScript,
@@ -100,7 +101,16 @@ const PostPreview = ({
     return (
       <div className='w-full max-w-[300px] mx-auto'>
         <div className='relative aspect-[9/16] rounded-3xl overflow-hidden bg-gray-900 shadow-lg border-4 border-gray-800'>
-          {bg ? (
+          {videoUrl ? (
+            <video
+              src={videoUrl}
+              className='absolute inset-0 w-full h-full object-cover'
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : bg ? (
             <img src={bg} alt='' className='absolute inset-0 w-full h-full object-cover' />
           ) : (
             <div className='absolute inset-0 bg-gradient-to-b from-sky-700 via-sky-900 to-gray-900' />
@@ -163,7 +173,16 @@ const PostPreview = ({
     return (
       <div className='w-full max-w-[300px] mx-auto'>
         <div className='relative aspect-[9/16] rounded-3xl overflow-hidden bg-gray-900 shadow-lg border-4 border-gray-800'>
-          {imageUrl ? (
+          {videoUrl ? (
+            <video
+              src={videoUrl}
+              className='absolute inset-0 w-full h-full object-cover'
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : imageUrl ? (
             <img src={imageUrl} alt='' className='absolute inset-0 w-full h-full object-cover' />
           ) : (
             <div className='absolute inset-0 bg-gradient-to-b from-gray-700 to-gray-900' />

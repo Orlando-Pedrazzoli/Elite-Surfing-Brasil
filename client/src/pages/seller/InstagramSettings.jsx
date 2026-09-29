@@ -6,10 +6,21 @@
 // Meta (botão "Ligar Instagram") é implementada na Fase 2; aqui mostra o
 // estado e o que falta.
 // ═══════════════════════════════════════════════════════════════════════
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
-import { Save, Instagram, CheckCircle2, XCircle, Plus, X } from 'lucide-react';
+import {
+  Save,
+  Instagram,
+  CheckCircle2,
+  XCircle,
+  Plus,
+  X,
+  RefreshCw,
+  Unplug,
+  AlertTriangle,
+} from 'lucide-react';
 
 const inputCls =
   'w-full outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary text-sm';
@@ -77,6 +88,26 @@ const InstagramSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
+  // ─── Fase 2: ligação Meta ──────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [metaStatus, setMetaStatus] = useState(null);
+  const [checkingMeta, setCheckingMeta] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [pendingPages, setPendingPages] = useState(null);
+
+  const loadMetaStatus = useCallback(async () => {
+    setCheckingMeta(true);
+    try {
+      const { data } = await axios.get('/api/social/meta/status');
+      setMetaStatus(data);
+      if (!data.success && data.message) toast.error(data.message);
+    } catch {
+      setMetaStatus({ success: false, message: 'Erro ao verificar ligação' });
+    } finally {
+      setCheckingMeta(false);
+    }
+  }, [axios]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -93,7 +124,69 @@ const InstagramSettings = () => {
       }
     };
     load();
-  }, [axios]);
+    loadMetaStatus();
+  }, [axios, loadMetaStatus]);
+
+  // Retorno do OAuth (?meta=connected|select|error)
+  useEffect(() => {
+    const meta = searchParams.get('meta');
+    if (!meta) return;
+    if (meta === 'connected') {
+      toast.success(`Instagram ligado: @${searchParams.get('username') || ''}`);
+      loadMetaStatus();
+    } else if (meta === 'error') {
+      toast.error(searchParams.get('message') || 'Falha na ligação com a Meta');
+    } else if (meta === 'select') {
+      axios.get('/api/social/meta/pages').then(({ data }) => {
+        if (data.success) setPendingPages(data.pages);
+        else toast.error(data.message);
+      });
+    }
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const startConnect = async () => {
+    setConnecting(true);
+    try {
+      const { data } = await axios.get('/api/social/meta/login-url');
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.message || 'Não foi possível iniciar a ligação');
+        setConnecting(false);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao iniciar ligação');
+      setConnecting(false);
+    }
+  };
+
+  const choosePage = async pageId => {
+    try {
+      const { data } = await axios.post('/api/social/meta/connect', { pageId });
+      if (data.success) {
+        toast.success(data.message);
+        setPendingPages(null);
+        loadMetaStatus();
+      } else toast.error(data.message);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao ligar');
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm('Desligar a conta Instagram? Posts agendados vão falhar até religar.')) return;
+    try {
+      const { data } = await axios.post('/api/social/meta/disconnect');
+      if (data.success) {
+        toast.success(data.message);
+        loadMetaStatus();
+      } else toast.error(data.message);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao desligar');
+    }
+  };
 
   const setVoice = patch => {
     setSettings(prev => ({ ...prev, brandVoice: { ...prev.brandVoice, ...patch } }));
@@ -133,7 +226,6 @@ const InstagramSettings = () => {
 
   const v = settings.brandVoice;
   const d = settings.defaults;
-  const ig = settings.instagram || {};
 
   return (
     <div className='flex-1 h-[95vh] overflow-y-auto bg-gray-50'>
@@ -179,33 +271,111 @@ const InstagramSettings = () => {
           </div>
 
           <div className='bg-white rounded-xl border border-gray-200 p-4'>
-            <p className='text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2'>
-              <Instagram className='w-4 h-4 text-pink-600' /> Conta Instagram
-            </p>
-            {ig.connected ? (
-              <div className='text-sm text-gray-700'>
+            <div className='flex items-center justify-between mb-2'>
+              <p className='text-sm font-semibold text-gray-800 flex items-center gap-2'>
+                <Instagram className='w-4 h-4 text-pink-600' /> Conta Instagram
+              </p>
+              <button
+                type='button'
+                onClick={loadMetaStatus}
+                disabled={checkingMeta}
+                className='p-1.5 text-gray-400 hover:text-gray-700 rounded'
+                title='Verificar ligação'
+              >
+                <RefreshCw className={`w-4 h-4 ${checkingMeta ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {metaStatus?.connected ? (
+              <div className='text-sm text-gray-700 space-y-1'>
                 <p className='flex items-center gap-2'>
-                  <CheckCircle2 className='w-4 h-4 text-green-600' /> @{ig.username}
+                  <CheckCircle2 className='w-4 h-4 text-green-600' />
+                  <span className='font-medium'>@{metaStatus.account?.username || metaStatus.username}</span>
+                  {metaStatus.account?.followers !== undefined && (
+                    <span className='text-xs text-gray-400'>
+                      · {metaStatus.account.followers} seguidores
+                    </span>
+                  )}
                 </p>
-                <p className='text-[11px] text-gray-400 mt-1'>Página: {ig.pageName}</p>
+                <p className='text-[11px] text-gray-400'>Página: {metaStatus.pageName}</p>
+                {metaStatus.limit && (
+                  <p className='text-[11px] text-gray-500'>
+                    Publicações via API nas últimas {metaStatus.limit.windowHours}h:{' '}
+                    <strong>
+                      {metaStatus.limit.used}/{metaStatus.limit.total}
+                    </strong>
+                  </p>
+                )}
+                <button
+                  type='button'
+                  onClick={disconnect}
+                  className='mt-2 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 flex items-center gap-1'
+                >
+                  <Unplug className='w-3 h-3' /> Desligar
+                </button>
               </div>
             ) : (
               <div className='text-sm text-gray-600'>
                 <p className='flex items-center gap-2'>
                   <XCircle className='w-4 h-4 text-gray-400' /> Não ligada
                 </p>
-                <button
-                  type='button'
-                  disabled
-                  className='mt-2 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed'
-                  title='Disponível na Fase 2 (publicação direta)'
-                >
-                  Ligar Instagram (Fase 2)
-                </button>
+                {metaStatus?.lastError && (
+                  <p className='text-[11px] text-red-600 mt-1 flex items-start gap-1'>
+                    <AlertTriangle className='w-3 h-3 mt-0.5 flex-shrink-0' /> {metaStatus.lastError}
+                  </p>
+                )}
+                {metaStatus && (!metaStatus.configured || !metaStatus.encryptionConfigured) ? (
+                  <p className='text-[11px] text-amber-700 mt-2'>
+                    Faltam variáveis no servidor:{' '}
+                    {!metaStatus.configured && (
+                      <code className='font-mono'>META_APP_ID / META_APP_SECRET / META_REDIRECT_URI</code>
+                    )}
+                    {!metaStatus.configured && !metaStatus.encryptionConfigured && ' e '}
+                    {!metaStatus.encryptionConfigured && (
+                      <code className='font-mono'>SOCIAL_TOKEN_ENCRYPTION_KEY</code>
+                    )}
+                  </p>
+                ) : (
+                  <button
+                    type='button'
+                    onClick={startConnect}
+                    disabled={connecting}
+                    className='mt-2 px-3 py-1.5 text-xs font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 flex items-center gap-1'
+                  >
+                    <Instagram className='w-3 h-3' />
+                    {connecting ? 'A redirecionar...' : 'Ligar Instagram'}
+                  </button>
+                )}
                 <p className='text-[11px] text-gray-400 mt-2'>
-                  Por enquanto: copie a legenda e baixe as imagens no Estúdio, e publique pela
-                  app do Instagram.
+                  Precisa de conta Business/Creator ligada a uma Página do Facebook, e de ser
+                  administrador da app Meta.
                 </p>
+              </div>
+            )}
+
+            {pendingPages && (
+              <div className='mt-3 border-t border-gray-100 pt-3'>
+                <p className='text-xs font-semibold text-gray-700 mb-2'>
+                  Escolha a Página ligada ao Instagram da loja:
+                </p>
+                <div className='space-y-2'>
+                  {pendingPages.map(p => (
+                    <button
+                      key={p.pageId}
+                      type='button'
+                      onClick={() => choosePage(p.pageId)}
+                      className='w-full text-left p-2 rounded-lg border border-gray-200 hover:border-pink-400 hover:bg-pink-50 flex items-center gap-2'
+                    >
+                      {p.igPicture && (
+                        <img src={p.igPicture} alt='' className='w-8 h-8 rounded-full' />
+                      )}
+                      <span className='text-sm'>
+                        <strong>@{p.igUsername}</strong>{' '}
+                        <span className='text-gray-400 text-xs'>· {p.pageName}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -318,7 +488,7 @@ const InstagramSettings = () => {
         <div className='bg-white rounded-xl border border-gray-200 p-5 space-y-4'>
           <div>
             <h2 className='text-base font-semibold text-gray-900'>Publicação</h2>
-            <p className='text-xs text-gray-500'>Usado pelo agendamento (Fase 2)</p>
+            <p className='text-xs text-gray-500'>Horários sugeridos ao agendar no Estúdio</p>
           </div>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='flex flex-col gap-1'>

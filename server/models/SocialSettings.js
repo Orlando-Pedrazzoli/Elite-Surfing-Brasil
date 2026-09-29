@@ -73,6 +73,11 @@ const socialSettingsSchema = new mongoose.Schema(
       accessToken: { type: String, default: null, select: false }, // encriptado
       connectedAt: { type: Date, default: null },
       lastCheckedAt: { type: Date, default: null },
+      lastError: { type: String, default: null },
+      // Durante o OAuth: user token long-lived (encriptado) até o admin
+      // escolher a Página, quando há mais do que uma com Instagram.
+      pendingUserToken: { type: String, default: null, select: false },
+      pendingAt: { type: Date, default: null },
     },
   },
   { timestamps: true },
@@ -87,12 +92,14 @@ socialSettingsSchema.statics.getSingleton = async function () {
   return doc;
 };
 
-// Nunca expor o token, mesmo que alguém faça select('+accessToken')
+// Nunca expor tokens, mesmo que alguém faça select('+instagram.accessToken')
 socialSettingsSchema.methods.toSafeJSON = function () {
   const obj = this.toObject();
   if (obj.instagram) {
     obj.instagram.hasToken = !!obj.instagram.accessToken;
+    obj.instagram.hasPendingSelection = !!obj.instagram.pendingUserToken;
     delete obj.instagram.accessToken;
+    delete obj.instagram.pendingUserToken;
   }
   return obj;
 };
