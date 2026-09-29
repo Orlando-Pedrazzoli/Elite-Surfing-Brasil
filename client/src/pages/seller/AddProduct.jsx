@@ -12,6 +12,7 @@ import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
+import PricingFields from '../../components/seller/PricingFields';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
 const PRESET_COLORS = [
@@ -468,6 +469,8 @@ const AddProduct = () => {
 
   const [price, setPrice] = useState('');
   const [offerPrice, setOfferPrice] = useState('');
+  // 🆕 CUSTO REAL (fornecedor) — privado, só o admin vê
+  const [costPrice, setCostPrice] = useState('');
 
   // STOCK
   const [stock, setStock] = useState('');
@@ -687,6 +690,8 @@ const AddProduct = () => {
         category,
         price: Number(price),
         offerPrice: Number(offerPrice),
+        // 🆕 Custo: vazio → null (sem custo cadastrado)
+        costPrice: costPrice === '' ? null : Number(costPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
         sku: sku.trim() || undefined,
@@ -799,6 +804,7 @@ const AddProduct = () => {
         setCategory('');
         setPrice('');
         setOfferPrice('');
+        setCostPrice('');
         setStock('');
         setSku('');
         setWeight('');
@@ -1042,39 +1048,19 @@ const AddProduct = () => {
           </div>
         )}
 
-        {/* Preços */}
-        <div className='flex items-center gap-5 flex-wrap'>
-          <div className='flex-1 flex flex-col gap-1 min-w-[140px]'>
-            <label className='text-base font-medium' htmlFor='product-price'>
-              Preço Original (R$)
-            </label>
-            <input
-              onChange={e => setPrice(e.target.value)}
-              value={price}
-              id='product-price'
-              type='number'
-              step='0.01'
-              placeholder='0.00'
-              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
-              required
-            />
-          </div>
-          <div className='flex-1 flex flex-col gap-1 min-w-[140px]'>
-            <label className='text-base font-medium' htmlFor='offer-price'>
-              Preço de Venda (R$)
-            </label>
-            <input
-              onChange={e => setOfferPrice(e.target.value)}
-              value={offerPrice}
-              id='offer-price'
-              type='number'
-              step='0.01'
-              placeholder='0.00'
-              className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
-              required
-            />
-          </div>
-        </div>
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 🆕 PRECIFICAÇÃO — custo, preço original, venda + margem    */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <PricingFields
+          costPrice={costPrice}
+          setCostPrice={setCostPrice}
+          price={price}
+          setPrice={setPrice}
+          offerPrice={offerPrice}
+          setOfferPrice={setOfferPrice}
+          idPrefix='product'
+          disabled={isSubmitting}
+        />
 
         {/* STOCK */}
         <div className='flex flex-col gap-1'>

@@ -4,6 +4,15 @@ import { useAppContext } from '../../context/AppContext';
 import { groups, getCategoriesByGroup } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import EditProductModal from '../../components/seller/EditProductModal';
+import MarginBadge from '../../components/seller/MarginBadge';
+import {
+  calcMargin,
+  summarizeMargins,
+  formatBRL,
+  formatPct,
+  toNumberOrNull,
+  MARGIN_THRESHOLDS,
+} from '../../utils/pricingUtils';
 import {
   Package,
   Layers,
@@ -18,6 +27,9 @@ import {
   GripVertical,
   Save,
   ArrowUpDown,
+  TrendingUp,
+  Wallet,
+  Tag,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -239,6 +251,16 @@ const ProductList = () => {
     ),
   ];
 
+  // 💰 Resumo financeiro do catálogo (só produtos publicados com custo)
+  const marginSummary = summarizeMargins(allProducts);
+
+  // Helpers de filtro por margem
+  const hasNoCost = p => toNumberOrNull(p.costPrice) === null;
+  const hasLowOrNegativeMargin = p => {
+    const m = calcMargin(p.costPrice, p.offerPrice);
+    return !!m && m.marginPct < MARGIN_THRESHOLDS.LOW;
+  };
+
   const filteredProducts = (() => {
     let result = allProducts.filter(product => {
       if (selectedGroup) {
@@ -282,6 +304,10 @@ const ProductList = () => {
         filterStatus === 'out-of-stock' &&
         !(product.inStock && (product.stock || 0) === 0)
       )
+        return false;
+      // 💰 Filtros de margem
+      if (filterStatus === 'no-cost' && !hasNoCost(product)) return false;
+      if (filterStatus === 'low-margin' && !hasLowOrNegativeMargin(product))
         return false;
 
       if (showOnlyMain && product.isMainVariant === false) return false;
@@ -702,6 +728,125 @@ const ProductList = () => {
           </div>
         </div>
 
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* 💰 SAÚDE FINANCEIRA — custo x venda (privado, só admin)     */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div className='bg-white rounded-xl border border-emerald-200 shadow-sm mb-6 overflow-hidden'>
+          <div className='flex items-center justify-between px-4 py-3 border-b border-emerald-100 bg-emerald-50/60'>
+            <div className='flex items-center gap-2'>
+              <TrendingUp className='w-4 h-4 text-emerald-600' />
+              <h2 className='text-sm font-semibold text-emerald-900'>
+                Margem e Custo
+              </h2>
+            </div>
+            <span className='text-[11px] text-emerald-700'>
+              Base: {marginSummary.count} publicado
+              {marginSummary.count !== 1 ? 's' : ''} com custo
+            </span>
+          </div>
+
+          <div className='grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-100'>
+            {/* Margem média */}
+            <div className='p-4'>
+              <p className='text-xs text-gray-500 mb-1'>Margem média</p>
+              <p
+                className={`text-2xl font-bold tabular-nums ${
+                  marginSummary.avgMarginPct === null
+                    ? 'text-gray-400'
+                    : marginSummary.avgMarginPct < MARGIN_THRESHOLDS.LOW
+                      ? 'text-orange-600'
+                      : 'text-emerald-600'
+                }`}
+              >
+                {marginSummary.avgMarginPct === null
+                  ? '—'
+                  : formatPct(marginSummary.avgMarginPct)}
+              </p>
+              <p className='text-[11px] text-gray-400'>sobre o preço de venda</p>
+            </div>
+
+            {/* Alertas */}
+            <div className='p-4'>
+              <p className='text-xs text-gray-500 mb-1'>Atenção</p>
+              <div className='flex items-baseline gap-3'>
+                <button
+                  type='button'
+                  onClick={() => setFilterStatus('low-margin')}
+                  className='text-left group'
+                  title='Filtrar produtos com margem baixa ou prejuízo'
+                >
+                  <span
+                    className={`text-2xl font-bold tabular-nums ${
+                      marginSummary.negativeCount + marginSummary.lowCount > 0
+                        ? 'text-red-600'
+                        : 'text-gray-900'
+                    } group-hover:underline`}
+                  >
+                    {marginSummary.negativeCount + marginSummary.lowCount}
+                  </span>
+                  <span className='block text-[11px] text-gray-400'>
+                    margem &lt; {MARGIN_THRESHOLDS.LOW}%
+                    {marginSummary.negativeCount > 0 &&
+                      ` (${marginSummary.negativeCount} prejuízo)`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Capital em estoque (custo) */}
+            <div className='p-4'>
+              <div className='flex items-center gap-1.5 mb-1'>
+                <Wallet className='w-3.5 h-3.5 text-gray-400' />
+                <p className='text-xs text-gray-500'>Estoque a custo</p>
+              </div>
+              <p className='text-2xl font-bold tabular-nums text-gray-900'>
+                {formatBRL(marginSummary.stockCostValue)}
+              </p>
+              <p className='text-[11px] text-gray-400'>
+                capital investido em produto
+              </p>
+            </div>
+
+            {/* Valor de venda do estoque */}
+            <div className='p-4'>
+              <div className='flex items-center gap-1.5 mb-1'>
+                <Tag className='w-3.5 h-3.5 text-gray-400' />
+                <p className='text-xs text-gray-500'>Estoque a venda</p>
+              </div>
+              <p className='text-2xl font-bold tabular-nums text-emerald-700'>
+                {formatBRL(marginSummary.stockSaleValue)}
+              </p>
+              <p className='text-[11px] text-gray-400'>
+                lucro potencial:{' '}
+                <span className='font-medium text-gray-600'>
+                  {formatBRL(
+                    marginSummary.stockSaleValue -
+                      marginSummary.stockCostValue,
+                  )}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {marginSummary.withoutCost > 0 && (
+            <div className='px-4 py-2 bg-amber-50 border-t border-amber-100 flex items-center justify-between gap-3 flex-wrap'>
+              <p className='text-xs text-amber-800'>
+                <strong>{marginSummary.withoutCost}</strong> produto
+                {marginSummary.withoutCost !== 1 ? 's' : ''} sem custo
+                cadastrado — a margem só fica visível depois de informar o
+                custo do fornecedor.
+              </p>
+              <button
+                type='button'
+                onClick={() => setFilterStatus('no-cost')}
+                className='text-xs font-semibold text-amber-800 hover:text-amber-900 underline whitespace-nowrap'
+              >
+                Ver quais
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* CARDS DE GROUPS */}
         <div className='mb-6'>
           <h2 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'>
@@ -865,6 +1010,8 @@ const ProductList = () => {
                 <option value='inactive'>📝 Rascunhos</option>
                 <option value='low-stock'>⚠ Estoque Baixo</option>
                 <option value='out-of-stock'>✗ Esgotados</option>
+                <option value='low-margin'>💰 Margem Baixa / Prejuízo</option>
+                <option value='no-cost'>💰 Sem Custo Cadastrado</option>
               </select>
 
               <label className='flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200'>
@@ -937,13 +1084,16 @@ const ProductList = () => {
               )}
               {filterStatus && (
                 <span className='inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full'>
-                  {filterStatus === 'active'
-                    ? 'Publicados'
-                    : filterStatus === 'inactive'
-                      ? 'Rascunhos'
-                      : filterStatus === 'low-stock'
-                        ? 'Estoque Baixo'
-                        : 'Esgotados'}
+                  {
+                    {
+                      active: 'Publicados',
+                      inactive: 'Rascunhos',
+                      'low-stock': 'Estoque Baixo',
+                      'out-of-stock': 'Esgotados',
+                      'low-margin': 'Margem Baixa / Prejuízo',
+                      'no-cost': 'Sem Custo',
+                    }[filterStatus]
+                  }
                   <button onClick={() => setFilterStatus('')}>
                     <X className='w-3 h-3' />
                   </button>
@@ -1066,6 +1216,9 @@ const ProductList = () => {
                     </th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell'>
                       Preço
+                    </th>
+                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell'>
+                      Custo / Margem
                     </th>
                     <th className='px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider'>
                       Estoque
@@ -1285,6 +1438,54 @@ const ProductList = () => {
                               </p>
                             )}
                           </div>
+                        </td>
+
+                        {/* 💰 Custo / Margem */}
+                        <td className='px-4 py-3 hidden lg:table-cell'>
+                          {(() => {
+                            const m = calcMargin(
+                              product.costPrice,
+                              product.offerPrice,
+                            );
+                            return (
+                              <div className='flex flex-col gap-1'>
+                                <p className='text-xs text-gray-600 tabular-nums'>
+                                  {m ? (
+                                    <>
+                                      <span className='text-gray-400'>
+                                        custo{' '}
+                                      </span>
+                                      {formatBRL(m.cost)}
+                                    </>
+                                  ) : (
+                                    <span className='text-gray-400'>
+                                      custo —
+                                    </span>
+                                  )}
+                                </p>
+                                <div className='flex items-center gap-1.5'>
+                                  <MarginBadge
+                                    costPrice={product.costPrice}
+                                    offerPrice={product.offerPrice}
+                                    size='sm'
+                                  />
+                                  {m && (
+                                    <span
+                                      className={`text-[11px] tabular-nums ${
+                                        m.profit < 0
+                                          ? 'text-red-600'
+                                          : 'text-gray-500'
+                                      }`}
+                                      title='Lucro bruto por unidade'
+                                    >
+                                      {m.profit >= 0 ? '+' : ''}
+                                      {formatBRL(m.profit)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         <td className='px-4 py-3'>
@@ -1558,10 +1759,17 @@ const ProductList = () => {
                     </div>
 
                     <div className='flex items-center justify-between mt-2'>
-                      <p className='font-bold text-primary'>
-                        {currency}
-                        {product.offerPrice.toFixed(2)}
-                      </p>
+                      <div className='flex items-center gap-2'>
+                        <p className='font-bold text-primary'>
+                          {currency}
+                          {product.offerPrice.toFixed(2)}
+                        </p>
+                        {/* 💰 Margem */}
+                        <MarginBadge
+                          costPrice={product.costPrice}
+                          offerPrice={product.offerPrice}
+                        />
+                      </div>
                       <div className='flex items-center gap-1 text-xs'>
                         <span
                           className={`font-medium ${currentStock === 0 ? 'text-red-600' : isLowStock ? 'text-orange-600' : 'text-gray-600'}`}

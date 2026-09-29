@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
+import PricingFields from './PricingFields';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
 const PRESET_COLORS = [
@@ -489,6 +490,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
   const [price, setPrice] = useState('');
   const [offerPrice, setOfferPrice] = useState('');
+  // 🆕 CUSTO REAL (fornecedor) — privado, só o admin vê
+  const [costPrice, setCostPrice] = useState('');
 
   // CAMPOS DE STOCK
   const [stock, setStock] = useState('');
@@ -593,6 +596,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
       setPrice(product.price.toString());
       setOfferPrice(product.offerPrice.toString());
+      // 🆕 costPrice só chega quando o seller está autenticado (select:false
+      // no backend). null/undefined → campo vazio.
+      setCostPrice(
+        product.costPrice !== null && product.costPrice !== undefined
+          ? product.costPrice.toString()
+          : '',
+      );
 
       // Stock
       setStock((product.stock || 0).toString());
@@ -804,6 +814,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         category,
         price: parseFloat(price),
         offerPrice: parseFloat(offerPrice),
+        // 🆕 Custo: vazio → null (limpa o custo no backend)
+        costPrice: costPrice === '' ? null : parseFloat(costPrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
         sku: sku.trim() || null,
@@ -1194,47 +1206,19 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
               </div>
             )}
 
-          {/* Preços */}
-          <div className='flex items-center gap-5 flex-wrap'>
-            <div className='flex-1 flex flex-col gap-1 min-w-[120px]'>
-              <label
-                className='text-base font-medium'
-                htmlFor='edit-product-price'
-              >
-                Preço Original (R$)
-              </label>
-              <input
-                onChange={e => setPrice(e.target.value)}
-                value={price}
-                id='edit-product-price'
-                type='number'
-                step='0.01'
-                placeholder='0.00'
-                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-            <div className='flex-1 flex flex-col gap-1 min-w-[120px]'>
-              <label
-                className='text-base font-medium'
-                htmlFor='edit-offer-price'
-              >
-                Preço de Venda (R$)
-              </label>
-              <input
-                onChange={e => setOfferPrice(e.target.value)}
-                value={offerPrice}
-                id='edit-offer-price'
-                type='number'
-                step='0.01'
-                placeholder='0.00'
-                className='outline-none py-2.5 px-3 rounded-lg border border-gray-300 focus:border-primary transition-colors'
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* 🆕 PRECIFICAÇÃO — custo, preço original, venda + margem    */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          <PricingFields
+            costPrice={costPrice}
+            setCostPrice={setCostPrice}
+            price={price}
+            setPrice={setPrice}
+            offerPrice={offerPrice}
+            setOfferPrice={setOfferPrice}
+            idPrefix='edit-product'
+            disabled={isSubmitting}
+          />
 
           {/* Estoque */}
           <div className='flex flex-col gap-1'>

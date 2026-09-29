@@ -1,6 +1,7 @@
 // server/controllers/productController.js
 import { v2 as cloudinary } from 'cloudinary';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import Product from '../models/Product.js';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -70,6 +71,24 @@ const parseProductData = raw => {
   }
 };
 
+// ═══════════════════════════════════════════════════════════════════════
+// 🆕 CUSTO — helpers
+// ═══════════════════════════════════════════════════════════════════════
+// parseCostPrice: normaliza o valor vindo do frontend.
+//   - undefined         → undefined (campo não enviado: não mexer no doc)
+//   - null / ''         → null      (admin apagou o custo)
+//   - número >= 0       → número arredondado a 2 casas
+//   - qualquer outro    → { error }
+const parseCostPrice = value => {
+  if (value === undefined) return { value: undefined };
+  if (value === null || value === '') return { value: null };
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) {
+    return { error: 'Custo do produto inválido' };
+  }
+  return { value: Math.round(num * 100) / 100 };
+};
+
 const validateProductData = productData => {
   const name = String(productData.name || '').trim();
   if (!name) return 'Nome do produto é obrigatório';
@@ -89,6 +108,12 @@ const validateProductData = productData => {
   if (offerPrice > price) {
     return 'Preço de venda não pode ser maior que o preço original';
   }
+
+  // 🆕 Custo é opcional, mas se vier tem de ser um número >= 0.
+  // Vender abaixo do custo NÃO é bloqueado (pode ser queima de estoque
+  // intencional) — o admin vê o alerta de margem negativa na UI.
+  const cost = parseCostPrice(productData.costPrice);
+  if (cost.error) return cost.error;
 
   const stock = Number(productData.stock);
   if (!Number.isFinite(stock) || stock < 0) return 'Estoque inválido';
@@ -119,6 +144,30 @@ const isAdminRequest = req => {
     req.query.all === 'true'
   );
 };
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🆕 isSellerAuthenticated — verifica DE FACTO o JWT do seller
+// ═══════════════════════════════════════════════════════════════════════
+// isAdminRequest acima é apenas uma "dica" de visibilidade (drafts, cache)
+// e aceita qualquer `?all=true` — NÃO serve para proteger dados sensíveis.
+// O custo do produto só é devolvido quando este helper confirma o token
+// (mesma lógica do middleware authSeller: cookie primeiro, header depois).
+// Nunca lança: em rota pública, token inválido = simplesmente não é seller.
+// ═══════════════════════════════════════════════════════════════════════
+const isSellerAuthenticated = req => {
+  const token = req.cookies?.sellerToken || req.headers['x-seller-token'];
+  if (!token || !process.env.JWT_SECRET) return false;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return !!decoded?.email && decoded.email === process.env.SELLER_EMAIL;
+  } catch {
+    return false;
+  }
+};
+
+// Aplica `.select('+costPrice')` à query apenas para o seller autenticado.
+const withCostIfSeller = (query, seller) =>
+  seller ? query.select('+costPrice') : query;
 
 // Add Product : /api/product/add
 export const addProduct = async (req, res) => {
@@ -173,9 +222,14 @@ export const addProduct = async (req, res) => {
     const cleanSku = sanitizeSku(productData.sku);
     delete productData.sku;
 
+    // 🆕 Custo normalizado (já validado em validateProductData)
+    const { value: costPrice } = parseCostPrice(productData.costPrice);
+    delete productData.costPrice;
+
     await Product.create({
       ...productData,
       ...(cleanSku ? { sku: cleanSku } : {}),
+      ...(costPrice !== undefined ? { costPrice } : {}),
       image: imagesUrl,
       video: videoUrl,
       stock,
@@ -196,7 +250,13 @@ export const addProduct = async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════
 export const productList = async (req, res) => {
   try {
-    const admin = isAdminRequest(req);
+    // 🆕 seller = JWT válido → recebe costPrice e resposta sem cache.
+    // Um seller logado por cookie que abra a loja pública também cai
+    // aqui como admin — evita que uma resposta COM custo seja cacheada
+    // no CDN (o cache público faz Vary apenas em Authorization/x-seller-token,
+    // não em Cookie).
+    const seller = isSellerAuthenticated(req);
+    const admin = isAdminRequest(req) || seller;
 
     let query = {};
 
@@ -213,7 +273,10 @@ export const productList = async (req, res) => {
       };
     }
 
-    const products = await Product.find(query).sort({
+    const products = await withCostIfSeller(
+      Product.find(query),
+      seller,
+    ).sort({
       displayOrder: 1,
       createdAt: -1,
     });
@@ -285,8 +348,9 @@ export const reorderProducts = async (req, res) => {
 export const productById = async (req, res) => {
   try {
     const { id } = req.body;
-    const product = await Product.findById(id);
-    const admin = isAdminRequest(req);
+    const seller = isSellerAuthenticated(req);
+    const admin = isAdminRequest(req) || seller;
+    const product = await withCostIfSeller(Product.findById(id), seller);
 
     if (!product) {
       setNoCacheHeaders(res);
@@ -326,8 +390,9 @@ export const productById = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findById(id);
-    const admin = isAdminRequest(req);
+    const seller = isSellerAuthenticated(req);
+    const admin = isAdminRequest(req) || seller;
+    const product = await withCostIfSeller(Product.findById(id), seller);
 
     if (!product) {
       setNoCacheHeaders(res);
@@ -422,7 +487,8 @@ export const getProductsByIds = async (req, res) => {
 export const getProductFamily = async (req, res) => {
   try {
     const { familySlug } = req.body;
-    const admin = isAdminRequest(req);
+    const seller = isSellerAuthenticated(req);
+    const admin = isAdminRequest(req) || seller;
 
     if (!familySlug) {
       return res.json({ success: false, message: 'Family slug é obrigatório' });
@@ -434,7 +500,7 @@ export const getProductFamily = async (req, res) => {
       query.inStock = { $ne: false };
     }
 
-    const products = await Product.find(query).sort({
+    const products = await withCostIfSeller(Product.find(query), seller).sort({
       isMainVariant: -1,
       createdAt: 1,
     });
@@ -715,11 +781,16 @@ export const updateProduct = async (req, res) => {
     const cleanSku = sanitizeSku(productData.sku);
     delete productData.sku;
 
+    // 🆕 Custo: undefined → não mexe; null → limpa; número → grava
+    const { value: costPrice } = parseCostPrice(productData.costPrice);
+    delete productData.costPrice;
+
     const updateOps = {
       $set: {
         ...productData,
         image: finalImageUrls,
         video: videoUrl,
+        ...(costPrice !== undefined ? { costPrice } : {}),
       },
     };
 

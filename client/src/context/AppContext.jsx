@@ -75,6 +75,11 @@ export const AppContextProvider = ({ children }) => {
       // não estava nesta lista — sem o header x-seller-token, o Safari/iOS
       // (que bloqueia cookies cross-site) recebia 401 ao salvar a ordem.
       url.includes('/api/product/reorder') ||
+      // 💰 Lista do admin (?all=true): o backend só devolve costPrice quando
+      // consegue verificar o JWT do seller. No desktop o cookie basta; no
+      // Safari/iOS (sem cookie cross-site) é este header que garante que o
+      // admin vê custo e margem na Lista de Produtos.
+      (url.includes('/api/product/list') && url.includes('all=true')) ||
       // 🏷️ Etiquetas Melhor Envio (admin)
       url.includes('/api/shipping/label') ||
       // 💰 Saldo da carteira Melhor Envio (admin)

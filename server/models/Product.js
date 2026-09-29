@@ -41,6 +41,23 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // ═══════════════════════════════════════════════════════════════
+    // 🆕 CUSTO REAL DO PRODUTO (o que o admin paga ao fornecedor)
+    // ─────────────────────────────────────────────────────────────
+    // `select: false` → o campo NUNCA sai em queries por padrão.
+    // Só é devolvido quando o controller faz `.select('+costPrice')`,
+    // e o controller só faz isso após verificar o JWT do seller.
+    // Assim o custo jamais aparece na API pública / cache do CDN.
+    // Margem e lucro são derivados no frontend a partir de
+    // costPrice + offerPrice (não são gravados, para nunca ficarem
+    // desatualizados).
+    // ═══════════════════════════════════════════════════════════════
+    costPrice: {
+      type: Number,
+      default: null,
+      min: [0, 'Custo não pode ser negativo'],
+      select: false,
+    },
     image: {
       type: [String],
       required: true,
