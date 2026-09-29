@@ -33,6 +33,8 @@ import {
   Store,
 } from 'lucide-react';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
+// 🎯 Origem do cliente (UTMs do Instagram) — vai no pedido
+import { getAttributionForOrder, clearAttribution } from '../utils/attribution';
 
 const Cart = () => {
   const {
@@ -473,6 +475,8 @@ const Cart = () => {
           product: item._id,
           quantity: item.quantity,
         })),
+        // 🎯 atribuição de origem (UTM) — gravada em Order.attribution
+        attribution: getAttributionForOrder(),
         // ─── dados do Brick ───
         token: formData.token,
         issuer_id: formData.issuer_id,
@@ -519,6 +523,7 @@ const Cart = () => {
 
       if (data.success) {
         const emptyCart = {};
+        clearAttribution(); // 🎯 pedido feito: origem consumida
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
 
@@ -629,6 +634,8 @@ const Cart = () => {
             product: item._id,
             quantity: item.quantity,
           })),
+          // 🎯 atribuição de origem (UTM) — gravada em Order.attribution
+          attribution: getAttributionForOrder(),
           promoCode: appliedCoupon?.code || '',
           customerName,
           customerEmail,
@@ -679,6 +686,8 @@ const Cart = () => {
           );
 
           const emptyCart = {};
+
+          clearAttribution(); // 🎯 pedido feito: origem consumida
           setCartItems(emptyCart);
           saveCartToStorage(emptyCart);
 
@@ -706,6 +715,8 @@ const Cart = () => {
           product: item._id,
           quantity: item.quantity,
         })),
+        // 🎯 atribuição de origem (UTM) — gravada em Order.attribution
+        attribution: getAttributionForOrder(),
         promoCode: appliedCoupon?.code || '',
         customerName,
         customerEmail,
@@ -756,6 +767,8 @@ const Cart = () => {
         );
 
         const emptyCart = {};
+
+        clearAttribution(); // 🎯 pedido feito: origem consumida
         setCartItems(emptyCart);
         saveCartToStorage(emptyCart);
 

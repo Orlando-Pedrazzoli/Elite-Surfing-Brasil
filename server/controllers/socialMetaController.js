@@ -26,6 +26,7 @@ import {
   runScheduledPublishing,
   validateMediaForType,
 } from '../services/instagram/publishService.js';
+import { runLightMetrics } from './socialAnalyticsController.js';
 
 const SITE_URL = (process.env.SITE_URL || 'https://www.elitesurfing.com.br').replace(/\/$/, '');
 const SETTINGS_PAGE = `${SITE_URL}/seller/instagram/settings`;
@@ -384,7 +385,9 @@ export const cronPublish = async (req, res) => {
   }
   try {
     const summary = await runScheduledPublishing({ limit: 5 });
-    res.json({ success: true, ...summary });
+    // 📊 Fase 3: mantém vendas atribuídas e insights frescos no mesmo tick
+    const metrics = await runLightMetrics();
+    res.json({ success: true, ...summary, metrics });
   } catch (error) {
     console.error('[social/cron]', error);
     res.status(500).json({ success: false, message: error.message });

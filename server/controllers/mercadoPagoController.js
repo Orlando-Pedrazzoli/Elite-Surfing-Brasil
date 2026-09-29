@@ -237,6 +237,32 @@ const computeServerAmount = async ({
 // CRIAR DOCUMENTO DE ENCOMENDA NO MONGO
 // =============================================================================
 //    `pricing` vem de computeServerAmount — o client NÃO dita descontos.
+// 🎯 Sanitiza a atribuição enviada pelo checkout (nunca confiar no body)
+const sanitizeAttribution = raw => {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const clip = v => (v === undefined || v === null ? '' : String(v).trim().slice(0, 120));
+  const source = clip(raw.source).toLowerCase();
+  if (!source) return undefined;
+  const content = clip(raw.content);
+  const firstSeenAt = raw.firstSeenAt ? new Date(raw.firstSeenAt) : null;
+  return {
+    source,
+    medium: clip(raw.medium).toLowerCase(),
+    campaign: clip(raw.campaign).toLowerCase(),
+    content,
+    term: clip(raw.term),
+    landingPath: clip(raw.landingPath),
+    referrer: clip(raw.referrer),
+    firstSeenAt: firstSeenAt && !Number.isNaN(firstSeenAt.getTime()) ? firstSeenAt : null,
+    lastSource: clip(raw.lastSource).toLowerCase(),
+    lastCampaign: clip(raw.lastCampaign).toLowerCase(),
+    lastContent: clip(raw.lastContent),
+    // utm_content = id do SocialPost quando o link veio do Estúdio Instagram
+    socialPostId:
+      source === 'instagram' && /^[a-f\d]{24}$/i.test(content) ? content : null,
+  };
+};
+
 const buildOrderDoc = (
   req,
   paymentType,
@@ -246,6 +272,7 @@ const buildOrderDoc = (
 ) => {
   const b = req.body;
   const isPickup = !!b.isPickup;
+  const attribution = sanitizeAttribution(b.attribution);
   const doc = {
     items: b.items,
     amount: computedAmount,
@@ -268,6 +295,8 @@ const buildOrderDoc = (
     shippingCarrier: b.shippingCarrier || '',
     shippingDeliveryDays: isPickup ? 0 : b.shippingDeliveryDays || 0,
     shippingServiceId: isPickup ? '' : b.shippingServiceId || '',
+    // 🎯 origem do cliente (UTMs) — só grava se veio algo válido
+    ...(attribution ? { attribution } : {}),
     ...extra,
   };
   if (b.isGuestOrder) {

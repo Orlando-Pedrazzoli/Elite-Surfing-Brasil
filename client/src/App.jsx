@@ -1,5 +1,5 @@
 // client/src/App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from './components/Navbar';
 import AnnouncementBar from './components/AnnouncementBar';
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -52,9 +52,13 @@ import Coupons from './pages/seller/Coupons';
 import InstagramStudio from './pages/seller/InstagramStudio';
 import InstagramPosts from './pages/seller/InstagramPosts';
 import InstagramSettings from './pages/seller/InstagramSettings';
+import InstagramAnalytics from './pages/seller/InstagramAnalytics';
+import InstagramPlanner from './pages/seller/InstagramPlanner';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
+// 🎯 Atribuição de origem (UTMs do Instagram → pedido)
+import { captureAttribution } from './utils/attribution';
 
 const App = () => {
   const location = useLocation();
@@ -64,6 +68,13 @@ const App = () => {
   const isInstitucional = location.pathname.startsWith('/institucional');
   const isBlogPage = location.pathname.startsWith('/blog');
   const { showUserLogin, isSeller, isSellerLoading } = useAppContext();
+
+  // 🎯 Captura UTMs (utm_source, utm_content = id do post do Instagram)
+  // sempre que a URL muda — a origem fica em localStorage por 30 dias e
+  // segue com o pedido no checkout.
+  useEffect(() => {
+    captureAttribution();
+  }, [location.search]);
 
   // Loading APENAS na área de seller
   if (isSellerPath && isSellerLoading) {
@@ -172,6 +183,8 @@ const App = () => {
             <Route path='instagram' element={<InstagramStudio />} />
             <Route path='instagram/posts' element={<InstagramPosts />} />
             <Route path='instagram/settings' element={<InstagramSettings />} />
+            <Route path='instagram/analytics' element={<InstagramAnalytics />} />
+            <Route path='instagram/planner' element={<InstagramPlanner />} />
             <Route path='blog' element={<BlogManager />} />
             <Route path='/seller/wsl' element={<WslManager />} />
             {/* ─── Vendas Diretas ─── */}

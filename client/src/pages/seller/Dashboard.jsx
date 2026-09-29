@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Link } from 'react-router-dom';
+// 📊 Instagram → vendas (Fase 3)
+import InstagramSalesCard from '../../components/social/InstagramSalesCard';
 import {
   Package,
   ShoppingCart,
@@ -805,6 +807,9 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* 📊 INSTAGRAM → VENDAS */}
+        <InstagramSalesCard year={selectedPeriod.year} month={selectedPeriod.month} />
 
         {/* QUICK ACTIONS */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>

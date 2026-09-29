@@ -29,6 +29,16 @@ import {
   signUpload,
   registerUploadedMedia,
 } from '../controllers/socialMetaController.js';
+import {
+  getAnalytics,
+  recomputeAnalytics,
+  refreshPostInsights,
+  cronMetrics,
+  planWeek,
+  latestPlan,
+  planCandidates,
+  createDraftFromPlanItem,
+} from '../controllers/socialAnalyticsController.js';
 
 const socialRouter = express.Router();
 
@@ -53,6 +63,8 @@ socialRouter.get('/meta/callback', metaCallback);
 // Cron — validado por CRON_SECRET (header Authorization: Bearer ou x-cron-secret)
 socialRouter.get('/cron/publish', cronPublish);
 socialRouter.post('/cron/publish', cronPublish);
+socialRouter.get('/cron/metrics', cronMetrics);
+socialRouter.post('/cron/metrics', cronMetrics);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Tudo o resto é admin
@@ -79,6 +91,17 @@ socialRouter.delete('/posts/:id', deletePost);
 socialRouter.post('/posts/:id/publish', publishNow);
 socialRouter.post('/posts/:id/schedule', schedulePost);
 socialRouter.post('/posts/:id/unschedule', unschedulePost);
+
+// 📊 Analytics (Fase 3)
+socialRouter.get('/analytics', getAnalytics);
+socialRouter.post('/analytics/recompute', recomputeAnalytics);
+socialRouter.post('/posts/:id/refresh-insights', refreshPostInsights);
+
+// 🗓️ Planejador semanal (Fase 3)
+socialRouter.post('/plan/week', aiLimiter, planWeek);
+socialRouter.get('/plan/latest', latestPlan);
+socialRouter.get('/plan/candidates', planCandidates);
+socialRouter.post('/plan/:id/items/:index/draft', aiLimiter, createDraftFromPlanItem);
 
 // Ligação Meta / Instagram
 socialRouter.get('/meta/login-url', metaLoginUrl);

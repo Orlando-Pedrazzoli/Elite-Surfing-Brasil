@@ -211,6 +211,25 @@ const InstagramPosts = () => {
                       {p.status === 'failed' && p.lastError && (
                         <p className='text-[11px] text-red-600 mt-1 line-clamp-2'>{p.lastError}</p>
                       )}
+                      {p.status === 'published' && (p.metrics?.fetchedAt || p.sales?.orders > 0) && (
+                        <div className='flex flex-wrap gap-1 mt-1.5'>
+                          {p.metrics?.reach !== null && p.metrics?.reach !== undefined && (
+                            <span className='px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded tabular-nums'>
+                              alcance {Number(p.metrics.reach).toLocaleString('pt-BR')}
+                            </span>
+                          )}
+                          {p.metrics?.reach > 0 && (
+                            <span className='px-1.5 py-0.5 bg-pink-50 text-pink-700 text-[10px] rounded tabular-nums'>
+                              S+E {(((p.metrics.saves || 0) + (p.metrics.shares || 0)) / p.metrics.reach * 100).toFixed(1)}%
+                            </span>
+                          )}
+                          {p.sales?.orders > 0 && (
+                            <span className='px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] rounded tabular-nums'>
+                              {p.sales.orders} pedido{p.sales.orders > 1 ? 's' : ''} · R$ {Number(p.sales.revenue).toFixed(2).replace('.', ',')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className='mt-auto flex items-center justify-between px-3 py-2 border-t border-gray-100 bg-gray-50/50'>

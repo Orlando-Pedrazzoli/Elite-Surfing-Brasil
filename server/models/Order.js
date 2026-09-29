@@ -47,6 +47,30 @@ const orderSchema = new mongoose.Schema(
     pixDiscount: { type: Number, default: 0 },
     paidAt: { type: Date, default: null },
 
+    // ═══ 🎯 Atribuição de origem (UTMs) ═══
+    // Preenchido pelo checkout a partir do localStorage (ver
+    // client/src/utils/attribution.js). `socialPostId` é derivado de
+    // utm_content quando utm_source=instagram e o valor é um ObjectId —
+    // liga o pedido ao post do Estúdio Instagram ("este post vendeu X").
+    attribution: {
+      source: { type: String, default: '' },
+      medium: { type: String, default: '' },
+      campaign: { type: String, default: '' },
+      content: { type: String, default: '' },
+      term: { type: String, default: '' },
+      landingPath: { type: String, default: '' },
+      referrer: { type: String, default: '' },
+      firstSeenAt: { type: Date, default: null },
+      lastSource: { type: String, default: '' },
+      lastCampaign: { type: String, default: '' },
+      lastContent: { type: String, default: '' },
+      socialPostId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SocialPost',
+        default: null,
+      },
+    },
+
     // ═══ 🏷️ Melhor Envio — Etiqueta de Envio ═══
     // meStatus: null → 'cart' → 'paid' → 'generated' → 'printed'
     // O fluxo é retomável: se parar em qualquer etapa (ex: saldo
@@ -86,6 +110,9 @@ orderSchema.index({ guestEmail: 1 });
 orderSchema.index({ userId: 1 });
 orderSchema.index({ mpPaymentId: 1 });
 orderSchema.index({ pagarmeOrderId: 1 });
+
+orderSchema.index({ 'attribution.socialPostId': 1, isPaid: 1 }); // 🎯 vendas por post
+orderSchema.index({ 'attribution.source': 1, paidAt: -1 });
 
 const Order = mongoose.models.order || mongoose.model('order', orderSchema);
 

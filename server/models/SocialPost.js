@@ -151,7 +151,20 @@ const socialPostSchema = new mongoose.Schema(
       comments: { type: Number, default: null },
       likes: { type: Number, default: null },
       linkClicks: { type: Number, default: null },
+      plays: { type: Number, default: null }, // reels
+      totalInteractions: { type: Number, default: null },
       fetchedAt: { type: Date, default: null },
+      fetchCount: { type: Number, default: 0 },
+    },
+
+    // ─── Vendas atribuídas (Fase 3) — Order.attribution.socialPostId ──
+    sales: {
+      orders: { type: Number, default: 0 },
+      units: { type: Number, default: 0 },
+      revenue: { type: Number, default: 0 }, // soma de Order.amount pagos
+      grossProfit: { type: Number, default: 0 }, // Σ (offerPrice − costPrice) × qty
+      lastOrderAt: { type: Date, default: null },
+      computedAt: { type: Date, default: null },
     },
 
     // ─── Telemetria da geração ─────────────────────────────────────

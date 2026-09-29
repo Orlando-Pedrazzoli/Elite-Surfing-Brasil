@@ -17,6 +17,8 @@ import {
   Ticket,
   Instagram,
   Sparkles,
+  CalendarDays,
+  BarChart3,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -73,6 +75,16 @@ const SellerLayout = () => {
       name: 'Conteúdos',
       path: '/seller/instagram/posts',
       icon: Instagram,
+    },
+    {
+      name: 'Planejador',
+      path: '/seller/instagram/planner',
+      icon: CalendarDays,
+    },
+    {
+      name: 'Análise',
+      path: '/seller/instagram/analytics',
+      icon: BarChart3,
     },
     // ─── Separador ───
     { divider: true, label: 'CONTEUDO' },
