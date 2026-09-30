@@ -1,75 +1,94 @@
 import mongoose from 'mongoose';
+import { attachDatabasePool } from '@vercel/functions';
 
 // ═══════════════════════════════════════════════════════════════════
-// Cached Connection Pattern para Vercel Serverless
+// Ligação MongoDB otimizada para Vercel (Fluid Compute) + Atlas M0
 // ═══════════════════════════════════════════════════════════════════
-// Problema: No Vercel, cada invocação serverless pode criar uma nova
-// conexão ao MongoDB. Com tráfego, isso esgota o limite de 500
-// conexões do plano M0 (Free) do MongoDB Atlas.
+// 🔧 30/09/2026 — FIX alerta Atlas "connections exceeded threshold" (M0 = 500)
 //
-// Solução: Guardar a promise de conexão em cache global (que persiste
-// entre invocações warm no mesmo container). Só cria uma nova conexão
-// se não existir nenhuma ativa.
+// Causa: cada instância Vercel mantém um pool próprio. Quando a Vercel
+// SUSPENDE uma instância ociosa, os sockets ficam abertos do lado do
+// Atlas ("ligações zombie") até expirarem. Com várias instâncias a
+// subir e a ser suspensas (bots, crons, picos), o total acumula até 500.
+//
+// Correções:
+//   1. attachDatabasePool() — a Vercel fecha as ligações ociosas do pool
+//      ANTES de suspender a instância (solução oficial Vercel).
+//   2. maxPoolSize 5 → 3 e maxIdleTimeMS 30s → 10s — menos ligações por
+//      instância e libertação mais rápida.
+//   3. serverMonitoringMode 'poll' — 1 ligação de monitorização por nó
+//      em vez de 2 (o cluster M0 tem 3 nós → poupa 3 por instância).
+//   4. appName — o Atlas mostra as ligações agrupadas por aplicação,
+//      facilita perceber de onde vêm.
+//   5. Listeners registados UMA vez e cache nunca é descartada no
+//      'disconnected' (o driver reconecta sozinho; antes podia abrir
+//      um segundo pool em paralelo).
 // ═══════════════════════════════════════════════════════════════════
 
-// Cache global — persiste entre invocações warm no mesmo container
 let cached = global._mongooseConnection;
 
 if (!cached) {
-  cached = global._mongooseConnection = { conn: null, promise: null };
+  cached = global._mongooseConnection = {
+    conn: null,
+    promise: null,
+    listeners: false,
+    attached: false,
+  };
 }
 
+const registerListeners = () => {
+  if (cached.listeners) return;
+  cached.listeners = true;
+
+  mongoose.connection.on('connected', () => console.log('✅ MongoDB Connected'));
+  mongoose.connection.on('error', err =>
+    console.error('❌ MongoDB Error:', err.message),
+  );
+  mongoose.connection.on('disconnected', () =>
+    console.log('⚠️ MongoDB Disconnected (o driver reconecta automaticamente)'),
+  );
+};
+
 const connectDB = async () => {
-  // 1. Se já tem conexão ativa, reutilizar
+  // 1. Já ligado ou a ligar → reutilizar a mesma promise (nunca abre 2º pool)
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
-
-  // 2. Se já tem uma promise em progresso (outra invocação está a conectar),
-  //    aguardar essa mesma promise em vez de criar outra
   if (cached.promise) {
     cached.conn = await cached.promise;
     return cached.conn;
   }
 
-  // 3. Criar nova conexão
   const MONGODB_URI = process.env.MONGODB_URI;
-
   if (!MONGODB_URI) {
     throw new Error('MONGODB_URI não está definida nas variáveis de ambiente');
   }
 
-  mongoose.connection.on('connected', () =>
-    console.log('✅ MongoDB Connected'),
-  );
-
-  mongoose.connection.on('error', err =>
-    console.error('❌ MongoDB Error:', err.message),
-  );
-
-  mongoose.connection.on('disconnected', () => {
-    console.log('⚠️ MongoDB Disconnected');
-    cached.conn = null;
-    cached.promise = null;
-  });
+  registerListeners();
 
   cached.promise = mongoose
     .connect(MONGODB_URI, {
-      maxPoolSize: 5, // ✅ Reduzido de 10 para 5 (M0 Free tem limite 500)
-      minPoolSize: 0, // ✅ 0 em serverless — não manter conexões idle
+      appName: process.env.VERCEL ? 'elitesurfingbr-backend' : 'elitesurfingbr-local',
+      maxPoolSize: 3, // M0 Free: limite 500 ligações no total
+      minPoolSize: 0, // serverless: não manter ligações ociosas
+      maxIdleTimeMS: 10000, // fecha ligações ociosas após 10s
+      serverMonitoringMode: 'poll', // 1 ligação de monitorização por nó
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      bufferCommands: true, // ✅ Permitir buffering enquanto reconecta
-      maxIdleTimeMS: 30000, // ✅ Fechar conexões idle após 30s (libera slots)
+      bufferCommands: true,
     })
-    .then(mongoose => {
+    .then(m => {
+      // ✅ Vercel liberta as ligações ociosas antes de suspender a instância
+      if (process.env.VERCEL && !cached.attached) {
+        attachDatabasePool(m.connection.getClient());
+        cached.attached = true;
+      }
       console.log('✅ MongoDB connection established');
-      return mongoose;
+      return m;
     })
     .catch(error => {
       console.error('❌ MongoDB connection failed:', error.message);
-      // Limpar cache para permitir retry na próxima invocação
-      cached.promise = null;
+      cached.promise = null; // permite retry na próxima invocação
       throw error;
     });
 
