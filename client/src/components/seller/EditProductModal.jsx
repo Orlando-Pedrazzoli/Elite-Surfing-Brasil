@@ -488,10 +488,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [category, setCategory] = useState('');
 
+  // Preço "de" (riscado na loja) — opcional, só para promoções
   const [price, setPrice] = useState('');
+  // Preço de venda no e-commerce
   const [offerPrice, setOfferPrice] = useState('');
   // 🆕 CUSTO REAL (fornecedor) — privado, só o admin vê
   const [costPrice, setCostPrice] = useState('');
+  // 🆕 PREÇO DE TABELA (lojistas) — privado, só o admin vê
+  const [wholesalePrice, setWholesalePrice] = useState('');
 
   // CAMPOS DE STOCK
   const [stock, setStock] = useState('');
@@ -594,13 +598,25 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       setSelectedGroup(product.group || '');
       setCategory(product.category || '');
 
-      setPrice(product.price.toString());
+      // Preço "de" só aparece preenchido quando há promoção de facto
+      // (price > offerPrice). Sem promoção o campo fica vazio, para o admin
+      // poder mudar o preço de venda sem ter de mexer aqui.
+      setPrice(
+        Number(product.price) > Number(product.offerPrice)
+          ? product.price.toString()
+          : '',
+      );
       setOfferPrice(product.offerPrice.toString());
-      // 🆕 costPrice só chega quando o seller está autenticado (select:false
-      // no backend). null/undefined → campo vazio.
+      // 🆕 costPrice e wholesalePrice só chegam quando o seller está
+      // autenticado (select:false no backend). null/undefined → campo vazio.
       setCostPrice(
         product.costPrice !== null && product.costPrice !== undefined
           ? product.costPrice.toString()
+          : '',
+      );
+      setWholesalePrice(
+        product.wholesalePrice !== null && product.wholesalePrice !== undefined
+          ? product.wholesalePrice.toString()
           : '',
       );
 
@@ -812,10 +828,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
         description: description.split('\n').filter(line => line.trim()),
         group: selectedGroup,
         category,
-        price: parseFloat(price),
+        // Preço "de" opcional: vazio → igual ao preço de venda (sem riscado)
+        price: price === '' ? parseFloat(offerPrice) : parseFloat(price),
         offerPrice: parseFloat(offerPrice),
         // 🆕 Custo: vazio → null (limpa o custo no backend)
         costPrice: costPrice === '' ? null : parseFloat(costPrice),
+        // 🆕 Preço de tabela: vazio → null (limpa a tabela no backend)
+        wholesalePrice:
+          wholesalePrice === '' ? null : parseFloat(wholesalePrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
         sku: sku.trim() || null,
@@ -1207,11 +1227,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
             )}
 
           {/* ═══════════════════════════════════════════════════════════ */}
-          {/* 🆕 PRECIFICAÇÃO — custo, preço original, venda + margem    */}
+          {/* 🆕 PRECIFICAÇÃO — custo, preço de tabela, venda + margens  */}
           {/* ═══════════════════════════════════════════════════════════ */}
           <PricingFields
             costPrice={costPrice}
             setCostPrice={setCostPrice}
+            wholesalePrice={wholesalePrice}
+            setWholesalePrice={setWholesalePrice}
             price={price}
             setPrice={setPrice}
             offerPrice={offerPrice}

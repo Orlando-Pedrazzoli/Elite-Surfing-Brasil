@@ -5,6 +5,17 @@
 // Fonte única de verdade para os cálculos de margem no admin.
 // Usado por: PricingFields (Add/Edit), MarginBadge e ProductList.
 //
+// Os três preços do produto (visão do negócio):
+//   costPrice      → Custo do Fornecedor: preço real de custo (privado)
+//   wholesalePrice → Preço de Tabela: o que o lojista paga na tabela de
+//                    preços da marca (privado)
+//   offerPrice     → Preço de Venda: o que o cliente paga no e-commerce
+// (`price` é só o preço "de" riscado na loja — opcional, promoção.)
+//
+// A margem é calculada por canal com a mesma fórmula:
+//   E-commerce → calcMargin(costPrice, offerPrice)
+//   Lojistas   → calcMargin(costPrice, wholesalePrice)
+//
 // Definições (padrão varejo):
 //   Lucro bruto  = Preço de venda − Custo
 //   Margem (%)   = Lucro bruto / Preço de venda × 100   ← "quanto do preço fica"
@@ -12,8 +23,8 @@
 //
 // Ex: custo 50, venda 100 → lucro 50, margem 50%, markup 100%.
 //
-// Nada disto é gravado no banco: é sempre derivado de costPrice + offerPrice,
-// para nunca ficar desatualizado quando um dos dois muda.
+// Nada disto é gravado no banco: é sempre derivado de costPrice + preço do
+// canal, para nunca ficar desatualizado quando um dos dois muda.
 // ═══════════════════════════════════════════════════════════════════════
 
 /** Converte '', null, undefined ou texto inválido em null; números válidos em Number. */
@@ -97,6 +108,33 @@ export const priceForTargetMargin = (costPrice, targetMarginPct) => {
   if (cost === null || cost <= 0) return null;
   if (targetMarginPct >= 100 || targetMarginPct < 0) return null;
   return round2(cost / (1 - targetMarginPct / 100));
+};
+
+/**
+ * Relação entre o preço de tabela (lojista) e o preço de venda (site).
+ * Ex: tabela 50, venda 100 → o lojista paga 50% do preço do site
+ *     (50% abaixo), e revendendo ao preço do site ganha 100% de markup.
+ * @returns {null | { wholesale, sale, pctOfSale, discountPct, resellerMarkupPct }}
+ *   null quando falta um dos dois preços.
+ */
+export const calcTableVsSale = (wholesalePrice, offerPrice) => {
+  const wholesale = toNumberOrNull(wholesalePrice);
+  const sale = toNumberOrNull(offerPrice);
+
+  if (wholesale === null || sale === null || sale <= 0 || wholesale < 0) {
+    return null;
+  }
+
+  const pctOfSale = round2((wholesale / sale) * 100);
+  return {
+    wholesale,
+    sale,
+    pctOfSale,
+    discountPct: round2(100 - pctOfSale),
+    // Markup do lojista se revender pelo preço do site
+    resellerMarkupPct:
+      wholesale > 0 ? round2(((sale - wholesale) / wholesale) * 100) : null,
+  };
 };
 
 /** Formata em BRL (R$ 1.234,56). */

@@ -72,21 +72,45 @@ const parseProductData = raw => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════
-// 🆕 CUSTO — helpers
+// 🆕 CUSTO e PREÇO DE TABELA — helpers
 // ═══════════════════════════════════════════════════════════════════════
-// parseCostPrice: normaliza o valor vindo do frontend.
+// parseOptionalMoney: normaliza um valor monetário OPCIONAL vindo do frontend.
 //   - undefined         → undefined (campo não enviado: não mexer no doc)
-//   - null / ''         → null      (admin apagou o custo)
+//   - null / ''         → null      (admin apagou o valor)
 //   - número >= 0       → número arredondado a 2 casas
 //   - qualquer outro    → { error }
-const parseCostPrice = value => {
+const parseOptionalMoney = (value, errorMessage) => {
   if (value === undefined) return { value: undefined };
   if (value === null || value === '') return { value: null };
   const num = Number(value);
   if (!Number.isFinite(num) || num < 0) {
-    return { error: 'Custo do produto inválido' };
+    return { error: errorMessage };
   }
   return { value: Math.round(num * 100) / 100 };
+};
+
+// Custo real pago ao fornecedor (privado)
+const parseCostPrice = value =>
+  parseOptionalMoney(value, 'Custo do produto inválido');
+
+// Preço de tabela pago pelos lojistas (privado)
+const parseWholesalePrice = value =>
+  parseOptionalMoney(value, 'Preço de tabela inválido');
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🆕 PREÇO "DE" (riscado) — agora opcional no admin
+// ═══════════════════════════════════════════════════════════════════════
+// O formulário de precificação passou a ser Custo / Tabela / Venda; o
+// preço "de" virou um campo opcional de promoção. Quando o admin não o
+// preenche (undefined, null ou ''), o produto é vendido sem preço riscado:
+// gravamos price = offerPrice (o schema continua exigindo `price`, e a
+// loja só risca quando price > offerPrice).
+const resolveOriginalPrice = productData => {
+  const raw = productData.price;
+  if (raw === undefined || raw === null || raw === '') {
+    return Number(productData.offerPrice);
+  }
+  return Number(raw);
 };
 
 const validateProductData = productData => {
@@ -97,16 +121,17 @@ const validateProductData = productData => {
   if (!productData.group) return 'Grupo é obrigatório';
   if (!productData.category) return 'Categoria é obrigatória';
 
-  const price = Number(productData.price);
   const offerPrice = Number(productData.offerPrice);
-  if (!Number.isFinite(price) || price <= 0) {
-    return 'Preço original inválido';
-  }
   if (!Number.isFinite(offerPrice) || offerPrice <= 0) {
     return 'Preço de venda inválido';
   }
+  // Preço "de" é opcional: vazio → assume o preço de venda (sem riscado)
+  const price = resolveOriginalPrice(productData);
+  if (!Number.isFinite(price) || price <= 0) {
+    return 'Preço "de" (riscado) inválido';
+  }
   if (offerPrice > price) {
-    return 'Preço de venda não pode ser maior que o preço original';
+    return 'Preço de venda não pode ser maior que o preço "de" (riscado)';
   }
 
   // 🆕 Custo é opcional, mas se vier tem de ser um número >= 0.
@@ -114,6 +139,12 @@ const validateProductData = productData => {
   // intencional) — o admin vê o alerta de margem negativa na UI.
   const cost = parseCostPrice(productData.costPrice);
   if (cost.error) return cost.error;
+
+  // 🆕 Preço de tabela (lojistas) é opcional, mas se vier tem de ser >= 0.
+  // Tabela abaixo do custo ou acima do preço do site NÃO é bloqueada —
+  // o admin vê o alerta na UI e decide.
+  const wholesale = parseWholesalePrice(productData.wholesalePrice);
+  if (wholesale.error) return wholesale.error;
 
   const stock = Number(productData.stock);
   if (!Number.isFinite(stock) || stock < 0) return 'Estoque inválido';
@@ -165,9 +196,11 @@ const isSellerAuthenticated = req => {
   }
 };
 
-// Aplica `.select('+costPrice')` à query apenas para o seller autenticado.
-const withCostIfSeller = (query, seller) =>
-  seller ? query.select('+costPrice') : query;
+// Aplica `.select('+costPrice +wholesalePrice')` à query apenas para o
+// seller autenticado — custo e preço de tabela são `select: false` no schema
+// e nunca saem na API pública.
+const withPrivatePricingIfSeller = (query, seller) =>
+  seller ? query.select('+costPrice +wholesalePrice') : query;
 
 // Add Product : /api/product/add
 export const addProduct = async (req, res) => {
@@ -222,14 +255,23 @@ export const addProduct = async (req, res) => {
     const cleanSku = sanitizeSku(productData.sku);
     delete productData.sku;
 
-    // 🆕 Custo normalizado (já validado em validateProductData)
+    // 🆕 Custo e preço de tabela normalizados (já validados em
+    // validateProductData)
     const { value: costPrice } = parseCostPrice(productData.costPrice);
     delete productData.costPrice;
+    const { value: wholesalePrice } = parseWholesalePrice(
+      productData.wholesalePrice,
+    );
+    delete productData.wholesalePrice;
+
+    // 🆕 Preço "de" opcional: vazio → igual ao preço de venda
+    productData.price = resolveOriginalPrice(productData);
 
     await Product.create({
       ...productData,
       ...(cleanSku ? { sku: cleanSku } : {}),
       ...(costPrice !== undefined ? { costPrice } : {}),
+      ...(wholesalePrice !== undefined ? { wholesalePrice } : {}),
       image: imagesUrl,
       video: videoUrl,
       stock,
@@ -250,7 +292,8 @@ export const addProduct = async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════
 export const productList = async (req, res) => {
   try {
-    // 🆕 seller = JWT válido → recebe costPrice e resposta sem cache.
+    // 🆕 seller = JWT válido → recebe costPrice + wholesalePrice e resposta
+    // sem cache.
     // Um seller logado por cookie que abra a loja pública também cai
     // aqui como admin — evita que uma resposta COM custo seja cacheada
     // no CDN (o cache público faz Vary apenas em Authorization/x-seller-token,
@@ -273,7 +316,7 @@ export const productList = async (req, res) => {
       };
     }
 
-    const products = await withCostIfSeller(
+    const products = await withPrivatePricingIfSeller(
       Product.find(query),
       seller,
     ).sort({
@@ -350,7 +393,7 @@ export const productById = async (req, res) => {
     const { id } = req.body;
     const seller = isSellerAuthenticated(req);
     const admin = isAdminRequest(req) || seller;
-    const product = await withCostIfSeller(Product.findById(id), seller);
+    const product = await withPrivatePricingIfSeller(Product.findById(id), seller);
 
     if (!product) {
       setNoCacheHeaders(res);
@@ -392,7 +435,7 @@ export const getProductById = async (req, res) => {
     const { id } = req.params;
     const seller = isSellerAuthenticated(req);
     const admin = isAdminRequest(req) || seller;
-    const product = await withCostIfSeller(Product.findById(id), seller);
+    const product = await withPrivatePricingIfSeller(Product.findById(id), seller);
 
     if (!product) {
       setNoCacheHeaders(res);
@@ -500,7 +543,7 @@ export const getProductFamily = async (req, res) => {
       query.inStock = { $ne: false };
     }
 
-    const products = await withCostIfSeller(Product.find(query), seller).sort({
+    const products = await withPrivatePricingIfSeller(Product.find(query), seller).sort({
       isMainVariant: -1,
       createdAt: 1,
     });
@@ -781,9 +824,17 @@ export const updateProduct = async (req, res) => {
     const cleanSku = sanitizeSku(productData.sku);
     delete productData.sku;
 
-    // 🆕 Custo: undefined → não mexe; null → limpa; número → grava
+    // 🆕 Custo e preço de tabela: undefined → não mexe; null → limpa;
+    // número → grava
     const { value: costPrice } = parseCostPrice(productData.costPrice);
     delete productData.costPrice;
+    const { value: wholesalePrice } = parseWholesalePrice(
+      productData.wholesalePrice,
+    );
+    delete productData.wholesalePrice;
+
+    // 🆕 Preço "de" opcional: vazio → igual ao preço de venda
+    productData.price = resolveOriginalPrice(productData);
 
     const updateOps = {
       $set: {
@@ -791,6 +842,7 @@ export const updateProduct = async (req, res) => {
         image: finalImageUrls,
         video: videoUrl,
         ...(costPrice !== undefined ? { costPrice } : {}),
+        ...(wholesalePrice !== undefined ? { wholesalePrice } : {}),
       },
     };
 

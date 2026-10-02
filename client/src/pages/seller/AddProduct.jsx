@@ -467,10 +467,14 @@ const AddProduct = () => {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [category, setCategory] = useState('');
 
+  // Preço "de" (riscado na loja) — opcional, só para promoções
   const [price, setPrice] = useState('');
+  // Preço de venda no e-commerce
   const [offerPrice, setOfferPrice] = useState('');
   // 🆕 CUSTO REAL (fornecedor) — privado, só o admin vê
   const [costPrice, setCostPrice] = useState('');
+  // 🆕 PREÇO DE TABELA (lojistas) — privado, só o admin vê
+  const [wholesalePrice, setWholesalePrice] = useState('');
 
   // STOCK
   const [stock, setStock] = useState('');
@@ -688,10 +692,13 @@ const AddProduct = () => {
         description: description.split('\n').filter(line => line.trim()),
         group: selectedGroup,
         category,
-        price: Number(price),
+        // Preço "de" opcional: vazio → igual ao preço de venda (sem riscado)
+        price: price === '' ? Number(offerPrice) : Number(price),
         offerPrice: Number(offerPrice),
         // 🆕 Custo: vazio → null (sem custo cadastrado)
         costPrice: costPrice === '' ? null : Number(costPrice),
+        // 🆕 Preço de tabela: vazio → null (sem tabela cadastrada)
+        wholesalePrice: wholesalePrice === '' ? null : Number(wholesalePrice),
         stock: parseInt(stock) || 0,
         isMainVariant,
         sku: sku.trim() || undefined,
@@ -805,6 +812,7 @@ const AddProduct = () => {
         setPrice('');
         setOfferPrice('');
         setCostPrice('');
+        setWholesalePrice('');
         setStock('');
         setSku('');
         setWeight('');
@@ -1049,11 +1057,13 @@ const AddProduct = () => {
         )}
 
         {/* ═══════════════════════════════════════════════════════════ */}
-        {/* 🆕 PRECIFICAÇÃO — custo, preço original, venda + margem    */}
+        {/* 🆕 PRECIFICAÇÃO — custo, preço de tabela, venda + margens  */}
         {/* ═══════════════════════════════════════════════════════════ */}
         <PricingFields
           costPrice={costPrice}
           setCostPrice={setCostPrice}
+          wholesalePrice={wholesalePrice}
+          setWholesalePrice={setWholesalePrice}
           price={price}
           setPrice={setPrice}
           offerPrice={offerPrice}

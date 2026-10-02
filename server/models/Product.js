@@ -33,10 +33,13 @@ const productSchema = new mongoose.Schema(
       width: { type: Number, default: null }, // largura cm
       height: { type: Number, default: null }, // altura cm
     },
+    // Preço "de" (riscado na loja). Opcional no admin: quando não há
+    // promoção, o controller grava o mesmo valor do offerPrice.
     price: {
       type: Number,
       required: true,
     },
+    // Preço de venda no e-commerce (o que o cliente final paga)
     offerPrice: {
       type: Number,
       required: true,
@@ -56,6 +59,23 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: null,
       min: [0, 'Custo não pode ser negativo'],
+      select: false,
+    },
+    // ═══════════════════════════════════════════════════════════════
+    // 🆕 PREÇO DE TABELA (o que o lojista paga na tabela da marca)
+    // ─────────────────────────────────────────────────────────────
+    // Privado como o custo: `select: false` + devolvido só ao seller
+    // autenticado (`.select('+wholesalePrice')` no controller).
+    // NUNCA pode sair na API pública nem no cache do CDN — é a
+    // condição comercial dos lojistas, não o preço do site.
+    // É um campo próprio (não reaproveita `price`) porque `price` é o
+    // preço "de" riscado na loja, usado em cards, SEO, Instagram e
+    // no catálogo de parceiros.
+    // ═══════════════════════════════════════════════════════════════
+    wholesalePrice: {
+      type: Number,
+      default: null,
+      min: [0, 'Preço de tabela não pode ser negativo'],
       select: false,
     },
     image: {

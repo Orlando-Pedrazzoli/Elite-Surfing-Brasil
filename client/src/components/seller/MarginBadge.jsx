@@ -11,14 +11,22 @@ import {
 
 /**
  * Badge compacto de margem para a Lista de Produtos (tabela e grid).
- * Mostra "42,5%" colorido; o title traz lucro e markup no hover.
+ * Mostra "42,5%" colorido (margem do e-commerce); o title traz lucro e
+ * markup no hover e, quando há preço de tabela, o resultado dos lojistas.
  *
  * @param {number|null} costPrice
  * @param {number} offerPrice
+ * @param {number|null} [wholesalePrice] preço de tabela (lojistas)
  * @param {'sm'|'xs'} size
  */
-const MarginBadge = ({ costPrice, offerPrice, size = 'xs' }) => {
+const MarginBadge = ({
+  costPrice,
+  offerPrice,
+  wholesalePrice = null,
+  size = 'xs',
+}) => {
   const margin = calcMargin(costPrice, offerPrice);
+  const tableMargin = calcMargin(costPrice, wholesalePrice);
   const tone = getMarginTone(margin?.marginPct ?? null);
 
   const sizeClasses =
@@ -41,6 +49,9 @@ const MarginBadge = ({ costPrice, offerPrice, size = 'xs' }) => {
     `Lucro: ${formatBRL(margin.profit)}`,
     `Margem: ${formatPct(margin.marginPct)}`,
     margin.markupPct !== null ? `Markup: ${formatPct(margin.markupPct)}` : null,
+    tableMargin
+      ? `Tabela: ${formatBRL(tableMargin.sale)} · lucro ${formatBRL(tableMargin.profit)} · margem ${formatPct(tableMargin.marginPct)}`
+      : null,
   ]
     .filter(Boolean)
     .join('\n');

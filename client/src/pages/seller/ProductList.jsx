@@ -1437,6 +1437,17 @@ const ProductList = () => {
                                 {product.price.toFixed(2)}
                               </p>
                             )}
+                            {/* 🏷️ Preço de tabela (lojistas) — privado */}
+                            {toNumberOrNull(product.wholesalePrice) !==
+                              null && (
+                              <p
+                                className='text-xs text-gray-600 tabular-nums mt-0.5'
+                                title='Preço de tabela (pago pelos lojistas)'
+                              >
+                                <span className='text-gray-400'>tabela </span>
+                                {formatBRL(product.wholesalePrice)}
+                              </p>
+                            )}
                           </div>
                         </td>
 
@@ -1467,6 +1478,7 @@ const ProductList = () => {
                                   <MarginBadge
                                     costPrice={product.costPrice}
                                     offerPrice={product.offerPrice}
+                                    wholesalePrice={product.wholesalePrice}
                                     size='sm'
                                   />
                                   {m && (
@@ -1768,6 +1780,7 @@ const ProductList = () => {
                         <MarginBadge
                           costPrice={product.costPrice}
                           offerPrice={product.offerPrice}
+                          wholesalePrice={product.wholesalePrice}
                         />
                       </div>
                       <div className='flex items-center gap-1 text-xs'>
