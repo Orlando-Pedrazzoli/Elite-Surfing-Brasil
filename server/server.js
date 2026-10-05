@@ -22,12 +22,14 @@
 //    - Browser nunca cacheia, CDN cacheia no máximo 60s
 //    - Resolve atraso entre PUT do admin e GET público
 //    - Mutações no controller WSL setam CDN-Cache-Control: no-store
+// 🔧 05/10/2026: FIX ligações MongoDB Atlas (alerta "connections > 80%")
+//    - mongoose ^8.24.5 + guarda dbIdleGuard — detalhes em configs/db.js
 
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import connectDB from './configs/db.js';
+import connectDB, { dbIdleGuard } from './configs/db.js';
 import 'dotenv/config';
 import userRouter from './routes/userRoute.js';
 import sellerRouter from './routes/sellerRoute.js';
@@ -62,6 +64,11 @@ await connectDB();
 await connectCloudinary();
 console.log('✅ Database connected successfully');
 console.log('✅ Cloudinary connected successfully');
+
+// 🔧 05/10/2026 — Guarda de ligações MongoDB (ver configs/db.js).
+// Tem de ser o PRIMEIRO middleware: segura a instância Vercel até o driver
+// fechar as ligações ociosas, mesmo em pedidos bloqueados/sem acesso à BD.
+app.use(dbIdleGuard);
 
 // ⚡ BLOQUEIO DE SCRAPERS — lista CURTA de bots comprovadamente maliciosos.
 const BLOCKED_USER_AGENTS = [
