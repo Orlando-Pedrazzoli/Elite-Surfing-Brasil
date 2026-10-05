@@ -1,3 +1,4 @@
+// client/src/pages/seller/SellerLayout.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { assets } from '../../assets/assets';
@@ -19,6 +20,7 @@ import {
   Sparkles,
   CalendarDays,
   BarChart3,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -55,6 +57,13 @@ const SellerLayout = () => {
       name: 'Pedidos',
       path: '/seller/orders',
       icon: ShoppingCart,
+    },
+    // ─── Separador ───
+    { divider: true, label: 'COMERCIAL' },
+    {
+      name: 'Tabelas de Preço',
+      path: '/seller/tabelas',
+      icon: FileSpreadsheet,
     },
     // ─── Separador ───
     { divider: true, label: 'MARKETING' },
@@ -194,7 +203,9 @@ const SellerLayout = () => {
       <div className='flex flex-1 overflow-hidden'>
         {/* Sidebar — Desktop */}
         <aside className='hidden lg:flex w-60 bg-white border-r border-gray-200 flex-col flex-shrink-0'>
-          <nav className='flex-1 p-3 space-y-1'>{renderLinks(undefined)}</nav>
+          <nav className='flex-1 p-3 space-y-1 overflow-y-auto'>
+            {renderLinks(undefined)}
+          </nav>
 
           <div className='p-3 border-t border-gray-100'>
             <div className='px-3 py-2'>

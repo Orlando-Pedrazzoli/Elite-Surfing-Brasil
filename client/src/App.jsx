@@ -48,6 +48,9 @@ import WslManager from './pages/seller/WslManager';
 import Clientes from './pages/seller/Clientes';
 import VendasDiretas from './pages/seller/VendasDiretas';
 import Coupons from './pages/seller/Coupons';
+// 📋 Tabelas de Preço
+import PriceTables from './pages/seller/PriceTables';
+import PriceTableEditor from './pages/seller/PriceTableEditor';
 // 📸 Estúdio Instagram
 import InstagramStudio from './pages/seller/InstagramStudio';
 import InstagramPosts from './pages/seller/InstagramPosts';
@@ -177,6 +180,9 @@ const App = () => {
             <Route path='add-product' element={<AddProduct />} />
             <Route path='product-list' element={<ProductList />} />
             <Route path='orders' element={<Orders />} />
+            {/* ─── Comercial ─── */}
+            <Route path='tabelas' element={<PriceTables />} />
+            <Route path='tabelas/:id' element={<PriceTableEditor />} />
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
             {/* ─── Instagram ─── */}

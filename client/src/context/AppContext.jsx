@@ -87,7 +87,9 @@ export const AppContextProvider = ({ children }) => {
       url.includes('/api/wsl/admin') ||
       url.includes('/api/blog/admin') ||
       // 📸 Estúdio Instagram (todas as rotas são admin)
-      url.includes('/api/social')
+      url.includes('/api/social') ||
+      // 📋 Tabelas de Preço (todas as rotas são admin — custo e preço de tabela)
+      url.includes('/api/price-tables')
     );
   };
 

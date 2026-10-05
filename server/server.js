@@ -1,3 +1,4 @@
+// server/server.js
 // server.js - Elite Surfing Brasil
 // ✅ MIGRAÇÃO 12/06/2026: Pagar.me REMOVIDO — Mercado Pago é o único gateway
 //    (Cartão via Card Brick + PIX nativo auto-confirmado + Boleto)
@@ -48,6 +49,7 @@ import catalogRouter from './routes/catalogRoute.js';
 import partnerRouter from './routes/partnerRoute.js';
 import couponRouter from './routes/couponRoute.js';
 import socialRouter from './routes/socialRoute.js'; // 📸 Estúdio Instagram
+import priceTableRouter from './routes/priceTableRoute.js'; // 📋 Tabelas de Preço
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -303,6 +305,7 @@ app.use('/api/v1/catalog', readLimiter, catalogRouter);
 app.use('/api/partner', partnerRouter);
 app.use('/api/coupon', couponRouter);
 app.use('/api/social', socialRouter); // 📸 Estúdio Instagram (admin)
+app.use('/api/price-tables', priceTableRouter); // 📋 Tabelas de Preço (admin)
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');
