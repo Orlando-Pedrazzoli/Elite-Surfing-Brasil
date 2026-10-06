@@ -10,7 +10,11 @@ const HealthCheck = () => {
     localStorage: 'checking',
   });
 
+  // 🔧 06/10/2026: este painel só é mostrado em desenvolvimento, mas o
+  // efeito corria também em produção: 2 pedidos ao backend (GET / e
+  // is-auth) por cada página aberta, para um resultado que ninguém via.
   useEffect(() => {
+    if (import.meta.env.PROD) return;
     checkHealth();
   }, []);
 

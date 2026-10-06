@@ -159,7 +159,19 @@ export const AppContextProvider = ({ children }) => {
     );
 
   // OTIMIZADO: fetchUser sem setIsLoading global
-  const fetchUser = async () => {
+  // 🔧 06/10/2026: skipIfNoSession — usado só no arranque da app. Um
+  // visitante sem token nem utilizador guardado recebia sempre 401 do
+  // servidor; era 1 invocação de função por cada página aberta (incluindo
+  // crawlers). Agora aplica-se localmente o mesmo resultado desse 401,
+  // sem fazer o pedido. Quem tem sessão guardada continua a validar.
+  const fetchUser = async ({ skipIfNoSession = false } = {}) => {
+    if (skipIfNoSession && !getStoredToken() && !loadUserFromStorage()) {
+      setUser(null);
+      setCartItems({});
+      clearStoredData();
+      return;
+    }
+
     try {
       let response = await axios.get('/api/user/is-auth');
 
@@ -701,7 +713,7 @@ export const AppContextProvider = ({ children }) => {
 
       // 3. Fetch produtos e user em paralelo
       fetchProducts();
-      fetchUser();
+      fetchUser({ skipIfNoSession: true });
 
       // 4. ✅ FIX: Lógica de seller simplificada
       const hasSellerToken = !!localStorage.getItem('sellerToken');
