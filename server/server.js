@@ -52,6 +52,10 @@ import partnerRouter from './routes/partnerRoute.js';
 import couponRouter from './routes/couponRoute.js';
 import socialRouter from './routes/socialRoute.js'; // 📸 Estúdio Instagram
 import priceTableRouter from './routes/priceTableRoute.js'; // 📋 Tabelas de Preço
+import {
+  bannerPublicRouter,
+  bannerAdminRouter,
+} from './routes/bannerRoute.js'; // 🖼️ Banners da hero
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -126,7 +130,10 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // 🔧 06/10/2026: faltava PATCH. Sem ele na lista, o browser recusa
+    // pedidos PATCH entre domínios (loja → backend), como o botão
+    // ativar/desativar cupom (PATCH /api/coupon/:id/toggle).
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -297,6 +304,8 @@ app.get('/', (req, res) => {
 
 // ✅ Rotas principais
 app.use('/api/user', userRouter);
+// 🖼️ Banners da hero (admin) — tem de vir ANTES de /api/seller
+app.use('/api/seller/banners', bannerAdminRouter);
 app.use('/api/seller', sellerRouter);
 app.use('/api/product', readLimiter, productRouter);
 app.use('/api/cart', cartRouter);
@@ -316,6 +325,7 @@ app.use('/api/partner', partnerRouter);
 app.use('/api/coupon', couponRouter);
 app.use('/api/social', socialRouter); // 📸 Estúdio Instagram (admin)
 app.use('/api/price-tables', priceTableRouter); // 📋 Tabelas de Preço (admin)
+app.use('/api/banner', readLimiter, bannerPublicRouter); // 🖼️ Banners da hero (loja)
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');

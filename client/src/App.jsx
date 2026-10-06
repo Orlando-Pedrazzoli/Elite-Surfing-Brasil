@@ -50,6 +50,8 @@ import WslManager from './pages/seller/WslManager';
 import Clientes from './pages/seller/Clientes';
 import VendasDiretas from './pages/seller/VendasDiretas';
 import Coupons from './pages/seller/Coupons';
+// 🖼️ Banners da hero
+import Banners from './pages/seller/Banners';
 // 📋 Tabelas de Preço
 import PriceTables from './pages/seller/PriceTables';
 import PriceTableEditor from './pages/seller/PriceTableEditor';
@@ -190,6 +192,7 @@ const App = () => {
             <Route path='tabelas/:id' element={<PriceTableEditor />} />
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
+            <Route path='banners' element={<Banners />} />
             {/* ─── Instagram ─── */}
             <Route path='instagram' element={<InstagramStudio />} />
             <Route path='instagram/posts' element={<InstagramPosts />} />

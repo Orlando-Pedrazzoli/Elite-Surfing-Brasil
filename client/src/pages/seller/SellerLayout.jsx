@@ -21,6 +21,7 @@ import {
   CalendarDays,
   BarChart3,
   FileSpreadsheet,
+  Images,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -71,6 +72,11 @@ const SellerLayout = () => {
       name: 'Cupons',
       path: '/seller/cupons',
       icon: Ticket,
+    },
+    {
+      name: 'Banners',
+      path: '/seller/banners',
+      icon: Images,
     },
     // ─── Separador ───
     { divider: true, label: 'INSTAGRAM' },
