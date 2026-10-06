@@ -4,10 +4,49 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import jwt from 'jsonwebtoken';
+import { dangerouslyDeleteByTag, waitUntil } from '@vercel/functions';
 import Coupon, { COUPON_SCOPES, COUPON_TYPES } from '../models/Coupon.js';
 import CouponRedemption from '../models/CouponRedemption.js';
 import Product from '../models/Product.js';
-import { evaluateCoupon, normalizeCode } from '../services/couponService.js';
+import {
+  evaluateCoupon,
+  normalizeCode,
+  couponLabel,
+  getActiveWelcomeCoupon,
+} from '../services/couponService.js';
+
+// ─────────────────────────────────────────────────────────────────────
+// 🎁 Oferta de boas-vindas — cache no CDN da Vercel
+//   A resposta de GET /api/coupon/welcome é igual para todos os
+//   visitantes, por isso fica 10 min no CDN (o modal não acorda a função
+//   nem o MongoDB a cada visita). Qualquer alteração de cupons no admin
+//   limpa essa cache; se a limpeza falhar, o atraso máximo é de 10 min.
+//   Fora da Vercel as funções abaixo são no-op.
+// ─────────────────────────────────────────────────────────────────────
+const WELCOME_TAG = 'welcome-offer';
+const WELCOME_CDN_TTL_SECONDS = 600;
+
+const purgeWelcomeCache = () => {
+  try {
+    const purge = Promise.resolve(dangerouslyDeleteByTag(WELCOME_TAG)).catch(
+      error =>
+        console.error('[welcomeOffer] limpeza do CDN falhou:', error?.message),
+    );
+    waitUntil(purge);
+  } catch (error) {
+    console.error('[welcomeOffer] limpeza do CDN falhou:', error?.message);
+  }
+};
+
+// Só pode existir um cupom de boas-vindas: ao ligar a opção num cupom,
+// desliga-a em todos os outros.
+const keepSingleWelcomeCoupon = async coupon => {
+  if (!coupon?.welcomeOffer) return;
+  await Coupon.updateMany(
+    { _id: { $ne: coupon._id }, welcomeOffer: true },
+    { $set: { welcomeOffer: false } },
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers
@@ -99,6 +138,7 @@ const sanitizeCouponPayload = body => {
         body.stackWithPix !== false && body.stackWithPix !== 'false',
       firstOrderOnly:
         body.firstOrderOnly === true || body.firstOrderOnly === 'true',
+      welcomeOffer: body.welcomeOffer === true || body.welcomeOffer === 'true',
       isActive: body.isActive !== false && body.isActive !== 'false',
     },
   };
@@ -193,6 +233,50 @@ export const validateCoupon = async (req, res) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════
+// 🌐 PÚBLICO — GET /api/coupon/welcome
+//   Devolve a oferta de boas-vindas em vigor (ou offer: null). O modal do
+//   site só aparece quando existe uma oferta — desativar o cupom no admin
+//   desliga o modal, e o texto ("5% OFF") vem sempre do cupom real.
+// ═════════════════════════════════════════════════════════════════════
+export const getWelcomeOffer = async (req, res) => {
+  // Pedidos sem credenciais são iguais para todos → cache no CDN.
+  // (Com Authorization/x-seller-token mantém-se o no-store global.)
+  const hasCredentials =
+    !!req.headers.authorization || !!req.headers['x-seller-token'];
+  if (!hasCredentials) {
+    res.setHeader(
+      'Cache-Control',
+      `public, max-age=60, s-maxage=${WELCOME_CDN_TTL_SECONDS}, stale-while-revalidate=60`,
+    );
+    res.setHeader('Vercel-Cache-Tag', WELCOME_TAG);
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
+  }
+
+  try {
+    const coupon = await getActiveWelcomeCoupon();
+    if (!coupon) return res.json({ success: true, offer: null });
+
+    return res.json({
+      success: true,
+      offer: {
+        code: coupon.code,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        label: couponLabel(coupon),
+        stackWithPix: coupon.stackWithPix,
+        firstOrderOnly: coupon.firstOrderOnly,
+        minOrderValue: coupon.minOrderValue || 0,
+        partial: coupon.scope !== 'all',
+      },
+    });
+  } catch (error) {
+    console.error('❌ getWelcomeOffer:', error);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ success: false, offer: null });
+  }
+};
+
+// ═════════════════════════════════════════════════════════════════════
 // 🔐 ADMIN — CRUD
 // ═════════════════════════════════════════════════════════════════════
 
@@ -255,6 +339,8 @@ export const createCoupon = async (req, res) => {
       });
 
     const coupon = await Coupon.create(data);
+    await keepSingleWelcomeCoupon(coupon);
+    purgeWelcomeCache();
     return res.json({ success: true, message: 'Cupom criado!', coupon });
   } catch (error) {
     console.error('❌ createCoupon:', error);
@@ -285,6 +371,8 @@ export const updateCoupon = async (req, res) => {
     if (!coupon)
       return res.json({ success: false, message: 'Cupom não encontrado.' });
 
+    await keepSingleWelcomeCoupon(coupon);
+    purgeWelcomeCache();
     return res.json({ success: true, message: 'Cupom atualizado!', coupon });
   } catch (error) {
     console.error('❌ updateCoupon:', error);
@@ -300,6 +388,7 @@ export const toggleCoupon = async (req, res) => {
       return res.json({ success: false, message: 'Cupom não encontrado.' });
     coupon.isActive = !coupon.isActive;
     await coupon.save();
+    purgeWelcomeCache();
     return res.json({
       success: true,
       message: coupon.isActive ? 'Cupom ativado.' : 'Cupom desativado.',
@@ -325,6 +414,7 @@ export const deleteCoupon = async (req, res) => {
     if (hasRedemptions) {
       coupon.isActive = false;
       await coupon.save();
+      purgeWelcomeCache();
       return res.json({
         success: true,
         softDeleted: true,
@@ -335,6 +425,7 @@ export const deleteCoupon = async (req, res) => {
 
     await CouponRedemption.deleteMany({ coupon: coupon._id });
     await coupon.deleteOne();
+    purgeWelcomeCache();
     return res.json({ success: true, message: 'Cupom excluído.' });
   } catch (error) {
     return res.json({ success: false, message: error.message });

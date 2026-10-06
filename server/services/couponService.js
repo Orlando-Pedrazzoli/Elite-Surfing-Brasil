@@ -142,6 +142,14 @@ export const evaluateCoupon = async ({ code, lines, userId, email }) => {
     };
 
   // ─── Regras por cliente ───
+  // 🎁 Cupom de boas-vindas: só para clientes cadastrados e logados
+  if (coupon.welcomeOffer && !userId)
+    return {
+      valid: false,
+      reason: 'LOGIN_REQUIRED',
+      message:
+        'Este cupom é exclusivo para clientes cadastrados. Entre ou crie sua conta para usar.',
+    };
   if (coupon.perCustomerLimit) {
     if (!userId && !email)
       return {
@@ -209,6 +217,26 @@ export const evaluateCoupon = async ({ code, lines, userId, email }) => {
     label: couponLabel(coupon),
     message: `Cupom ${coupon.code} aplicado!`,
   };
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// 🎁 CUPOM DE BOAS-VINDAS em vigor (ou null)
+//   É o cupom com welcomeOffer ligado que está ativo, dentro da janela
+//   de validade e com utilizações disponíveis. Usado pelo modal do site.
+// ─────────────────────────────────────────────────────────────────────
+export const getActiveWelcomeCoupon = async () => {
+  const now = new Date();
+  const candidates = await Coupon.find({ welcomeOffer: true, isActive: true })
+    .sort({ updatedAt: -1 })
+    .limit(5);
+  return (
+    candidates.find(
+      c =>
+        (!c.startsAt || c.startsAt <= now) &&
+        (!c.expiresAt || c.expiresAt >= now) &&
+        (!c.usageLimit || c.usageCount < c.usageLimit),
+    ) || null
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────

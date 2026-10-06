@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import authSeller from '../middlewares/authSeller.js';
 import {
   validateCoupon,
+  getWelcomeOffer,
   listCoupons,
   createCoupon,
   updateCoupon,
@@ -28,6 +29,9 @@ const validateLimiter = rateLimit({
 
 // ─── Público (checkout) ───
 couponRouter.post('/validate', validateLimiter, validateCoupon);
+
+// ─── Público (modal de boas-vindas do site) — resposta em cache no CDN ───
+couponRouter.get('/welcome', getWelcomeOffer);
 
 // ─── Admin ───
 couponRouter.get('/', authSeller, listCoupons);

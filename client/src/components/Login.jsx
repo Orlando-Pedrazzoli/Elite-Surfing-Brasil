@@ -15,20 +15,36 @@ import {
   Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  fetchWelcomeOffer,
+  getCachedWelcomeOffer,
+  welcomeOfferAmount,
+  notifyWelcomeRegistered,
+} from '../utils/welcomeOffer';
 
 const Login = () => {
   const {
+    showUserLogin,
     setShowUserLogin,
     setUser,
     axios,
     navigate,
     setAuthToken,
+    cartItems,
     setCartItems,
     saveCartToStorage,
     saveUserToStorage,
   } = useAppContext();
 
-  const [state, setState] = useState('login');
+  // 🎁 setShowUserLogin('register') abre direto em "Criar Conta"
+  // (usado pelo modal de boas-vindas); qualquer outro valor abre em "Entrar"
+  const [state, setState] = useState(
+    showUserLogin === 'register' ? 'register' : 'login',
+  );
+  // 🎁 Oferta de boas-vindas em vigor (cupom do admin) — lembrada no cadastro
+  const [welcomeOffer, setWelcomeOffer] = useState(
+    () => getCachedWelcomeOffer() || null,
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,6 +67,12 @@ const Login = () => {
     // Delay para animação
     setTimeout(() => setIsVisible(true), 50);
 
+    // 🎁 Oferta de boas-vindas (resposta em cache; null se não houver)
+    let active = true;
+    fetchWelcomeOffer().then(offer => {
+      if (active) setWelcomeOffer(offer || null);
+    });
+
     // Carregar email salvo
     const savedEmail = localStorage.getItem('user_email');
     if (savedEmail) {
@@ -61,6 +83,7 @@ const Login = () => {
     // Bloquear scroll do body quando modal está aberto
     document.body.style.overflow = 'hidden';
     return () => {
+      active = false;
       document.body.style.overflow = 'unset';
     };
   }, []);
@@ -201,18 +224,35 @@ const Login = () => {
         // Save user data to localStorage
         saveUserToStorage(data.user);
 
-        // ✅ Usar APENAS os cartItems do servidor
+        // ✅ Login: usar APENAS os cartItems do servidor
         const serverCart = data.user.cartItems || {};
+        // 🎁 Cadastro novo: a conta nasce com o carrinho vazio, por isso
+        // mantemos o que o visitante já tinha escolhido (antes, criar
+        // conta com produtos no carrinho esvaziava o carrinho) e
+        // gravamos esse carrinho na conta recém-criada.
+        const guestCart = cartItems || {};
+        const keepGuestCart =
+          state === 'register' &&
+          Object.keys(serverCart).length === 0 &&
+          Object.keys(guestCart).length > 0;
 
-        // Atualizar estado e localStorage com os dados do servidor
-        setCartItems(serverCart);
-        saveCartToStorage(serverCart);
+        if (keepGuestCart) {
+          axios
+            .post('/api/cart/update', { cartItems: guestCart })
+            .catch(error =>
+              console.error('Erro ao gravar o carrinho na nova conta:', error),
+            );
+        } else {
+          // Atualizar estado e localStorage com os dados do servidor
+          setCartItems(serverCart);
+          saveCartToStorage(serverCart);
 
-        console.log(
-          '🛒 Carrinho restaurado do servidor:',
-          Object.keys(serverCart).length,
-          'itens',
-        );
+          console.log(
+            '🛒 Carrinho restaurado do servidor:',
+            Object.keys(serverCart).length,
+            'itens',
+          );
+        }
 
         // Mensagem de boas-vindas personalizada
         const userName = data.user.name.split(' ')[0];
@@ -227,6 +267,9 @@ const Login = () => {
             icon: '🎉',
             duration: 4000,
           });
+          // 🎁 Cadastro novo → o modal de boas-vindas mostra o cupom e o
+          // carrinho passa a aplicá-lo automaticamente
+          notifyWelcomeRegistered(data.user);
         }
 
         // Clear form
@@ -271,10 +314,13 @@ const Login = () => {
     },
   ];
 
+  // z-[10000]: acima do aviso de cookies (9999). No telemóvel o aviso
+  // tapava o botão "Criar Conta" de quem ainda não tinha respondido aos
+  // cookies; ele volta a aparecer assim que este modal fecha.
   return (
     <div
       onClick={handleClose}
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+      className={`fixed inset-0 z-[10000] flex items-center justify-center p-4 transition-all duration-300 ${
         isVisible ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent'
       }`}
     >
@@ -433,6 +479,16 @@ const Login = () => {
                       : 'Informe seu email para receber o código de recuperação'
                     : 'Preencha os dados abaixo para se cadastrar'}
               </p>
+              {/* 🎁 Lembrete da oferta de boas-vindas durante o cadastro */}
+              {state === 'register' && welcomeOffer && (
+                <p className='mt-3 px-3.5 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-sm text-primary font-medium'>
+                  Conclua o cadastro e ganhe{' '}
+                  <span className='font-bold'>
+                    {welcomeOfferAmount(welcomeOffer)} OFF
+                  </span>{' '}
+                  na primeira compra.
+                </p>
+              )}
             </div>
 
             {/* Formulário */}

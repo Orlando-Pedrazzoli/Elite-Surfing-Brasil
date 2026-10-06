@@ -7,6 +7,9 @@
 // pedido mínimo, validade (início/fim), limite global e por cliente,
 // escopo por categoria (group) ou subcategoria (category), acumular
 // com PIX, apenas primeira compra.
+// 🎁 Cupom de boas-vindas: o cupom com essa opção ligada é o que o modal
+// do site anuncia ("Cadastre e ganhe X% OFF") e só vale para clientes
+// logados. Desativar o cupom desliga o modal.
 // ═══════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -30,6 +33,7 @@ import {
   Copy,
   Check,
   Info,
+  Gift,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatBRL } from '../../utils/installmentUtils';
@@ -80,7 +84,21 @@ const emptyForm = () => ({
   categories: [],
   stackWithPix: true,
   firstOrderOnly: false,
+  welcomeOffer: false,
   isActive: true,
+});
+
+// 🎁 Predefinição do cupom de boas-vindas (o admin pode ajustar antes de salvar)
+const welcomeForm = () => ({
+  ...emptyForm(),
+  code: 'BEMVINDO',
+  description: 'Boas-vindas: desconto na primeira compra de quem se cadastra',
+  discountType: 'percentage',
+  discountValue: '5',
+  perCustomerLimit: '1',
+  stackWithPix: true,
+  firstOrderOnly: true,
+  welcomeOffer: true,
 });
 
 const generateCode = (prefix = 'ELITE') => {
@@ -179,6 +197,13 @@ const Coupons = () => {
     setModalOpen(true);
   };
 
+  // 🎁 Abre o formulário já preenchido com o cupom de boas-vindas
+  const openCreateWelcome = () => {
+    setEditing(null);
+    setForm(welcomeForm());
+    setModalOpen(true);
+  };
+
   const openEdit = c => {
     setEditing(c);
     setForm({
@@ -198,6 +223,7 @@ const Coupons = () => {
       categories: c.categories || [],
       stackWithPix: c.stackWithPix !== false,
       firstOrderOnly: !!c.firstOrderOnly,
+      welcomeOffer: !!c.welcomeOffer,
       isActive: c.isActive !== false,
     });
     setModalOpen(true);
@@ -336,13 +362,25 @@ const Coupons = () => {
               Crie e gerencie cupons aplicados no checkout
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className='flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-sm'
-          >
-            <Plus className='w-5 h-5' />
-            Novo Cupom
-          </button>
+          <div className='flex flex-wrap items-center gap-2'>
+            {!coupons.some(c => c.welcomeOffer) && (
+              <button
+                onClick={openCreateWelcome}
+                title='Cria o cupom anunciado no modal de boas-vindas do site'
+                className='flex items-center gap-2 px-4 py-2.5 bg-white text-primary border border-primary/30 rounded-xl font-semibold hover:bg-primary/5 transition-all'
+              >
+                <Gift className='w-5 h-5' />
+                Cupom de boas-vindas
+              </button>
+            )}
+            <button
+              onClick={openCreate}
+              className='flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-sm'
+            >
+              <Plus className='w-5 h-5' />
+              Novo Cupom
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -483,6 +521,11 @@ const Coupons = () => {
                             {c.firstOrderOnly && (
                               <span className='text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600'>
                                 1ª compra
+                              </span>
+                            )}
+                            {c.welcomeOffer && (
+                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700'>
+                                🎁 boas-vindas (modal do site)
                               </span>
                             )}
                           </div>
@@ -920,6 +963,11 @@ const Coupons = () => {
                     k: 'firstOrderOnly',
                     label: 'Apenas primeira compra',
                     hint: 'Bloqueia clientes (login ou email) que já têm pedido pago.',
+                  },
+                  {
+                    k: 'welcomeOffer',
+                    label: '🎁 Cupom de boas-vindas (modal do site)',
+                    hint: 'O modal “Cadastre e ganhe” do site anuncia este cupom e só clientes cadastrados (logados) podem usá-lo. Só um cupom pode ter esta opção; com o cupom desativado o modal não aparece.',
                   },
                   {
                     k: 'isActive',

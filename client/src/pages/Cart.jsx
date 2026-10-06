@@ -1,6 +1,6 @@
 // client/src/pages/Cart.jsx
 import useMetaPixel from '../hooks/useMetaPixel';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
 import toast from 'react-hot-toast';
@@ -37,6 +37,13 @@ import {
   formatBRL,
   calculateInstallments,
 } from '../utils/installmentUtils';
+// 🎁 Cupom de boas-vindas (ganho no cadastro) — aplicado automaticamente
+import {
+  getPendingWelcomeCoupon,
+  clearPendingWelcomeCoupon,
+  WELCOME_PERMANENT_REJECTIONS,
+  WELCOME_COUPON_READY_EVENT,
+} from '../utils/welcomeOffer';
 // 🎯 Origem do cliente (UTMs do Instagram) — vai no pedido
 import { getAttributionForOrder, clearAttribution } from '../utils/attribution';
 
@@ -905,6 +912,46 @@ const Cart = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [couponRevalidationKey]);
+
+  // 🎁 Cupom de boas-vindas: quem acabou de se cadastrar não precisa de
+  // digitar o código — entra sozinho no carrinho (uma tentativa por
+  // visita ao carrinho; o servidor valida tudo de novo no pagamento).
+  // Se o cliente remover o cupom à mão, não é reaplicado nesta visita.
+  const welcomeCouponTried = useRef(false);
+  // cadastro feito com o carrinho aberto → o cupom fica disponível depois
+  const [welcomeCouponTick, setWelcomeCouponTick] = useState(0);
+  useEffect(() => {
+    const onReady = () => setWelcomeCouponTick(t => t + 1);
+    window.addEventListener(WELCOME_COUPON_READY_EVENT, onReady);
+    return () =>
+      window.removeEventListener(WELCOME_COUPON_READY_EVENT, onReady);
+  }, []);
+  useEffect(() => {
+    if (welcomeCouponTried.current) return;
+    if (!user?._id || appliedCoupon || cartArray.length === 0) return;
+    const pendingCode = getPendingWelcomeCoupon(user._id);
+    if (!pendingCode) return;
+
+    welcomeCouponTried.current = true;
+    (async () => {
+      try {
+        const data = await validateCouponOnServer(pendingCode);
+        if (data.success) {
+          setAppliedCoupon(current => current || data.coupon);
+          toast.success(
+            `Cupom de boas-vindas ${data.coupon.code} aplicado (${data.coupon.label})!`,
+            { icon: '🎁' },
+          );
+        } else if (WELCOME_PERMANENT_REJECTIONS.includes(data.reason)) {
+          // já comprou, já usou ou o cupom foi desativado → deixa de tentar
+          clearPendingWelcomeCoupon();
+        }
+      } catch {
+        /* falha de rede: tenta de novo na próxima visita ao carrinho */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id, cartArray.length, appliedCoupon, welcomeCouponTick]);
 
   const getPaymentButtonText = () => {
     if (isProcessing) return 'Processando...';

@@ -15,6 +15,10 @@
 //     O desconto incide APENAS sobre os itens elegíveis do carrinho.
 //   • stackWithPix  : permite acumular com o desconto PIX (10%)
 //   • firstOrderOnly: apenas clientes sem pedido pago anterior
+//   • welcomeOffer  : cupom de boas-vindas — é o que o modal do site
+//                     anuncia ("Cadastre e ganhe X% OFF") e só é aceito
+//                     para clientes LOGADOS (cadastrados). Só pode haver
+//                     um cupom com esta opção ligada.
 //   • usageCount    : contador atómico (reservado na criação do pedido,
 //                     libertado se o pagamento for cancelado/recusado)
 // ═══════════════════════════════════════════════════════════════════════
@@ -58,6 +62,8 @@ const couponSchema = new mongoose.Schema(
 
     stackWithPix: { type: Boolean, default: true },
     firstOrderOnly: { type: Boolean, default: false },
+    // 🎁 Cupom de boas-vindas (modal do site + exige cliente cadastrado)
+    welcomeOffer: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },

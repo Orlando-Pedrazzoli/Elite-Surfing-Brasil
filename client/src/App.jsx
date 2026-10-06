@@ -33,6 +33,8 @@ import ScrollToTop from './components/ScrollToTop';
 import HealthCheck from './components/HealthCheck';
 import WhatsAppButton from './components/WhatsAppButton';
 import CartSidebar from './components/CartSidebar';
+// 🎁 Modal de boas-vindas ("Cadastre-se e ganhe X% OFF na primeira compra")
+import WelcomeOfferModal from './components/WelcomeOfferModal';
 import GroupPage from './pages/GroupPage';
 import InstitucionalPage from './pages/InstitucionalPage';
 import PixPayment from './pages/PixPayment';
@@ -106,8 +108,11 @@ const App = () => {
 
       {showUserLogin ? <Login /> : null}
 
+      {/* zIndex 10001: os avisos ficam por cima dos modais de login e de
+          boas-vindas (10000) e do aviso de cookies (9999) */}
       <Toaster
         position='top-center'
+        containerStyle={{ zIndex: 10001 }}
         toastOptions={{
           duration: 3000,
           style: {
@@ -204,6 +209,7 @@ const App = () => {
 
       {!isSellerPath && <WhatsAppButton />}
       {!isSellerPath && <CartSidebar />}
+      {!isSellerPath && <WelcomeOfferModal />}
 
       {/* ═══════════════════════════════════════════════════════════
           COOKIE CONSENT — LGPD (Lei nº 13.709/2018)
