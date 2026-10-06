@@ -1,3 +1,4 @@
+// client/src/components/seo/SEO.jsx
 import { Helmet } from 'react-helmet-async';
 
 /**
@@ -46,7 +47,7 @@ const SEO = ({
   const pageTitle = title ? title : 'Loja Online de Surf';
   const fullTitle = `${pageTitle} | ${SITE_NAME}`;
   const defaultDescription =
-    'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax e quilhas. Frete para todo Brasil. PIX com 10% OFF. Até 10x sem juros.';
+    'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax e quilhas. Frete para todo Brasil. PIX com 10% OFF. Até 6x sem juros.';
   const metaDescription = truncateDescription(
     description || defaultDescription,
   );

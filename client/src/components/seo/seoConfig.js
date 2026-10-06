@@ -1,3 +1,4 @@
+// client/src/components/seo/seoConfig.js
 /**
  * SEO Configuration - Elite Surfing Brasil
  * Versão: 4.0.0
@@ -20,7 +21,7 @@ const seoConfig = {
   home: {
     title: 'Loja de Surf Online - Decks, Leashes, Capas e Quilhas',
     description:
-      'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax e quilhas. PIX com 10% OFF. Até 10x sem juros. Frete para todo Brasil.',
+      'Loja online de acessórios de surf no Brasil. Decks, leashes, capas de prancha, sarcófagos, wax e quilhas. PIX com 10% OFF. Até 6x sem juros. Frete para todo Brasil.',
     url: '',
     keywords: [
       'loja surf brasil',

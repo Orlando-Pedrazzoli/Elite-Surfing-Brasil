@@ -1,3 +1,4 @@
+// client/src/pages/Home.jsx
 import React from 'react';
 import MainBanner from '../components/MainBanner';
 import BenefitsBar from '../components/Benefitsbar';
@@ -64,7 +65,7 @@ const Home = () => {
             Decks (traction pads) com EVA premium fresado, leashes com swivel
             duplo anti-torção, capas refletivas e sarcófagos para viagem,
             quilhas de alta performance, parafinas, racks e muito mais.
-            Pagamento por PIX com 10% OFF, cartão até 10x sem juros ou boleto.
+            Pagamento por PIX com 10% OFF, cartão até 6x sem juros ou boleto.
             Frete para todo o Brasil.
           </p>
         </section>

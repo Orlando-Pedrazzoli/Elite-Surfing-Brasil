@@ -1,3 +1,4 @@
+// client/src/utils/companyConfig.js
 // ═══════════════════════════════════════════════════════════════════════
 // 🏢 CONFIGURAÇÃO DA EMPRESA — ELITE SURFING BRASIL
 // ═══════════════════════════════════════════════════════════════════════
@@ -88,7 +89,7 @@ const COMPANY = {
   payments: {
     pixDiscount: 0.05, // 5% desconto PIX
     boletoDiscount: 0.05, // 5% desconto Boleto
-    maxInstallments: 12, // Até 12x sem juros
+    maxInstallments: 6, // Até 6x sem juros (7x–12x com juros do cartão)
     minInstallment: 10, // Parcela mínima R$10
     freeShippingMin: 299, // Frete grátis acima de R$299
   },

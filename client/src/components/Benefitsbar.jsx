@@ -1,3 +1,4 @@
+// client/src/components/Benefitsbar.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CreditCard, Percent, Truck } from 'lucide-react';
@@ -6,7 +7,7 @@ const benefits = [
   {
     icon: CreditCard,
     title: 'PAGAMENTO FACILITADO',
-    subtitle: 'ATÉ 10X SEM JUROS',
+    subtitle: 'ATÉ 6X SEM JUROS',
     link: null,
   },
   {

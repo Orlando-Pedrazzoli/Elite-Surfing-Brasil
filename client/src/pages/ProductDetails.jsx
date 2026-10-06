@@ -1,3 +1,4 @@
+// client/src/pages/ProductDetails.jsx
 import '../styles/ProductDetails.css';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
@@ -1102,7 +1103,7 @@ const ProductDetails = () => {
                     <span className='text-white text-xs'>✓</span>
                   </div>
                   <span className='text-xs md:text-sm text-gray-700'>
-                    Parcele em até 12x sem juros no cartão
+                    Parcele em até 6x sem juros no cartão (ou até 12x com juros)
                   </span>
                 </div>
                 <div className='flex items-center gap-2'>

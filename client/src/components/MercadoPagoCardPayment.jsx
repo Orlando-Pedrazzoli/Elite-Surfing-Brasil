@@ -6,11 +6,22 @@
 // calcula parcelas nativamente e injeta o device fingerprint
 // usado pelo motor antifraude. Os dados do cartão NUNCA passam
 // pelo nosso DOM controlado nem pelo nosso servidor.
+//
+// 💰 PARCELAMENTO: até 6x sem juros, de 7x a 12x com juros.
+// Quem decide quais parcelas têm juros (e a taxa) é a conta do
+// Mercado Pago: "Seu Negócio > Custos > Parcelamento sem juros"
+// deve estar configurado em 6x. O Brick lê essa configuração e
+// mostra ao cliente o valor de cada parcela e o total com juros.
+// O maxInstallments abaixo é só o teto de parcelas oferecidas.
 // ═══════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react';
 import { initMercadoPago, CardPayment } from '@mercadopago/sdk-react';
 import { Lock, Shield, Loader2 } from 'lucide-react';
+import {
+  MAX_INSTALLMENTS,
+  MAX_INSTALLMENTS_NO_INTEREST,
+} from '../utils/installmentUtils';
 
 const PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
 
@@ -49,6 +60,14 @@ const MercadoPagoCardPayment = ({ totalAmount, onSubmit, payerEmail }) => {
       </div>
 
       <div className='p-4'>
+        <p className='text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3'>
+          <span className='font-semibold text-gray-800'>
+            Até {MAX_INSTALLMENTS_NO_INTEREST}x sem juros.
+          </span>{' '}
+          De {MAX_INSTALLMENTS_NO_INTEREST + 1}x a {MAX_INSTALLMENTS}x com
+          juros do cartão — o valor total aparece ao escolher as parcelas.
+        </p>
+
         {!ready && (
           <div className='flex items-center justify-center gap-2 py-8 text-gray-500'>
             <Loader2 className='w-5 h-5 animate-spin' />
@@ -62,7 +81,7 @@ const MercadoPagoCardPayment = ({ totalAmount, onSubmit, payerEmail }) => {
             ...(payerEmail ? { payer: { email: payerEmail } } : {}),
           }}
           customization={{
-            paymentMethods: { maxInstallments: 12 },
+            paymentMethods: { maxInstallments: MAX_INSTALLMENTS },
             visual: {
               style: { theme: 'default' },
               hidePaymentButton: false,

@@ -1,3 +1,4 @@
+// client/src/components/ProductPriceDisplay.jsx
 import { useState } from 'react';
 import { calculateInstallments, formatBRL } from '../utils/installmentUtils';
 
@@ -59,6 +60,14 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
           </p>
         )}
 
+        {/* Parcelamento com juros (7x a 12x) */}
+        {installmentData.hasInterestOptions && (
+          <p className='text-xs text-gray-500'>
+            ou em até {installmentData.maxInstallmentsWithInterest}x com juros
+            do cartão
+          </p>
+        )}
+
         {/* Link para ver todas as parcelas */}
         {installmentData.allInstallments.length > 2 && (
           <button
@@ -79,6 +88,18 @@ const ProductPriceDisplay = ({ price, offerPrice, currency }) => {
                 <span className='text-green-600 font-medium'>sem juros</span>
               </div>
             ))}
+            {/* 7x a 12x — com juros, valor exato calculado no checkout */}
+            {installmentData.hasInterestOptions && (
+              <div className='flex justify-between gap-3 text-xs text-gray-500'>
+                <span>
+                  {installmentData.maxInstallments + 1}x a{' '}
+                  {installmentData.maxInstallmentsWithInterest}x
+                </span>
+                <span className='text-right'>
+                  com juros — valor exibido no checkout
+                </span>
+              </div>
+            )}
             {/* PIX na tabela (🆕 Verde) */}
             <div className='border-t border-gray-100 pt-1.5 mt-1.5'>
               <div className='flex justify-between text-xs'>

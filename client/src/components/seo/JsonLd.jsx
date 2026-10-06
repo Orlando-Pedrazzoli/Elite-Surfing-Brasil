@@ -1,3 +1,4 @@
+// client/src/components/seo/JsonLd.jsx
 /**
  * JSON-LD Structured Data - Elite Surfing Brasil
  * Versão: 3.0.0
@@ -333,7 +334,7 @@ export const LocalBusinessSchema = () => {
     telephone: '+5521964358058',
     email: 'atendimento@elitesurfing.com.br',
     description:
-      'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, wax, quilhas e mais. PIX com 10% OFF, até 10x sem juros.',
+      'Loja online de acessórios e equipamentos de surf no Brasil. Decks, leashes, capas, sarcófagos, wax, quilhas e mais. PIX com 10% OFF, até 6x sem juros.',
     address: {
       '@type': 'PostalAddress',
       streetAddress:

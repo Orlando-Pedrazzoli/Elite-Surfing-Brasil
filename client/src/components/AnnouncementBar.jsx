@@ -1,3 +1,4 @@
+// client/src/components/AnnouncementBar.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -13,7 +14,7 @@ const announcements = [
     link: '/products',
   },
   {
-    bold: 'ATÉ 12X SEM JUROS',
+    bold: 'ATÉ 6X SEM JUROS',
     text: 'NO CARTÃO DE CRÉDITO',
     link: '/products',
   },

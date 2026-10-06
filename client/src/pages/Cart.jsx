@@ -32,7 +32,11 @@ import {
   Trash2,
   Store,
 } from 'lucide-react';
-import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
+import {
+  PIX_DISCOUNT,
+  formatBRL,
+  calculateInstallments,
+} from '../utils/installmentUtils';
 // 🎯 Origem do cliente (UTMs do Instagram) — vai no pedido
 import { getAttributionForOrder, clearAttribution } from '../utils/attribution';
 
@@ -2175,12 +2179,28 @@ const Cart = () => {
                   </span>
                 </div>
 
-                {paymentMethod === 'card' && (
-                  <p className='text-xs text-gray-500 mt-1 text-right'>
-                    ou até 12x de {formatBRL(parseFloat(calculateTotal()) / 12)}{' '}
-                    sem juros
-                  </p>
-                )}
+                {paymentMethod === 'card' &&
+                  (() => {
+                    // Até 6x sem juros; de 7x a 12x com juros do cartão
+                    // (o valor com juros é calculado pelo Mercado Pago)
+                    const inst = calculateInstallments(
+                      parseFloat(calculateTotal()),
+                    );
+                    if (inst.maxInstallments <= 1) return null;
+                    return (
+                      <p className='text-xs text-gray-500 mt-1 text-right'>
+                        ou até {inst.maxInstallments}x de{' '}
+                        {formatBRL(inst.installmentValue)} sem juros
+                        {inst.hasInterestOptions && (
+                          <span className='block'>
+                            de {inst.maxInstallments + 1}x a{' '}
+                            {inst.maxInstallmentsWithInterest}x com juros do
+                            cartão
+                          </span>
+                        )}
+                      </p>
+                    );
+                  })()}
 
                 {paymentMethod === 'pix' && isPixDiscountAvailable() && (
                   <p className='text-xs text-green-600 mt-1 text-right font-medium'>

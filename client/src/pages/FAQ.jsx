@@ -1,3 +1,4 @@
+// client/src/pages/FAQ.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HelpCircle, ChevronDown, ChevronUp, Mail, Phone } from 'lucide-react';
@@ -25,7 +26,7 @@ Você receberá um e-mail de confirmação com os detalhes do pedido. Após a co
     },
     {
       question: 'Quais são as formas de pagamento?',
-      answer: `Cartão de Crédito: Aceitamos Visa e Mastercard em até 10x sem juros. Seus dados são protegidos com criptografia SSL 256-bit via Stripe.
+      answer: `Cartão de Crédito: Aceitamos Visa e Mastercard em até 6x sem juros, ou de 7x a 12x com juros do cartão (o valor total com juros é exibido antes de você confirmar o pagamento). Seus dados são protegidos com criptografia SSL 256-bit via Stripe.
 
 PIX: Pagamento instantâneo com 10% de desconto. Após finalizar o pedido, o QR Code será exibido na tela e enviado por e-mail.
 
