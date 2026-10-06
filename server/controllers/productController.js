@@ -524,6 +524,65 @@ export const getProductsByIds = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════
+// 🆕 06/10/2026 — Get ALL Product Families : GET /api/product/families
+// ═══════════════════════════════════════════════════════════════════════
+// Devolve TODAS as famílias (variantes de cor/tamanho) numa só resposta:
+//   { success, families: { [familySlug]: [produtos...] } }
+//
+// Porquê: cada ProductCard fazia o seu próprio POST /api/product/family.
+// Uma página com 30 produtos disparava 30+ pedidos em simultâneo, e POST
+// nunca é cacheado no CDN. Este endpoint era 86% das invocações do backend
+// e a origem das rajadas de instâncias (alerta de ligações do Atlas).
+// Agora a loja faz 1 GET, cacheado no CDN, para todas as famílias.
+//
+// Cada família vem com os mesmos produtos, campos e ordem que o
+// POST /api/product/family devolve para esse slug.
+// Público: só variantes publicadas. Admin: todas (sem cache).
+// ═══════════════════════════════════════════════════════════════════════
+export const getAllProductFamilies = async (req, res) => {
+  try {
+    const seller = isSellerAuthenticated(req);
+    const admin = isAdminRequest(req) || seller;
+
+    const query = { productFamily: { $nin: [null, ''] } };
+
+    if (!admin) {
+      query.inStock = { $ne: false };
+    }
+
+    const products = await withPrivatePricingIfSeller(
+      Product.find(query),
+      seller,
+    ).sort({
+      isMainVariant: -1,
+      createdAt: 1,
+    });
+
+    const families = {};
+    for (const product of products) {
+      const slug = product.productFamily;
+      if (!families[slug]) families[slug] = [];
+      families[slug].push(product);
+    }
+
+    if (admin) {
+      setNoCacheHeaders(res);
+    } else {
+      res.setHeader(
+        'Cache-Control',
+        'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
+      );
+    }
+    res.setHeader('Vary', 'Authorization, x-seller-token');
+
+    res.json({ success: true, families });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════
 // 🆕 Get Products by Family : /api/product/family
 // Público: só mostra variantes publicadas. Admin: mostra todas.
 // ═══════════════════════════════════════════════════════════════════════

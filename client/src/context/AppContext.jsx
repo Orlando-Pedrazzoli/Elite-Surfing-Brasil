@@ -37,6 +37,12 @@ export const AppContextProvider = ({ children }) => {
   const sellerFetchInProgress = useRef(false);
   const sellerInitialized = useRef(false);
 
+  // 🆕 06/10/2026: famílias (variantes) — 1 só pedido para a loja inteira
+  // e nunca dois pedidos iguais em simultâneo (ver getProductFamily).
+  const productsRequest = useRef(null); // GET /api/product/list em curso
+  const allFamiliesRequest = useRef(null); // GET /api/product/families
+  const familyRequests = useRef({}); // POST por família (admin/fallback)
+
   // Token management functions
   const setAuthToken = token => {
     if (token) {
@@ -307,16 +313,29 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // Fetch All Products
-  const fetchProducts = async () => {
-    try {
-      const { data } = await axios.get('/api/product/list');
-      if (data.success) {
-        setProducts(data.products);
-        setFamilyCache({});
+  // 🔧 06/10/2026: se já há um pedido da lista em curso, reutiliza-o.
+  // Antes, cada página de listagem repetia o pedido 3 a 5 vezes ao abrir
+  // (o efeito em AllProducts volta a correr a cada re-render do contexto).
+  const fetchProducts = () => {
+    if (productsRequest.current) return productsRequest.current;
+
+    productsRequest.current = (async () => {
+      try {
+        const { data } = await axios.get('/api/product/list');
+        if (data.success) {
+          setProducts(data.products);
+          allFamiliesRequest.current = null;
+          familyRequests.current = {};
+          setFamilyCache({});
+        }
+      } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+      } finally {
+        productsRequest.current = null;
       }
-    } catch (error) {
-      console.error('Erro ao buscar produtos:', error);
-    }
+    })();
+
+    return productsRequest.current;
   };
 
   // =============================================================================
@@ -377,6 +396,66 @@ export const AppContextProvider = ({ children }) => {
   // FUNÇÕES DE FAMÍLIA/VARIANTES
   // =============================================================================
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // 🔧 06/10/2026 — FIX consumo: antes, CADA ProductCard fazia o seu próprio
+  // POST /api/product/family (e repetia-o a cada re-render do contexto).
+  // Uma página com 30 produtos disparava dezenas de pedidos simultâneos:
+  // 86% das invocações do backend e a origem das rajadas no MongoDB.
+  //
+  // Agora:
+  //   • Loja pública → 1 GET /api/product/families (todas as famílias de uma
+  //     vez, cacheado no CDN). Os cartões leem do resultado.
+  //   • Admin logado → continua a pedir por família (vê rascunhos e custos),
+  //     mas sem pedidos duplicados em simultâneo.
+  //   • Se o GET falhar → volta ao pedido por família (comportamento antigo).
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // Todas as famílias num só pedido. Devolve o mapa { slug: [produtos] }
+  // ou null se falhar (quem chama usa o fallback por família).
+  const loadAllFamilies = () => {
+    if (!allFamiliesRequest.current) {
+      allFamiliesRequest.current = axios
+        .get('/api/product/families')
+        .then(({ data }) => {
+          if (data.success && data.families) {
+            setFamilyCache(prev => ({ ...prev, ...data.families }));
+            return data.families;
+          }
+          return null;
+        })
+        .catch(error => {
+          console.error('Erro ao buscar famílias:', error);
+          return null;
+        });
+    }
+    return allFamiliesRequest.current;
+  };
+
+  // Uma família via POST (admin/fallback) — reutiliza o pedido em curso.
+  const loadSingleFamily = familySlug => {
+    if (!familyRequests.current[familySlug]) {
+      familyRequests.current[familySlug] = axios
+        .post('/api/product/family', { familySlug })
+        .then(({ data }) => {
+          if (data.success && data.products) {
+            setFamilyCache(prev => ({
+              ...prev,
+              [familySlug]: data.products,
+            }));
+            return data.products;
+          }
+          delete familyRequests.current[familySlug];
+          return [];
+        })
+        .catch(error => {
+          console.error('Erro ao buscar família:', error);
+          delete familyRequests.current[familySlug];
+          return [];
+        });
+    }
+    return familyRequests.current[familySlug];
+  };
+
   // Buscar todos os produtos de uma família (com cache)
   const getProductFamily = async familySlug => {
     if (!familySlug) return [];
@@ -385,35 +464,39 @@ export const AppContextProvider = ({ children }) => {
       return familyCache[familySlug];
     }
 
-    try {
-      const { data } = await axios.post('/api/product/family', { familySlug });
-
-      if (data.success && data.products) {
-        setFamilyCache(prev => ({
-          ...prev,
-          [familySlug]: data.products,
-        }));
-        return data.products;
-      }
-      return [];
-    } catch (error) {
-      console.error('Erro ao buscar família:', error);
-      return [];
+    if (!isSeller) {
+      const families = await loadAllFamilies();
+      if (families) return families[familySlug] || [];
     }
+
+    return loadSingleFamily(familySlug);
   };
 
   // Limpar cache de uma família
   const clearFamilyCache = familySlug => {
+    allFamiliesRequest.current = null;
     if (familySlug) {
+      delete familyRequests.current[familySlug];
       setFamilyCache(prev => {
         const newCache = { ...prev };
         delete newCache[familySlug];
         return newCache;
       });
     } else {
+      familyRequests.current = {};
       setFamilyCache({});
     }
   };
+
+  // Admin acabou de ser reconhecido: descarta as famílias públicas para que
+  // os cartões voltem a pedi-las como admin (com rascunhos e custos).
+  useEffect(() => {
+    if (isSeller) {
+      allFamiliesRequest.current = null;
+      familyRequests.current = {};
+      setFamilyCache({});
+    }
+  }, [isSeller]);
 
   // =============================================================================
   // OPERAÇÕES DO CARRINHO COM VALIDAÇÃO DE ESTOQUE

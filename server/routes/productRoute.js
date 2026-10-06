@@ -12,6 +12,7 @@ import {
   updateProduct,
   deleteProduct,
   getProductFamily,
+  getAllProductFamilies, // 🆕 Todas as famílias num só GET
   checkStock,
   updateStock,
   decrementStock,
@@ -22,6 +23,8 @@ const productRouter = express.Router();
 
 // Rotas públicas
 productRouter.get('/list', productList);
+// 🆕 06/10/2026: tem de vir ANTES de '/:id' (senão 'families' é lido como id)
+productRouter.get('/families', getAllProductFamilies);
 productRouter.post('/by-ids', getProductsByIds);
 productRouter.post('/id', productById);
 productRouter.post('/family', getProductFamily);

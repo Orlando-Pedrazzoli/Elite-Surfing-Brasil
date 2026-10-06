@@ -138,6 +138,9 @@ app.use(
       'Pragma',
     ],
     exposedHeaders: ['ETag', 'Last-Modified'],
+    // 🔧 06/10/2026: o browser guarda o preflight (OPTIONS) em vez de o
+    // repetir antes de cada chamada — menos invocações da função.
+    maxAge: 86400,
   }),
 );
 
