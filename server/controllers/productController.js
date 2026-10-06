@@ -1,5 +1,9 @@
 // server/controllers/productController.js
 import { v2 as cloudinary } from 'cloudinary';
+import {
+  setPublicCatalogCache,
+  purgeCatalogCache,
+} from '../utils/catalogCache.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Product from '../models/Product.js';
@@ -167,8 +171,22 @@ const validateProductData = productData => {
 //   - Público só vê produtos com inStock !== false (= "publicados")
 //   - inStock === true + stock === 0  → aparece como "Esgotado"
 //   - inStock === false                → Draft (não aparece publicamente)
+//
+// 🔧 06/10/2026 — FIX: admin = JWT do seller VERIFICADO.
+// Antes bastava o pedido trazer um header Authorization, x-seller-token
+// (com qualquer valor) ou ?all=true. Como a loja envia Authorization para
+// todos os clientes logados, um cliente com sessão recebia rascunhos e
+// todas as variantes como produtos soltos (52 em vez de 18 num teste), e
+// qualquer pessoa via rascunhos acrescentando ?all=true ao URL.
+// O painel admin não muda: envia sempre o token do seller (cookie no
+// desktop, header x-seller-token no Safari/iOS).
 // ═══════════════════════════════════════════════════════════════════════
-const isAdminRequest = req => {
+const isAdminRequest = req => isSellerAuthenticated(req);
+
+// "Dica" NÃO verificada de que o pedido vem do painel admin ou de um
+// utilizador logado. Não dá acesso a nada — serve só para nunca guardar
+// estas respostas em cache (cada uma pode ser diferente da pública).
+const hasAdminHint = req => {
   return (
     !!req.headers['x-seller-token'] ||
     !!req.headers['authorization'] ||
@@ -176,11 +194,13 @@ const isAdminRequest = req => {
   );
 };
 
+const mustNotCache = (req, admin) => admin || hasAdminHint(req);
+
 // ═══════════════════════════════════════════════════════════════════════
 // 🆕 isSellerAuthenticated — verifica DE FACTO o JWT do seller
 // ═══════════════════════════════════════════════════════════════════════
-// isAdminRequest acima é apenas uma "dica" de visibilidade (drafts, cache)
-// e aceita qualquer `?all=true` — NÃO serve para proteger dados sensíveis.
+// Usado por isAdminRequest (visibilidade de rascunhos) e para decidir quem
+// recebe custo e preço de tabela.
 // O custo do produto só é devolvido quando este helper confirma o token
 // (mesma lógica do middleware authSeller: cookie primeiro, header depois).
 // Nunca lança: em rota pública, token inválido = simplesmente não é seller.
@@ -324,9 +344,9 @@ export const productList = async (req, res) => {
       createdAt: -1,
     });
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
     } else {
       const etag = crypto
         .createHash('md5')
@@ -336,11 +356,8 @@ export const productList = async (req, res) => {
         .digest('hex');
 
       res.setHeader('ETag', `"${etag}"`);
-      res.setHeader(
-        'Cache-Control',
-        'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
-      );
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      // 🗂️ 06/10/2026: 10 min no CDN + limpeza automática ao gravar produtos
+      setPublicCatalogCache(res);
 
       if (req.headers['if-none-match'] === `"${etag}"`) {
         return res.status(304).end();
@@ -376,6 +393,7 @@ export const reorderProducts = async (req, res) => {
     }));
 
     await Product.bulkWrite(bulkOps);
+    purgeCatalogCache(); // bulkWrite não dispara os hooks do modelo
 
     res.json({ success: true, message: 'Ordem atualizada com sucesso' });
   } catch (error) {
@@ -409,14 +427,14 @@ export const productById = async (req, res) => {
         .json({ success: false, message: 'Produto não encontrado' });
     }
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
     } else {
       res.setHeader(
         'Cache-Control',
         'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
       );
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
     }
 
     res.json({ success: true, product });
@@ -451,7 +469,7 @@ export const getProductById = async (req, res) => {
         .json({ success: false, message: 'Produto não encontrado' });
     }
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
     } else {
       const etag = crypto
@@ -464,7 +482,7 @@ export const getProductById = async (req, res) => {
         'Cache-Control',
         'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
       );
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
 
       if (req.headers['if-none-match'] === `"${etag}"`) {
         return res.status(304).end();
@@ -502,14 +520,14 @@ export const getProductsByIds = async (req, res) => {
 
     const products = await Product.find(query);
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
     } else {
       res.setHeader(
         'Cache-Control',
         'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
       );
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
     }
 
     res.json({
@@ -565,15 +583,13 @@ export const getAllProductFamilies = async (req, res) => {
       families[slug].push(product);
     }
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
     } else {
-      res.setHeader(
-        'Cache-Control',
-        'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
-      );
+      // 🗂️ 10 min no CDN + limpeza automática ao gravar produtos
+      setPublicCatalogCache(res);
     }
-    res.setHeader('Vary', 'Authorization, x-seller-token');
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
 
     res.json({ success: true, families });
   } catch (error) {
@@ -607,14 +623,14 @@ export const getProductFamily = async (req, res) => {
       createdAt: 1,
     });
 
-    if (admin) {
+    if (mustNotCache(req, admin)) {
       setNoCacheHeaders(res);
     } else {
       res.setHeader(
         'Cache-Control',
         'public, max-age=60, s-maxage=120, stale-while-revalidate=600',
       );
-      res.setHeader('Vary', 'Authorization, x-seller-token');
+      res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
     }
 
     res.json({ success: true, products });

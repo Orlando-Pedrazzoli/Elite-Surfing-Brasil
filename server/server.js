@@ -226,7 +226,7 @@ app.use((req, res, next) => {
     );
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.setHeader('Vary', 'Authorization, x-seller-token');
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
     return next();
   }
 
@@ -237,13 +237,13 @@ app.use((req, res, next) => {
       'Cache-Control',
       'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
     );
-    res.setHeader('Vary', 'Authorization, x-seller-token');
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
   } else if (path.startsWith('/api/blog')) {
     res.setHeader(
       'Cache-Control',
       'public, max-age=300, s-maxage=600, stale-while-revalidate=1800',
     );
-    res.setHeader('Vary', 'Authorization, x-seller-token');
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
   } else if (path.startsWith('/api/wsl')) {
     // 🔧 27/04/2026 — cache MUITO curto.
     // O admin atualiza manualmente após cada etapa (a cada 1-2 semanas)
@@ -255,7 +255,7 @@ app.use((req, res, next) => {
       'Cache-Control',
       'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
     );
-    res.setHeader('Vary', 'Authorization, x-seller-token');
+    res.setHeader('Vary', 'Origin, Authorization, x-seller-token');
   } else if (path.startsWith('/api/v1/catalog')) {
     res.setHeader(
       'Cache-Control',

@@ -63,6 +63,26 @@ export const AppContextProvider = ({ children }) => {
     localStorage.removeItem('sellerToken');
   };
 
+  // 🆕 06/10/2026 — Leituras do catálogo (/api/product/...).
+  // O backend só mostra rascunhos e custos a um seller com token verificado.
+  // No desktop o cookie chega; no Safari/iOS (sem cookies cross-site) é o
+  // header x-seller-token que identifica o admin — por isso enviamo-lo
+  // também nestas leituras quando há um seller logado.
+  const isCatalogRoute = url => !!url && url.includes('/api/product/');
+
+  // 🆕 06/10/2026 — Leituras PÚBLICAS do catálogo, iguais para toda a gente.
+  // Sem o header Authorization o CDN da Vercel pode responder a partir da
+  // cache também aos clientes logados (um pedido com Authorization nunca é
+  // servido da cache). O token do cliente não é preciso nestas rotas.
+  const isPublicCatalogRead = config => {
+    const url = config?.url || '';
+    if ((config?.method || 'get').toLowerCase() !== 'get') return false;
+    return (
+      (url.includes('/api/product/list') && !url.includes('all=true')) ||
+      url.includes('/api/product/families')
+    );
+  };
+
   // ✅ FIX IPHONE: Verificar se uma URL é rota protegida por authSeller
   const isSellerRoute = url => {
     if (!url) return false;
@@ -333,7 +353,15 @@ export const AppContextProvider = ({ children }) => {
 
     productsRequest.current = (async () => {
       try {
-        const { data } = await axios.get('/api/product/list');
+        // O primeiro pedido da lista sai antes de os interceptors estarem
+        // registados (os efeitos das páginas correm antes dos do contexto),
+        // por isso o token do seller vai aqui explicitamente: é ele que
+        // permite ao backend mostrar rascunhos ao admin também no iPhone.
+        const sellerToken = localStorage.getItem('sellerToken');
+        const { data } = await axios.get(
+          '/api/product/list',
+          sellerToken ? { headers: { 'x-seller-token': sellerToken } } : undefined,
+        );
         if (data.success) {
           setProducts(data.products);
           allFamiliesRequest.current = null;
@@ -644,15 +672,26 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       config => {
-        // User auth token — todas as requests
+        // User auth token — todas as requests, EXCETO leituras públicas do
+        // catálogo (para o CDN poder servi-las da cache a quem está logado)
         const token = getStoredToken();
-        if (token && !config.headers.Authorization) {
+        if (isPublicCatalogRead(config)) {
+          if (typeof config.headers.delete === 'function') {
+            config.headers.delete('Authorization');
+          } else {
+            delete config.headers.Authorization;
+          }
+        } else if (token && !config.headers.Authorization) {
           config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // ✅ FIX: Seller token — APENAS em rotas protegidas por authSeller
+        // ✅ FIX: Seller token — rotas protegidas por authSeller e leituras
+        // do catálogo (para o admin ver rascunhos/custos também no iPhone)
         const sellerToken = localStorage.getItem('sellerToken');
-        if (sellerToken && isSellerRoute(config.url)) {
+        if (
+          sellerToken &&
+          (isSellerRoute(config.url) || isCatalogRoute(config.url))
+        ) {
           config.headers['x-seller-token'] = sellerToken;
         }
 

@@ -1,5 +1,6 @@
 // server/models/Product.js
 import mongoose from 'mongoose';
+import { purgeCatalogCache } from '../utils/catalogCache.js';
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -177,6 +178,32 @@ productSchema.index({ group: 1 });
 // índice duplicado do Mongoose e trabalho redundante no Atlas.
 productSchema.index({ tags: 1 }); // 🆕 Para queries por tag
 productSchema.index({ freeShipping: 1 }); // 🆕 Para filtro de frete grátis
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🗂️ 06/10/2026 — limpar a cache do catálogo no CDN a cada escrita
+// ═══════════════════════════════════════════════════════════════════════
+// Qualquer criação, alteração, apagamento ou mudança de stock (admin,
+// vendas, romaneios, webhooks de pagamento) passa por um destes hooks e
+// apaga as respostas do catálogo guardadas no CDN — ver utils/catalogCache.js.
+// Product.bulkWrite NÃO passa por hooks: quem o usar chama purgeCatalogCache().
+const purgeAfterWrite = () => {
+  purgeCatalogCache();
+};
+productSchema.post('save', purgeAfterWrite); // Product.create / doc.save()
+productSchema.post('insertMany', purgeAfterWrite);
+productSchema.post(
+  [
+    'findOneAndUpdate', // inclui findByIdAndUpdate
+    'findOneAndDelete', // inclui findByIdAndDelete
+    'findOneAndReplace',
+    'updateOne',
+    'updateMany',
+    'replaceOne',
+    'deleteOne',
+    'deleteMany',
+  ],
+  purgeAfterWrite,
+);
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;
