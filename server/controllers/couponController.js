@@ -264,7 +264,7 @@ export const getWelcomeOffer = async (req, res) => {
         discountValue: coupon.discountValue,
         label: couponLabel(coupon),
         stackWithPix: coupon.stackWithPix,
-        firstOrderOnly: coupon.firstOrderOnly,
+        firstOrderOnly: true, // o cupom de boas-vindas é sempre de 1ª compra
         minOrderValue: coupon.minOrderValue || 0,
         partial: coupon.scope !== 'all',
       },

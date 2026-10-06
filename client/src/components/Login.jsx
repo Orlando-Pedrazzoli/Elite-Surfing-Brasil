@@ -276,6 +276,18 @@ const Login = () => {
         setName('');
         setEmail('');
         setPassword('');
+      } else if (
+        state === 'register' &&
+        /already exists/i.test(data.message || '')
+      ) {
+        // Já tem cadastro → o cupom de boas-vindas não se aplica
+        toast.error(
+          welcomeOffer
+            ? 'Já existe uma conta com este email. Entre na sua conta — o cupom de boas-vindas é só para novos cadastros.'
+            : 'Já existe uma conta com este email. Entre na sua conta.',
+          { duration: 6000 },
+        );
+        setState('login');
       } else {
         toast.error(data.message);
       }

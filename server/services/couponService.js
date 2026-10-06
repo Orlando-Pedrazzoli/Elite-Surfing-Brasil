@@ -14,9 +14,11 @@
 //   releaseCoupon()    → pedido cancelado/recusado → devolve o uso
 // ═══════════════════════════════════════════════════════════════════════
 
+import mongoose from 'mongoose';
 import Coupon from '../models/Coupon.js';
 import CouponRedemption from '../models/CouponRedemption.js';
 import Order from '../models/Order.js';
+import User from '../models/User.js';
 
 const round2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -71,6 +73,17 @@ const customerHasPaidOrder = async ({ userId, email }) => {
   if (!or.length) return false;
   const found = await Order.exists({ isPaid: true, $or: or });
   return !!found;
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// 🎁 Data de criação da conta do cliente (null se a conta não existir)
+//   O modelo User não tem timestamps; a data vem do próprio _id.
+// ─────────────────────────────────────────────────────────────────────
+const getAccountCreatedAt = async userId => {
+  if (!userId || !mongoose.isValidObjectId(userId)) return null;
+  const account = await User.findById(userId).select('_id createdAt');
+  if (!account) return null;
+  return account.createdAt || account._id.getTimestamp();
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -142,15 +155,36 @@ export const evaluateCoupon = async ({ code, lines, userId, email }) => {
     };
 
   // ─── Regras por cliente ───
-  // 🎁 Cupom de boas-vindas: só para clientes cadastrados e logados
-  if (coupon.welcomeOffer && !userId)
-    return {
-      valid: false,
-      reason: 'LOGIN_REQUIRED',
-      message:
-        'Este cupom é exclusivo para clientes cadastrados. Entre ou crie sua conta para usar.',
-    };
-  if (coupon.perCustomerLimit) {
+  // 🎁 Cupom de boas-vindas: vale UMA vez, na PRIMEIRA compra de um
+  // cadastro NOVO. Estas três regras valem sempre para este cupom,
+  // independentemente do que estiver marcado no painel:
+  //   1. cliente logado (o visitante tem de se cadastrar);
+  //   2. conta criada depois de o cupom existir — quem já tinha conta
+  //      antes da oferta não tem direito;
+  //   3. primeira compra + 1 uso por cliente (mais abaixo).
+  if (coupon.welcomeOffer) {
+    if (!userId)
+      return {
+        valid: false,
+        reason: 'LOGIN_REQUIRED',
+        message:
+          'Este cupom é exclusivo para clientes cadastrados. Entre ou crie sua conta para usar.',
+      };
+    const accountCreatedAt = await getAccountCreatedAt(userId);
+    // 1 min de tolerância: o _id só guarda segundos
+    const offerStart = new Date(new Date(coupon.createdAt).getTime() - 60000);
+    if (!accountCreatedAt || accountCreatedAt < offerStart)
+      return {
+        valid: false,
+        reason: 'NEW_ACCOUNTS_ONLY',
+        message:
+          'Este cupom é exclusivo para novos cadastros e não se aplica a contas já existentes.',
+      };
+  }
+  const perCustomerLimit = coupon.welcomeOffer ? 1 : coupon.perCustomerLimit;
+  const firstOrderOnly = coupon.welcomeOffer || coupon.firstOrderOnly;
+
+  if (perCustomerLimit) {
     if (!userId && !email)
       return {
         valid: false,
@@ -158,14 +192,14 @@ export const evaluateCoupon = async ({ code, lines, userId, email }) => {
         message: 'Adicione o seu endereço/email para aplicar este cupom.',
       };
     const used = await countCustomerRedemptions(coupon._id, { userId, email });
-    if (used >= coupon.perCustomerLimit)
+    if (used >= perCustomerLimit)
       return {
         valid: false,
         reason: 'CUSTOMER_LIMIT',
         message: 'Você já utilizou este cupom o número máximo de vezes.',
       };
   }
-  if (coupon.firstOrderOnly) {
+  if (firstOrderOnly) {
     if (!userId && !email)
       return {
         valid: false,

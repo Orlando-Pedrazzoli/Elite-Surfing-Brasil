@@ -3,7 +3,7 @@
 // 🎁 OFERTA DE BOAS-VINDAS — regras e estado partilhados
 // ═══════════════════════════════════════════════════════════════════════
 // Usado por:
-//   • WelcomeOfferModal → modal "Cadastre e ganhe X% OFF"
+//   • WelcomeOfferModal → modal "Cadastre e ganhe X% OFF" + aba lateral
 //   • Login             → avisa quando um cadastro é concluído
 //   • Cart              → aplica o cupom de boas-vindas automaticamente
 //
@@ -12,11 +12,18 @@
 // Sem cupom ativo, não há modal: o site nunca promete um desconto que o
 // checkout não vai dar.
 //
-// Regras de exibição (boas práticas de pop-ups de e-commerce):
+// O MODAL abre sozinho (boas práticas de pop-ups de e-commerce):
 //   • só para visitantes sem conta neste dispositivo e não logados
-//   • aparece WELCOME_DELAY_MS depois de a pessoa chegar ao site
+//   • WELCOME_DELAY_MS depois de a pessoa chegar ao site
 //   • no máximo uma vez por sessão; se fechar, só volta em SNOOZE_DAYS
 //   • nunca durante o checkout (ver EXCLUDED_PATHS no modal)
+//
+// A ABA lateral fica SEMPRE visível para quem não está logado e reabre
+// o modal com um clique (quem fechou sem querer não perde a oferta).
+// Quem está logado nunca vê nem a aba nem o modal.
+//
+// O cupom vale UMA vez, na PRIMEIRA compra de um cadastro NOVO — a regra
+// é imposta no servidor (services/couponService.js), não aqui.
 // ═══════════════════════════════════════════════════════════════════════
 
 // ⏱️ Tempo no site antes de abrir o modal. Abrir no primeiro segundo
@@ -25,7 +32,7 @@
 export const WELCOME_DELAY_MS = 6000;
 
 // 🔁 Dias sem voltar a mostrar depois de o visitante fechar o modal
-export const WELCOME_SNOOZE_DAYS = 7;
+export const WELCOME_SNOOZE_DAYS = 3;
 
 // Evento disparado pelo Login quando um cadastro novo é concluído
 export const WELCOME_REGISTERED_EVENT = 'elitesurfing:welcome-registered';
@@ -194,4 +201,5 @@ export const WELCOME_PERMANENT_REJECTIONS = [
   'EXHAUSTED',
   'CUSTOMER_LIMIT',
   'FIRST_ORDER_ONLY',
+  'NEW_ACCOUNTS_ONLY',
 ];

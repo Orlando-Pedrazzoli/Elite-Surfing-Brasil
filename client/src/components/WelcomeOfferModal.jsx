@@ -6,10 +6,15 @@
 //   1. 'offer'   → convite ao cadastro (visitante novo, não logado)
 //   2. 'success' → cadastro concluído: mostra o código do cupom
 //
+// 🏷️ ABA LATERAL: enquanto o visitante NÃO está logado, fica uma aba
+// sempre visível (borda esquerda no desktop, etiqueta no canto inferior
+// esquerdo no telemóvel) que reabre o modal. Quem está logado não vê
+// nem a aba nem o modal.
+//
 // O desconto e o código vêm do cupom marcado como "boas-vindas" no admin
 // (/seller/cupons). Sem cupom ativo, este componente não mostra nada.
 //
-// Quando aparece (regras em utils/welcomeOffer.js):
+// Quando o modal abre SOZINHO (regras em utils/welcomeOffer.js):
 //   • alguns segundos depois de o visitante chegar (WELCOME_DELAY_MS)
 //   • uma vez por sessão; se fechar, só volta passados WELCOME_SNOOZE_DAYS
 //   • nunca para quem está logado ou já tem conta neste dispositivo
@@ -22,7 +27,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X, Check, Copy } from 'lucide-react';
+import { X, Check, Copy, Gift } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { PIX_DISCOUNT, formatBRL } from '../utils/installmentUtils';
 import {
@@ -48,6 +53,15 @@ const EXCLUDED_PATHS = [
   '/minha-conta',
   '/my-orders',
   '/write-review',
+  '/loader',
+  '/seller',
+];
+
+// Páginas sem a aba lateral: pedido já feito (pagamento/confirmação) e admin
+const TAB_EXCLUDED_PATHS = [
+  '/order-success',
+  '/pix-payment',
+  '/boleto-payment',
   '/loader',
   '/seller',
 ];
@@ -86,9 +100,13 @@ const WelcomeOfferModal = () => {
 
   const panelRef = useRef(null);
   const returnFocusRef = useRef(null);
+  const openedFromTabRef = useRef(false);
   const closeTimerRef = useRef(null);
 
   const isExcludedPath = EXCLUDED_PATHS.some(p =>
+    location.pathname.startsWith(p),
+  );
+  const isTabExcludedPath = TAB_EXCLUDED_PATHS.some(p =>
     location.pathname.startsWith(p),
   );
 
@@ -113,9 +131,21 @@ const WelcomeOfferModal = () => {
     clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
       setView(null);
+      // devolve o foco a quem abriu o modal. A aba lateral sai do ecrã
+      // enquanto o modal está aberto, por isso é procurada de novo depois
+      // de o React voltar a mostrá-la.
       const el = returnFocusRef.current;
-      if (el && typeof el.focus === 'function' && document.contains(el))
-        el.focus({ preventScroll: true });
+      const fromTab = openedFromTabRef.current;
+      openedFromTabRef.current = false;
+      setTimeout(() => {
+        const target = fromTab
+          ? document.querySelector('.es-welcome-tab')
+          : el && document.contains(el)
+            ? el
+            : null;
+        if (target && typeof target.focus === 'function')
+          target.focus({ preventScroll: true });
+      }, 60);
     }, ANIMATION_MS);
   }, []);
 
@@ -127,6 +157,22 @@ const WelcomeOfferModal = () => {
     markWelcomeKnownCustomer();
     if (latest.current.view === 'offer') close();
   }, [user, close]);
+
+  // ─── Oferta em vigor (para a aba lateral) ───
+  // Pedida pouco depois de a página abrir, só para quem não está logado.
+  // A resposta vem do CDN e fica guardada na sessão.
+  useEffect(() => {
+    if (isKnown || isTabExcludedPath) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      const activeOffer = await fetchWelcomeOffer();
+      if (active && activeOffer) setOffer(current => current || activeOffer);
+    }, 1200);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [isKnown, isTabExcludedPath]);
 
   // ─── 1. Convite: abre depois de WELCOME_DELAY_MS no site ───
   useEffect(() => {
@@ -194,7 +240,38 @@ const WelcomeOfferModal = () => {
     };
   }, [view]);
 
-  if (!view || !offer) return null;
+  if (!offer) return null;
+
+  // ─── Texto (sempre a partir do cupom real) ───
+  const amount = welcomeOfferAmount(offer); // "5%"
+
+  // ═══ 🏷️ ABA LATERAL — sempre disponível para quem não está logado ═══
+  if (!view) {
+    if (isKnown || isTabExcludedPath || showUserLogin) return null;
+    return (
+      <>
+        <style>{STYLES}</style>
+        <button
+          type='button'
+          className='es-welcome-tab'
+          aria-haspopup='dialog'
+          aria-label={`Abrir oferta: cadastre-se e ganhe ${amount} OFF na primeira compra`}
+          onClick={() => {
+            track('WelcomeOfferTabClick', { coupon: offer.code });
+            markWelcomeShown(); // já viu nesta visita: não reabre sozinho
+            open('offer', offer);
+            openedFromTabRef.current = true;
+          }}
+        >
+          <Gift className='es-welcome-tab-icon' aria-hidden='true' />
+          <span className='es-welcome-tab-text'>
+            <strong>{amount} OFF</strong>
+            <span>no cadastro</span>
+          </span>
+        </button>
+      </>
+    );
+  }
 
   // ─── Ações ───
   const handleDismiss = () => {
@@ -208,6 +285,7 @@ const WelcomeOfferModal = () => {
   const handleRegister = () => {
     track('WelcomeOfferClick', { coupon: offer.code });
     returnFocusRef.current = null; // o foco segue para o cadastro
+    openedFromTabRef.current = false;
     setVisible(false);
     clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
@@ -257,15 +335,11 @@ const WelcomeOfferModal = () => {
     }
   };
 
-  // ─── Texto (sempre a partir do cupom real) ───
-  const amount = welcomeOfferAmount(offer); // "5%"
   const pixPercent = Math.round(PIX_DISCOUNT * 100);
   const isSuccess = view === 'success';
 
   const conditions = [
-    offer.firstOrderOnly
-      ? 'Válido na primeira compra de novos cadastros.'
-      : 'Válido para novos cadastros.',
+    'Válido uma vez, na primeira compra de novos cadastros.',
     offer.minOrderValue > 0
       ? `Pedido mínimo de ${formatBRL(offer.minOrderValue)}.`
       : '',
@@ -666,6 +740,71 @@ const STYLES = `
   background: #eef3f8;
 }
 
+/* ── 🏷️ Aba lateral (telemóvel: etiqueta no canto inferior esquerdo) ── */
+.es-welcome-tab {
+  position: fixed;
+  left: 12px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 40; /* abaixo da navbar, do carrinho lateral e dos modais */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px 0 13px;
+  border-radius: 999px;
+  background: #0f3057;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(7, 26, 48, 0.34);
+  outline: 1px dashed rgba(255, 255, 255, 0.42);
+  outline-offset: -5px;
+  animation: es-welcome-tab-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+.es-welcome-tab:hover {
+  background: #0a2240;
+}
+.es-welcome-tab:active {
+  transform: scale(0.97);
+}
+.es-welcome-tab:focus-visible {
+  outline: 3px solid #7fb0e0;
+  outline-offset: 2px;
+}
+.es-welcome-tab-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.es-welcome-tab-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  line-height: 1;
+}
+.es-welcome-tab-text strong {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.es-welcome-tab-text span {
+  display: none; /* no telemóvel só o valor, para ocupar pouco */
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+}
+@keyframes es-welcome-tab-in {
+  from {
+    opacity: 0;
+    translate: -16px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
 .es-welcome-ticket :is(button):focus-visible {
   outline: 3px solid #1a4a7a;
   outline-offset: 2px;
@@ -747,9 +886,44 @@ const STYLES = `
   .es-welcome-text {
     font-size: 16px;
   }
+
+  /* aba vertical colada à borda esquerda, a meio da altura */
+  .es-welcome-tab {
+    left: 0;
+    bottom: auto;
+    top: 50%;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    padding: 18px 13px 20px;
+    border-radius: 0 14px 14px 0;
+    transform: translateY(-50%);
+    transition: background-color 150ms ease, padding 150ms ease;
+  }
+  .es-welcome-tab:hover {
+    padding-left: 17px;
+  }
+  .es-welcome-tab:active {
+    transform: translateY(-50%);
+  }
+  .es-welcome-tab-text {
+    writing-mode: vertical-rl;
+    rotate: 180deg; /* lê-se de baixo para cima */
+    gap: 8px;
+  }
+  .es-welcome-tab-text strong {
+    font-size: 16px;
+  }
+  .es-welcome-tab-text span {
+    display: inline;
+    font-size: 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .es-welcome-tab {
+    animation: none;
+  }
   .es-welcome-backdrop,
   .es-welcome-lift,
   .es-welcome-cta {

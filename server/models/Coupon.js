@@ -15,10 +15,12 @@
 //     O desconto incide APENAS sobre os itens elegíveis do carrinho.
 //   • stackWithPix  : permite acumular com o desconto PIX (10%)
 //   • firstOrderOnly: apenas clientes sem pedido pago anterior
-//   • welcomeOffer  : cupom de boas-vindas — é o que o modal do site
-//                     anuncia ("Cadastre e ganhe X% OFF") e só é aceito
-//                     para clientes LOGADOS (cadastrados). Só pode haver
-//                     um cupom com esta opção ligada.
+//   • welcomeOffer  : cupom de boas-vindas — é o que o modal e a aba do
+//                     site anunciam ("Cadastre e ganhe X% OFF"). Vale UMA
+//                     vez, na PRIMEIRA compra de um cadastro NOVO: exige
+//                     cliente logado e conta criada depois deste cupom
+//                     (quem já tinha conta não tem direito). Só pode
+//                     haver um cupom com esta opção ligada.
 //   • usageCount    : contador atómico (reservado na criação do pedido,
 //                     libertado se o pagamento for cancelado/recusado)
 // ═══════════════════════════════════════════════════════════════════════

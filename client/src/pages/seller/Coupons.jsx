@@ -8,8 +8,8 @@
 // escopo por categoria (group) ou subcategoria (category), acumular
 // com PIX, apenas primeira compra.
 // 🎁 Cupom de boas-vindas: o cupom com essa opção ligada é o que o modal
-// do site anuncia ("Cadastre e ganhe X% OFF") e só vale para clientes
-// logados. Desativar o cupom desliga o modal.
+// e a aba do site anunciam ("Cadastre e ganhe X% OFF"). Vale uma vez, na
+// primeira compra de um cadastro novo. Desativar o cupom desliga ambos.
 // ═══════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -967,7 +967,7 @@ const Coupons = () => {
                   {
                     k: 'welcomeOffer',
                     label: '🎁 Cupom de boas-vindas (modal do site)',
-                    hint: 'O modal “Cadastre e ganhe” do site anuncia este cupom e só clientes cadastrados (logados) podem usá-lo. Só um cupom pode ter esta opção; com o cupom desativado o modal não aparece.',
+                    hint: 'O modal e a aba “Cadastre e ganhe” do site anunciam este cupom. Vale uma única vez, na primeira compra de quem criar conta depois de este cupom existir (quem já tinha conta não tem direito). Só um cupom pode ter esta opção; com o cupom desativado o modal e a aba não aparecem.',
                   },
                   {
                     k: 'isActive',
