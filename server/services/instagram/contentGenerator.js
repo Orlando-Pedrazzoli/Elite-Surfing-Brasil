@@ -8,7 +8,7 @@
 //
 // Modelos por env (com defaults):
 //   ANTHROPIC_MODEL       → geração principal (default: claude-sonnet-5-5)
-//   ANTHROPIC_MODEL_FAST  → reescritas (default: claude-haiku-4-5-20251001)
+//   ANTHROPIC_MODEL_FAST  → reescritas (default: claude-haiku-5-5)
 //
 // A chave ANTHROPIC_API_KEY é lida pelo SDK automaticamente.
 // ═══════════════════════════════════════════════════════════════════════
@@ -20,9 +20,10 @@ import {
   PROMPT_VERSION,
 } from '../../prompts/instagram/index.js';
 import { HUMANIZER } from '../../prompts/instagram/knowledge.js';
+import { TOOL_CHOICE_AUTO, toolInstruction, extractToolInput } from './structuredOutput.js';
 
 const MODEL_MAIN = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
-const MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-haiku-4-5-20251001';
+const MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-haiku-5-5';
 
 let client = null;
 const getClient = () => {
@@ -137,21 +138,19 @@ export const generateContent = async (input, settings) => {
     model: MODEL_MAIN,
     max_tokens: 4000,
     temperature: 0.8,
-    system,
+    system: system + toolInstruction(OUTPUT_TOOL.name),
     tools: [OUTPUT_TOOL],
-    tool_choice: { type: 'tool', name: OUTPUT_TOOL.name },
+    tool_choice: TOOL_CHOICE_AUTO,
     messages: [{ role: 'user', content: user }],
   });
 
-  const toolBlock = response.content.find(
-    b => b.type === 'tool_use' && b.name === OUTPUT_TOOL.name,
-  );
-  if (!toolBlock) {
+  const raw = extractToolInput(response, OUTPUT_TOOL.name);
+  if (!raw) {
     throw new Error('A IA não devolveu conteúdo estruturado. Tente novamente.');
   }
 
   return {
-    content: normalizeOutput(toolBlock.input),
+    content: normalizeOutput(raw),
     generation: {
       model: MODEL_MAIN,
       promptVersion: PROMPT_VERSION,

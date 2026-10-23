@@ -19,6 +19,7 @@ import SocialPlan from '../../models/SocialPlan.js';
 import SocialSettings from '../../models/SocialSettings.js';
 import { getPerformanceHints } from './analyticsService.js';
 import { HOOK_FORMULAS, ALGORITHM } from '../../prompts/instagram/knowledge.js';
+import { TOOL_CHOICE_AUTO, toolInstruction, extractToolInput } from './structuredOutput.js';
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 const DAY = 24 * 60 * 60 * 1000;
@@ -199,13 +200,14 @@ ${wsl.length ? wsl.map(e => `- id=${e._id} · Etapa ${e.stop} ${e.event} (${e.lo
     model: MODEL,
     max_tokens: 2500,
     temperature: 0.7,
-    system,
+    system: system + toolInstruction(PLAN_TOOL.name),
     tools: [PLAN_TOOL],
-    tool_choice: { type: 'tool', name: PLAN_TOOL.name },
+    tool_choice: TOOL_CHOICE_AUTO,
     messages: [{ role: 'user', content: user }],
   });
-  const block = response.content.find(b => b.type === 'tool_use' && b.name === PLAN_TOOL.name);
-  if (!block) throw new Error('A IA não devolveu um plano estruturado.');
+  const planInput = extractToolInput(response, PLAN_TOOL.name);
+  if (!planInput) throw new Error('A IA não devolveu um plano estruturado.');
+  const block = { input: planInput };
 
   const candidateMap = new Map(candidates.map(c => [String(c._id), c]));
   const wslIds = new Set(wsl.map(e => String(e._id)));
