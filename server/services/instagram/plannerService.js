@@ -199,7 +199,6 @@ ${wsl.length ? wsl.map(e => `- id=${e._id} · Etapa ${e.stop} ${e.event} (${e.lo
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 2500,
-    temperature: 0.7,
     system: system + toolInstruction(PLAN_TOOL.name),
     tools: [PLAN_TOOL],
     tool_choice: TOOL_CHOICE_AUTO,

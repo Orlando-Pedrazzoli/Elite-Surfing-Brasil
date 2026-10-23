@@ -137,7 +137,6 @@ export const generateContent = async (input, settings) => {
   const response = await anthropic.messages.create({
     model: MODEL_MAIN,
     max_tokens: 4000,
-    temperature: 0.8,
     system: system + toolInstruction(OUTPUT_TOOL.name),
     tools: [OUTPUT_TOOL],
     tool_choice: TOOL_CHOICE_AUTO,
@@ -182,7 +181,6 @@ export const rewriteText = async (text, mode = 'humanize', settings) => {
   const response = await anthropic.messages.create({
     model: MODEL_FAST,
     max_tokens: 1500,
-    temperature: 0.4,
     system: `Você edita legendas de Instagram da Elite Surfing (acessórios de surf, Brasil), em português do Brasil.
 Tom da marca: ${voice.tone || 'direto, de surfista para surfista'}.
 Palavras proibidas: ${(voice.bannedWords || []).join(', ') || '—'}.
