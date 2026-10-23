@@ -14,7 +14,8 @@
 //   2) GET  /{container-id}?fields=status_code  (vídeo: aguardar FINISHED)
 //   3) POST /{ig-user-id}/media_publish    → media id
 //
-// Env: META_APP_ID, META_APP_SECRET, META_REDIRECT_URI, META_GRAPH_VERSION
+// Env: META_APP_ID, META_APP_SECRET, META_REDIRECT_URI, META_GRAPH_VERSION,
+//      META_LOGIN_CONFIG_ID (opcional — Facebook Login for Business)
 // ═══════════════════════════════════════════════════════════════════════
 import axios from 'axios';
 import crypto from 'crypto';
@@ -119,14 +120,21 @@ const withAuth = (token, params = {}) => ({
 // ─────────────────────────────────────────────────────────────────────
 // OAuth
 // ─────────────────────────────────────────────────────────────────────
+// Apps do tipo "Empresa" usam o "Facebook Login for Business", cujo diálogo
+// recebe o `config_id` de uma configuração criada no painel da app (com as
+// permissões lá definidas) em vez de `scope`. Se META_LOGIN_CONFIG_ID estiver
+// definido usamos esse fluxo; caso contrário o Facebook Login clássico.
 export const buildLoginUrl = state => {
   requireConfig();
+  const configId = process.env.META_LOGIN_CONFIG_ID;
   const params = new URLSearchParams({
     client_id: process.env.META_APP_ID,
     redirect_uri: process.env.META_REDIRECT_URI,
     state,
-    scope: META_SCOPES.join(','),
     response_type: 'code',
+    ...(configId
+      ? { config_id: configId, override_default_response_type: 'true' }
+      : { scope: META_SCOPES.join(',') }),
   });
   return `${FB_DIALOG}?${params.toString()}`;
 };
