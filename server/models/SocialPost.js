@@ -92,7 +92,7 @@ const socialPostSchema = new mongoose.Schema(
 
     // ─── Origem do conteúdo ────────────────────────────────────────
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-    coupon: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', default: null },
+    coupon: { type: mongoose.Schema.Types.ObjectId, ref: 'coupon', default: null },
     wslEvent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'WslEvent',
