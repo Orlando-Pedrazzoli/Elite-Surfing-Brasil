@@ -47,10 +47,11 @@ const socialSettingsSchema = new mongoose.Schema(
       },
       emojiLevel: { type: String, enum: EMOJI_LEVELS, default: 'low' },
       ctaStyle: { type: String, enum: CTA_STYLES, default: 'direct' },
-      // Hashtags de marca sempre elegíveis (a IA escolhe 1–2 destas + nicho)
+      // Hashtags de marca extra, elegíveis para a IA. O bloco fixo que
+      // entra em todo post vive em services/instagram/hashtagPolicy.js.
       baseHashtags: {
         type: [String],
-        default: ['elitesurfing', 'surfbrasil', 'acessoriosdesurf'],
+        default: ['acessoriosdesurf', 'leashdesurf', 'deckdesurf', 'capadeprancha'],
       },
       // Assinatura/handle
       handle: { type: String, default: '@elitesurfing' },

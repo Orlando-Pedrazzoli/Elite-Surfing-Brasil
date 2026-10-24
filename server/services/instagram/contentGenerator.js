@@ -21,6 +21,7 @@ import {
 } from '../../prompts/instagram/index.js';
 import { HUMANIZER } from '../../prompts/instagram/knowledge.js';
 import { TOOL_CHOICE_AUTO, toolInstruction, extractToolInput } from './structuredOutput.js';
+import { withMandatoryHashtags } from './hashtagPolicy.js';
 
 const MODEL_MAIN = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 const MODEL_FAST = process.env.ANTHROPIC_MODEL_FAST || 'claude-haiku-5-5';
@@ -62,9 +63,11 @@ const normalizeOutput = raw => {
     let hook = String(v.hook || '').trim();
     // Se a IA não deu hook, usa o início da legenda
     if (!hook) hook = caption.slice(0, 125);
-    const hashtags = [...new Set((v.hashtags || []).map(cleanHashtag))]
+    // 3–5 de nicho escolhidas pela IA + bloco fixo da marca (hashtagPolicy)
+    const niche = [...new Set((v.hashtags || []).map(cleanHashtag))]
       .filter(Boolean)
       .slice(0, 5);
+    const hashtags = withMandatoryHashtags(niche);
     return {
       hook,
       caption,

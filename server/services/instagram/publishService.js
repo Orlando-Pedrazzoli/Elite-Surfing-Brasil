@@ -20,6 +20,7 @@ import SocialPost from '../../models/SocialPost.js';
 import SocialSettings from '../../models/SocialSettings.js';
 import { decrypt } from '../../utils/secretBox.js';
 import * as meta from './metaGraphService.js';
+import { withMandatoryHashtags } from './hashtagPolicy.js';
 
 const MAX_ATTEMPTS = 3;
 const STALE_PUBLISHING_MINUTES = 60;
@@ -79,7 +80,9 @@ export const validateMediaForType = (type, media = []) => {
 };
 
 const buildCaption = post => {
-  const tags = (post.hashtags || []).map(h => `#${String(h).replace(/^#+/, '')}`);
+  // O bloco fixo da marca entra sempre, mesmo que o admin o tenha removido
+  // no editor ou o post seja antigo (hashtagPolicy)
+  const tags = withMandatoryHashtags(post.hashtags || []).map(h => `#${h}`);
   const text = [String(post.caption || '').trim(), tags.join(' ')].filter(Boolean).join('\n\n');
   return text.slice(0, 2200);
 };

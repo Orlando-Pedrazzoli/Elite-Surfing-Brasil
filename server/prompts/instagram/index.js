@@ -11,9 +11,10 @@
 // ═══════════════════════════════════════════════════════════════════════
 import { HOOK_FORMULAS, ALGORITHM, HASHTAGS, HUMANIZER } from './knowledge.js';
 import { FORMAT_INSTRUCTIONS, GOAL_INSTRUCTIONS } from './formats.js';
+import { MANDATORY_HASHTAGS } from '../../services/instagram/hashtagPolicy.js';
 
 // Subir quando o conteúdo dos prompts muda de forma relevante
-export const PROMPT_VERSION = 'ig-v1.0';
+export const PROMPT_VERSION = 'ig-v1.1';
 
 const formatBRL = value =>
   Number(value).toLocaleString('pt-BR', {
@@ -51,7 +52,9 @@ Brasil, para surfistas, e cada conteúdo tem de ser publicável sem edição.
 - Palavras proibidas (nunca usar): ${(voice.bannedWords || []).join(', ') || '—'}
 - Nível de emoji: ${emojiLevel}
 - Estilo de CTA: ${ctaStyleText}
-- Hashtags de marca elegíveis (usar 1–2 como vaga de nicho): ${(voice.baseHashtags || []).map(h => `#${h}`).join(' ') || '—'}
+- Bloco fixo de hashtags da marca, acrescentado AUTOMATICAMENTE a todo post
+  (não repetir nenhuma destas): ${MANDATORY_HASHTAGS.map(h => `#${h}`).join(' ')}
+- Outras hashtags de marca elegíveis: ${(voice.baseHashtags || []).map(h => `#${h}`).join(' ') || '—'}
 
 ${HOOK_FORMULAS}
 
@@ -223,7 +226,7 @@ export const OUTPUT_TOOL = {
               type: 'array',
               maxItems: 5,
               items: { type: 'string' },
-              description: '3–5 hashtags sem "#", minúsculas, sem acento.',
+              description: '3–5 hashtags de NICHO específicas deste conteúdo, sem "#", minúsculas, sem acento. Não incluir o bloco fixo da marca (é acrescentado pelo sistema).',
             },
             whyItWorks: { type: 'string' },
           },

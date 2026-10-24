@@ -17,6 +17,12 @@ import VideoUploader from '../../components/social/VideoUploader';
 import PublishPanel from '../../components/social/PublishPanel';
 import ProductPicker from '../../components/social/ProductPicker';
 import {
+  MANDATORY_HASHTAGS,
+  NICHE_SLOTS,
+  isMandatoryHashtag,
+  withMandatoryHashtags,
+} from '../../utils/hashtagPolicy';
+import {
   POST_TYPES,
   POST_GOALS,
   STATUS_META,
@@ -42,6 +48,7 @@ import {
   Image as ImageIcon,
   Settings,
   History,
+  Lock,
 } from 'lucide-react';
 
 const MAX_PRODUCTS = 5;
@@ -57,7 +64,8 @@ const REWRITE_ACTIONS = [
 const toDraft = post => ({
   caption: post.caption || '',
   cta: post.cta || '',
-  hashtags: post.hashtags || [],
+  // Bloco fixo da marca garantido também em posts antigos
+  hashtags: withMandatoryHashtags(post.hashtags || []),
   selectedVariant: post.selectedVariant ?? 0,
   slides: (post.slides || []).map(s => ({ ...s })),
   reelScript: post.reelScript
@@ -223,7 +231,7 @@ const InstagramStudio = () => {
       selectedVariant: idx,
       caption: v.caption,
       cta: v.cta,
-      hashtags: v.hashtags || [],
+      hashtags: withMandatoryHashtags(v.hashtags || []),
     });
   };
 
@@ -240,12 +248,19 @@ const InstagramStudio = () => {
           .replace(/[^a-z0-9_]/g, ''),
       )
       .filter(Boolean);
-    updateDraft({ hashtags: [...new Set([...draft.hashtags, ...tags])].slice(0, 30) });
+    const niche = draft.hashtags.filter(t => !isMandatoryHashtag(t));
+    const merged = [...new Set([...niche, ...tags])].filter(t => !isMandatoryHashtag(t));
+    if (merged.length > NICHE_SLOTS) {
+      toast(`Máximo de ${NICHE_SLOTS} hashtags além do bloco fixo (limite de 30 no Instagram)`, { icon: 'ℹ️' });
+    }
+    updateDraft({ hashtags: withMandatoryHashtags(merged) });
     setHashtagInput('');
   };
 
-  const removeHashtag = tag =>
+  const removeHashtag = tag => {
+    if (isMandatoryHashtag(tag)) return; // bloco fixo não se remove
     updateDraft({ hashtags: draft.hashtags.filter(t => t !== tag) });
+  };
 
   const rewrite = async mode => {
     if (!draft.caption.trim() || rewriting) return;
@@ -625,18 +640,29 @@ const InstagramStudio = () => {
                   {/* Hashtags */}
                   <div>
                     <p className='text-xs font-semibold text-gray-600 mb-2'>
-                      Hashtags ({draft.hashtags.length}) — 3 a 5 dimensionadas
+                      Hashtags ({draft.hashtags.length}/30) —{' '}
+                      {draft.hashtags.filter(t => !isMandatoryHashtag(t)).length} de nicho +{' '}
+                      {MANDATORY_HASHTAGS.length} fixas da marca
                     </p>
                     <div className='flex flex-wrap gap-2 mb-2'>
-                      {draft.hashtags.map(tag => (
+                      {draft.hashtags.filter(t => !isMandatoryHashtag(t)).map(tag => (
                         <span
                           key={tag}
                           className='inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-800 text-xs rounded-full font-medium'
                         >
                           #{tag}
-                          <button type='button' onClick={() => removeHashtag(tag)}>
+                          <button type='button' onClick={() => removeHashtag(tag)} aria-label='Remover'>
                             <X className='w-3 h-3' />
                           </button>
+                        </span>
+                      ))}
+                      {draft.hashtags.filter(isMandatoryHashtag).map(tag => (
+                        <span
+                          key={tag}
+                          title='Hashtag fixa da marca — entra em todas as publicações'
+                          className='inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full'
+                        >
+                          <Lock className='w-3 h-3 opacity-60' />#{tag}
                         </span>
                       ))}
                     </div>

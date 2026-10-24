@@ -161,22 +161,24 @@ export const HASHTAGS = `
 rótulos de tema que ajudam o Instagram a categorizar o post; o alcance vem de
 envios, salvamentos e recomendação.
 
-Receita (3–5 no total):
-- 2–3 de NICHO (< 50k posts): onde uma conta pequena/média realmente ranqueia
-  e fica visível por horas. Ex.: #leashdesurf, #deckdesurf, #capadeprancha,
-  #quilhasdesurf, #surfrj, #surfsaquarema, #longboardbrasil.
-- 1–2 MÉDIAS (50k–500k): o subtema reconhecível. Ex.: #surfbrasil,
-  #surfistas, #pranchadesurf, #surftrip.
-- 0–1 AMPLA (> 500k): só se encaixa como rótulo. Ex.: #surf, #surfing.
-  Se nada encaixa, pular.
+Na Elite Surfing, o bloco fixo da marca (listado na voz da marca) já cobre
+as hashtags médias e amplas (#surf, #surfing, #surfbrasil, #surftrip...) e
+é acrescentado pelo sistema em todo post. A tua tarefa é só a parte de NICHO:
+
+Receita (3–5, todas de nicho, nenhuma do bloco fixo):
+- Hashtags < 50k posts que descrevem ESTE conteúdo: onde uma conta
+  pequena/média realmente ranqueia. Ex.: #leashdesurf, #deckdesurf,
+  #capadeprancha, #quilhasdesurf, #surfrj, #surfsaquarema, #longboardbrasil,
+  #sarcofagodeprancha, #bodyboardbrasil, #supbrasil.
+- Pelo menos uma ligada ao produto/categoria e uma ao contexto (local,
+  evento WSL, campanha), quando existirem.
 
 Regras:
 - Toda hashtag descreve o conteúdo real do post. Tag popular fora do tema
   ensina o algoritmo a mostrar o post para as pessoas erradas.
 - Ir no fim da legenda (ou primeiro comentário). Nunca no meio de frase.
-- Não repetir o mesmo bloco de 5 tags em todos os posts (parece automação).
-  Rotacionar por tema.
-- Hashtag de marca (ex.: #elitesurfing) conta como uma vaga de nicho.
+- Variar as hashtags de nicho de post para post, por tema (o bloco fixo
+  da marca é decisão do admin e repete-se; o nicho não).
 - Nunca #follow4follow, #like4like e afins.
 - Escrever sem acento e sem espaço, tudo minúsculo, sem o "#" no campo
   estruturado (o front adiciona).

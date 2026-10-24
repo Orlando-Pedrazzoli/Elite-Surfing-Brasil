@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../../context/AppContext';
+import { MANDATORY_HASHTAGS } from '../../utils/hashtagPolicy';
 import {
   Save,
   Instagram,
@@ -447,13 +448,30 @@ const InstagramSettings = () => {
             placeholder='ex: imperdível'
           />
 
+          <div className='rounded-lg border border-gray-200 bg-gray-50 p-3'>
+            <p className='text-xs font-semibold text-gray-700 mb-1'>
+              Bloco fixo em todas as publicações ({MANDATORY_HASHTAGS.length})
+            </p>
+            <p className='text-[11px] text-gray-500 mb-2'>
+              Entra automaticamente em todo post, story e reel. Para alterar, editar{' '}
+              <code>hashtagPolicy.js</code> (servidor e cliente).
+            </p>
+            <div className='flex flex-wrap gap-1.5'>
+              {MANDATORY_HASHTAGS.map(h => (
+                <span key={h} className='px-2 py-0.5 rounded-full bg-white border border-gray-200 text-xs text-gray-700'>
+                  #{h}
+                </span>
+              ))}
+            </div>
+          </div>
+
           <ChipList
-            label='Hashtags de marca'
-            hint='Sempre elegíveis; a IA usa 1–2 como vaga de nicho'
+            label='Hashtags de marca extra'
+            hint='Elegíveis para a IA como hashtag de nicho, além do bloco fixo'
             items={v.baseHashtags || []}
             onChange={baseHashtags => setVoice({ baseHashtags })}
             prefix='#'
-            placeholder='ex: elitesurfing'
+            placeholder='ex: leashdesurf'
           />
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
