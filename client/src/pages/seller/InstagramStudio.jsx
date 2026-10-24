@@ -15,6 +15,7 @@ import { useAppContext } from '../../context/AppContext';
 import PostPreview from '../../components/social/PostPreview';
 import VideoUploader from '../../components/social/VideoUploader';
 import PublishPanel from '../../components/social/PublishPanel';
+import ProductPicker from '../../components/social/ProductPicker';
 import {
   POST_TYPES,
   POST_GOALS,
@@ -28,7 +29,6 @@ import {
 } from '../../utils/socialUtils';
 import {
   Sparkles,
-  Search,
   X,
   Check,
   Copy,
@@ -87,7 +87,6 @@ const InstagramStudio = () => {
   const [wslEventId, setWslEventId] = useState('');
   const [context, setContext] = useState('');
   const [campaign, setCampaign] = useState('');
-  const [productSearch, setProductSearch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // ─── Passo 2: editor ───────────────────────────────────────────
@@ -157,21 +156,8 @@ const InstagramStudio = () => {
   // ═══════════════════════════════════════════════════════════════
   // Passo 1 — seleção
   // ═══════════════════════════════════════════════════════════════
-  const filteredProducts = useMemo(() => {
-    const q = productSearch.trim().toLowerCase();
-    const list = sources.products;
-    if (!q) return list.slice(0, 40);
-    return list
-      .filter(
-        p =>
-          p.name?.toLowerCase().includes(q) ||
-          p.sku?.toLowerCase().includes(q) ||
-          p.category?.toLowerCase().includes(q) ||
-          p.color?.toLowerCase().includes(q),
-      )
-      .slice(0, 40);
-  }, [sources.products, productSearch]);
-
+  // A grelha, filtros e busca vivem em <ProductPicker /> (todas as famílias,
+  // sem corte de 40 itens)
   const selectedProducts = useMemo(
     () => selectedIds.map(id => sources.products.find(p => p._id === id)).filter(Boolean),
     [selectedIds, sources.products],
@@ -481,9 +467,7 @@ const InstagramStudio = () => {
             setType={setType}
             goal={goal}
             setGoal={setGoal}
-            productSearch={productSearch}
-            setProductSearch={setProductSearch}
-            filteredProducts={filteredProducts}
+            products={sources.products}
             selectedIds={selectedIds}
             selectedProducts={selectedProducts}
             toggleProduct={toggleProduct}
@@ -873,9 +857,7 @@ const Briefing = ({
   setType,
   goal,
   setGoal,
-  productSearch,
-  setProductSearch,
-  filteredProducts,
+  products,
   selectedIds,
   selectedProducts,
   toggleProduct,
@@ -952,58 +934,12 @@ const Briefing = ({
           </p>
           <span className='text-xs text-gray-500'>{selectedIds.length} selecionado(s)</span>
         </div>
-        <div className='relative mb-3'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' />
-          <input
-            value={productSearch}
-            onChange={e => setProductSearch(e.target.value)}
-            placeholder='Buscar por nome, SKU, categoria, cor...'
-            className='w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:border-primary outline-none'
-          />
-        </div>
-        <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[340px] overflow-y-auto pr-1'>
-          {filteredProducts.map(p => {
-            const selected = selectedIds.includes(p._id);
-            return (
-              <button
-                key={p._id}
-                type='button'
-                onClick={() => toggleProduct(p._id)}
-                className={`relative text-left rounded-lg border-2 overflow-hidden transition-all ${
-                  selected ? 'border-pink-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className='aspect-square bg-white'>
-                  <img src={p.image?.[0]} alt={p.name} className='w-full h-full object-contain p-1' />
-                </div>
-                <div className='p-2'>
-                  <p className='text-xs font-medium text-gray-900 line-clamp-2 leading-snug'>{p.name}</p>
-                  <p className='text-[11px] text-gray-500 mt-0.5'>
-                    R$ {Number(p.offerPrice).toFixed(2).replace('.', ',')}
-                    {p.stock !== undefined && (
-                      <span className={`ml-1 ${p.stock === 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                        · {p.stock} un
-                      </span>
-                    )}
-                  </p>
-                </div>
-                {selected && (
-                  <span className='absolute top-1.5 right-1.5 w-5 h-5 bg-pink-500 text-white rounded-full flex items-center justify-center'>
-                    <Check className='w-3 h-3' />
-                  </span>
-                )}
-                {!p.inStock && (
-                  <span className='absolute top-1.5 left-1.5 bg-gray-700 text-white text-[9px] font-bold px-1.5 rounded'>
-                    RASCUNHO
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          {filteredProducts.length === 0 && (
-            <p className='col-span-full text-sm text-gray-400 py-6 text-center'>Nenhum produto</p>
-          )}
-        </div>
+        <ProductPicker
+          products={products}
+          selectedIds={selectedIds}
+          onToggle={toggleProduct}
+          max={MAX_PRODUCTS}
+        />
       </div>
 
       {/* Extras */}
