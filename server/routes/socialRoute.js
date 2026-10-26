@@ -42,6 +42,14 @@ import {
 
 const socialRouter = express.Router();
 
+import {
+  listCaptionTemplates,
+  createCaptionTemplate,
+  updateCaptionTemplate,
+  deleteCaptionTemplate,
+  postFromTemplate,
+} from '../controllers/captionTemplateController.js';
+
 // 🛡️ A geração custa dinheiro (tokens) — limita a 20 gerações/min por IP
 // mesmo com sessão de seller válida (protege contra loops no front).
 const aiLimiter = rateLimit({
@@ -82,6 +90,13 @@ socialRouter.post('/media/sign-upload', signUpload);
 socialRouter.post('/media/register', registerUploadedMedia);
 
 socialRouter.post('/generate', aiLimiter, generate);
+
+// Legendas pré-definidas (biblioteca do admin)
+socialRouter.get('/caption-templates', listCaptionTemplates);
+socialRouter.post('/caption-templates', createCaptionTemplate);
+socialRouter.put('/caption-templates/:id', updateCaptionTemplate);
+socialRouter.delete('/caption-templates/:id', deleteCaptionTemplate);
+socialRouter.post('/posts/from-template', postFromTemplate);
 socialRouter.post('/rewrite', aiLimiter, rewrite);
 
 socialRouter.get('/posts', listPosts);

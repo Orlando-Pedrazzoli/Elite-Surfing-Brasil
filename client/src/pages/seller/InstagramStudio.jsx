@@ -16,6 +16,7 @@ import PostPreview from '../../components/social/PostPreview';
 import VideoUploader from '../../components/social/VideoUploader';
 import PublishPanel from '../../components/social/PublishPanel';
 import ProductPicker from '../../components/social/ProductPicker';
+import CaptionTemplatePicker from '../../components/social/CaptionTemplatePicker';
 import {
   MANDATORY_HASHTAGS,
   NICHE_SLOTS,
@@ -211,6 +212,34 @@ const InstagramStudio = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Erro ao gerar conteúdo');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Post direto a partir de uma legenda pré-definida (sem IA)
+  const useTemplate = async template => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    try {
+      const { data } = await axios.post('/api/social/posts/from-template', {
+        templateId: template._id,
+        type,
+        goal,
+        productIds: selectedIds,
+        couponId: couponId || null,
+        wslEventId: wslEventId || null,
+        campaign,
+      });
+      if (data.success) {
+        openPost(data.post);
+        setSearchParams({ post: data.post._id });
+        toast.success(`Legenda "${template.name}" aplicada. Escolha as imagens e aprove.`);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao criar post');
     } finally {
       setIsGenerating(false);
     }
@@ -499,6 +528,7 @@ const InstagramStudio = () => {
             canGenerate={canGenerate}
             isGenerating={isGenerating}
             generate={generate}
+            useTemplate={useTemplate}
             variantCount={settings?.defaults?.variantCount || 3}
           />
         ) : (
@@ -900,6 +930,7 @@ const Briefing = ({
   canGenerate,
   isGenerating,
   generate,
+  useTemplate,
   variantCount,
 }) => (
   <div className='grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6'>
@@ -967,6 +998,15 @@ const Briefing = ({
           max={MAX_PRODUCTS}
         />
       </div>
+
+      {/* Legendas pré-definidas */}
+      <CaptionTemplatePicker
+        selectedProducts={selectedProducts}
+        type={type}
+        goal={goal}
+        onUse={useTemplate}
+        busy={isGenerating}
+      />
 
       {/* Extras */}
       <div className='bg-white rounded-xl border border-gray-200 p-4 space-y-4'>

@@ -14,6 +14,14 @@ import Coupon from '../../models/Coupon.js';
 import WslEvent from '../../models/WslEvent.js';
 import { generateContent, isGeneratorConfigured } from './contentGenerator.js';
 import { getPerformanceHints } from './analyticsService.js';
+import CaptionTemplate from '../../models/CaptionTemplate.js';
+import { withMandatoryHashtags } from './hashtagPolicy.js';
+import {
+  ensureCaptionTemplatesSeeded,
+  findTemplatesForGroups,
+  buildReferenceSection,
+  fillPlaceholders,
+} from './captionTemplateService.js';
 
 const SITE_URL = (process.env.SITE_URL || 'https://www.elitesurfing.com.br').replace(/\/$/, '');
 
@@ -96,6 +104,14 @@ export const createGeneratedPost = async briefing => {
     getPerformanceHints().catch(() => ''),
   ]);
 
+  // Legendas aprovadas pelo admin para as coleções destes produtos → a IA
+  // imita o tom (não copia)
+  await ensureCaptionTemplatesSeeded().catch(() => {});
+  const referenceTemplates = await findTemplatesForGroups(
+    products.map(p => p.group || p.category),
+  ).catch(() => []);
+  const referenceSection = buildReferenceSection(referenceTemplates);
+
   // Cria o post primeiro para ter o _id no link UTM
   const post = new SocialPost({
     type,
@@ -130,6 +146,7 @@ export const createGeneratedPost = async briefing => {
       wslEvent,
       context: fullContext,
       variantCount: count,
+      referenceSection,
     },
     settings,
   );
@@ -150,5 +167,86 @@ export const createGeneratedPost = async briefing => {
   post.utm = { campaign: campaignSlug, url: productsWithUrl[0]?.url || '' };
 
   await post.save();
+  return populatePost(post._id);
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Post a partir de uma legenda pré-definida (sem IA)
+// ─────────────────────────────────────────────────────────────────────
+/**
+ * @param {object} briefing { templateId, type, goal, productIds, couponId, wslEventId, campaign }
+ */
+export const createPostFromTemplate = async briefing => {
+  const {
+    templateId,
+    type = 'post',
+    goal = 'sell',
+    productIds = [],
+    couponId = null,
+    wslEventId = null,
+    campaign = '',
+  } = briefing || {};
+
+  if (!isValidId(templateId)) throw new BriefingError('Legenda inválida');
+  if (!SOCIAL_POST_TYPES.includes(type)) throw new BriefingError('Formato inválido');
+  if (!SOCIAL_POST_GOALS.includes(goal)) throw new BriefingError('Objetivo inválido');
+
+  const template = await CaptionTemplate.findById(templateId).lean();
+  if (!template || !template.isActive) throw new BriefingError('Legenda não encontrada');
+
+  const ids = (Array.isArray(productIds) ? productIds : []).filter(isValidId).slice(0, 5);
+  const [products, coupon, wslEvent] = await Promise.all([
+    ids.length ? Product.find({ _id: { $in: ids } }).lean() : [],
+    isValidId(couponId) ? Coupon.findById(couponId).lean() : null,
+    isValidId(wslEventId) ? WslEvent.findById(wslEventId).lean() : null,
+  ]);
+
+  const post = new SocialPost({
+    type,
+    goal,
+    products: products.map(p => p._id),
+    coupon: coupon?._id || null,
+    wslEvent: wslEvent?._id || null,
+    context: `Legenda pré-definida: ${template.name}`,
+    status: 'draft',
+  });
+
+  const campaignSlug = slugify(campaign) || `${goal}-${type}`;
+  const first = products[0] || null;
+  const url = first ? buildProductUrl(first, campaignSlug, post._id) : '';
+  const caption = fillPlaceholders(template.caption, { product: first, url });
+  const hashtags = withMandatoryHashtags(template.hashtags || []);
+  const hook = caption.split('\n')[0].slice(0, 125);
+
+  post.formula = `template:${template.angle}`;
+  post.variants = [
+    {
+      hook,
+      caption,
+      cta: '',
+      hashtags,
+      whyItWorks: `Legenda aprovada pelo admin (${template.name}).`,
+    },
+  ];
+  post.selectedVariant = 0;
+  post.hook = hook;
+  post.caption = caption;
+  post.cta = '';
+  post.hashtags = hashtags;
+  post.slides = [];
+  post.reelScript = null;
+  post.stories = [];
+  post.mediaGuidance = template.usage || '';
+  post.generation = {
+    model: 'template',
+    promptVersion: `template:${template._id}`,
+    inputTokens: 0,
+    outputTokens: 0,
+    generatedAt: new Date(),
+  };
+  post.utm = { campaign: campaignSlug, url };
+
+  await post.save();
+  await CaptionTemplate.updateOne({ _id: template._id }, { $inc: { usageCount: 1 } }).catch(() => {});
   return populatePost(post._id);
 };

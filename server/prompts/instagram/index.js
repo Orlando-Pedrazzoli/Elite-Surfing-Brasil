@@ -12,9 +12,10 @@
 import { HOOK_FORMULAS, ALGORITHM, HASHTAGS, HUMANIZER } from './knowledge.js';
 import { FORMAT_INSTRUCTIONS, GOAL_INSTRUCTIONS } from './formats.js';
 import { MANDATORY_HASHTAGS } from '../../services/instagram/hashtagPolicy.js';
+import { CAPTION_STYLE_RULES } from '../../services/instagram/captionTemplateService.js';
 
 // Subir quando o conteúdo dos prompts muda de forma relevante
-export const PROMPT_VERSION = 'ig-v1.1';
+export const PROMPT_VERSION = 'ig-v1.2';
 
 const formatBRL = value =>
   Number(value).toLocaleString('pt-BR', {
@@ -55,6 +56,8 @@ Brasil, para surfistas, e cada conteúdo tem de ser publicável sem edição.
 - Bloco fixo de hashtags da marca, acrescentado AUTOMATICAMENTE a todo post
   (não repetir nenhuma destas): ${MANDATORY_HASHTAGS.map(h => `#${h}`).join(' ')}
 - Outras hashtags de marca elegíveis: ${(voice.baseHashtags || []).map(h => `#${h}`).join(' ') || '—'}
+
+${CAPTION_STYLE_RULES}
 
 ${HOOK_FORMULAS}
 
@@ -166,6 +169,7 @@ export const buildUserPrompt = ({
   wslEvent = null,
   context = '',
   variantCount = 3,
+  referenceSection = '',
 }) => {
   const sections = [];
 
@@ -184,6 +188,7 @@ export const buildUserPrompt = ({
   if (context && context.trim()) {
     sections.push(`# Briefing do admin\n${context.trim()}`);
   }
+  if (referenceSection) sections.push(referenceSection);
 
   return sections.join('\n\n');
 };

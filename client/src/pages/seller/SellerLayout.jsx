@@ -22,6 +22,7 @@ import {
   BarChart3,
   FileSpreadsheet,
   Images,
+  Quote,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -95,6 +96,11 @@ const SellerLayout = () => {
       name: 'Planejador',
       path: '/seller/instagram/planner',
       icon: CalendarDays,
+    },
+    {
+      name: 'Legendas',
+      path: '/seller/instagram/captions',
+      icon: Quote,
     },
     {
       name: 'Análise',

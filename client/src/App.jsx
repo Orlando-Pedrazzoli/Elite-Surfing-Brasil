@@ -61,6 +61,7 @@ import InstagramPosts from './pages/seller/InstagramPosts';
 import InstagramSettings from './pages/seller/InstagramSettings';
 import InstagramAnalytics from './pages/seller/InstagramAnalytics';
 import InstagramPlanner from './pages/seller/InstagramPlanner';
+import InstagramCaptions from './pages/seller/InstagramCaptions';
 
 // ✅ Importa o CookieConsent
 import CookieConsent from 'react-cookie-consent';
@@ -199,6 +200,7 @@ const App = () => {
             <Route path='instagram/settings' element={<InstagramSettings />} />
             <Route path='instagram/analytics' element={<InstagramAnalytics />} />
             <Route path='instagram/planner' element={<InstagramPlanner />} />
+            <Route path='instagram/captions' element={<InstagramCaptions />} />
             <Route path='blog' element={<BlogManager />} />
             <Route path='/seller/wsl' element={<WslManager />} />
             {/* ─── Vendas Diretas ─── */}
