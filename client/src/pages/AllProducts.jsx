@@ -1,14 +1,33 @@
+// client/src/pages/AllProducts.jsx
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { searchProducts } from '../utils/productSearch';
 import ProductCard from '../components/ProductCard';
 import { categories, groups, getCategoriesByGroup } from '../assets/assets.js';
 import { SEO, BreadcrumbSchema } from '../components/seo';
 import seoConfig from '../components/seo/seoConfig';
-import { ChevronDown, SlidersHorizontal, LayoutGrid, Rows3 } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X } from 'lucide-react';
 
 const AllProducts = () => {
-  const { products, searchQuery, fetchProducts, clearSearchQuery } =
-    useAppContext();
+  const { products, fetchProducts, setSearchQuery } = useAppContext();
+
+  // 🔎 O termo de busca vive na URL (/products?q=termo): dá para partilhar,
+  // recarregar e voltar atrás. O contexto é só espelho para quem ainda o lê.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = (searchParams.get('q') || '').trim();
+
+  useEffect(() => {
+    setSearchQuery(searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const clearSearchQuery = () => {
+    if (!searchParams.has('q')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedGroups, setSelectedGroups] = useState([]);
@@ -23,37 +42,15 @@ const AllProducts = () => {
   }, [products, fetchProducts]);
 
   useEffect(() => {
-    let currentResult = [...products];
+    const hasSearch = searchQuery.length > 0;
 
-    // Filtrar apenas produtos principais (isMainVariant !== false)
-    currentResult = currentResult.filter(product => product.isMainVariant !== false);
-
-    // Apply search filter if search query exists
-    if (
-      searchQuery &&
-      typeof searchQuery === 'string' &&
-      searchQuery.length > 0
-    ) {
-      const lowerCaseSearchQuery = searchQuery.toLowerCase();
-      currentResult = currentResult.filter(product => {
-        const nameMatch =
-          product.name && typeof product.name === 'string'
-            ? product.name.toLowerCase().includes(lowerCaseSearchQuery)
-            : false;
-
-        const descriptionMatch =
-          product.description && typeof product.description === 'string'
-            ? product.description.toLowerCase().includes(lowerCaseSearchQuery)
-            : false;
-
-        const colorMatch =
-          product.color && typeof product.color === 'string'
-            ? product.color.toLowerCase().includes(lowerCaseSearchQuery)
-            : false;
-
-        return nameMatch || descriptionMatch || colorMatch;
-      });
-    }
+    // Com busca: o motor partilhado com a navbar devolve os produtos
+    // principais já por ordem de relevância (ignora acentos, aceita
+    // sinónimos, disponíveis primeiro).
+    // Sem busca: lista completa dos produtos principais.
+    let currentResult = hasSearch
+      ? searchProducts(products, searchQuery)
+      : products.filter(product => product.isMainVariant !== false);
 
     // Apply group filter
     if (selectedGroups.length > 0) {
@@ -80,15 +77,13 @@ const AllProducts = () => {
       );
     }
 
-    // Ordenar: produtos disponíveis primeiro, indisponíveis no final
-    currentResult.sort((a, b) => {
-      const aAvailable = a.inStock && a.stock > 0;
-      const bAvailable = b.inStock && b.stock > 0;
-      
-      if (aAvailable === bAvailable) return 0;
-      return aAvailable ? -1 : 1;
-    });
+    if (hasSearch) {
+      // Mantém a ordem de relevância do motor de busca
+      setFilteredProducts(currentResult);
+      return;
+    }
 
+    // Sem busca: disponíveis primeiro (mais recentes no topo), esgotados no fim
     const availableProducts = currentResult.filter(p => p.inStock && p.stock > 0).reverse();
     const unavailableProducts = currentResult.filter(p => !p.inStock || p.stock <= 0).reverse();
     
@@ -104,8 +99,6 @@ const AllProducts = () => {
   };
 
   const handleGroupChange = (groupSlug) => {
-    clearSearchQuery();
-    
     const isSelected = selectedGroups.includes(groupSlug);
     
     if (isSelected) {
@@ -121,7 +114,6 @@ const AllProducts = () => {
   };
 
   const handleCategoryChange = (categoryPath, groupSlug) => {
-    clearSearchQuery();
     const lowerCaseCategoryPath = categoryPath.toLowerCase();
     
     setSelectedCategories(prev =>
@@ -298,11 +290,30 @@ const AllProducts = () => {
         <div className='hidden sm:flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8'>
           <div className='flex flex-col items-start w-max'>
             <h1 className='text-3xl sm:text-4xl font-bold text-gray-800'>
-              Produtos
+              {searchQuery ? 'Resultados da busca' : 'Produtos'}
             </h1>
             <div className='w-full h-1 bg-primary rounded-full mt-2'></div>
           </div>
         </div>
+
+        {/* 🔎 Resumo da busca (desktop e mobile) */}
+        {searchQuery && (
+          <div className='flex flex-wrap items-center gap-x-3 gap-y-2 mb-4 sm:mb-6'>
+            <p className='text-sm sm:text-base text-gray-600'>
+              {filteredProducts.length === 0
+                ? 'Nenhum resultado para '
+                : `${filteredProducts.length} resultado${filteredProducts.length === 1 ? '' : 's'} para `}
+              <span className='font-semibold text-gray-900'>“{searchQuery}”</span>
+            </p>
+            <button
+              onClick={clearSearchQuery}
+              className='inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors'
+            >
+              <X className='w-3.5 h-3.5' />
+              Limpar busca
+            </button>
+          </div>
+        )}
 
         <div className='flex flex-col md:flex-row gap-8'>
           {/* Filter Section for Desktop */}
@@ -416,9 +427,29 @@ const AllProducts = () => {
 
             {filteredProducts.length === 0 &&
             (searchQuery || totalActiveFilters > 0) ? (
-              <p className='text-gray-500 py-8 text-center text-lg'>
-                Nenhum produto encontrado para os filtros selecionados.
-              </p>
+              <div className='py-10 text-center'>
+                <p className='text-gray-700 text-lg font-medium'>
+                  {searchQuery
+                    ? `Nenhum produto encontrado para “${searchQuery}”.`
+                    : 'Nenhum produto encontrado para os filtros selecionados.'}
+                </p>
+                <p className='text-gray-500 text-sm mt-2'>
+                  {searchQuery
+                    ? 'Confira a ortografia ou tente um termo mais curto, como “deck”, “leash” ou “capa”.'
+                    : 'Tente remover alguns filtros.'}
+                </p>
+                {(searchQuery || totalActiveFilters > 0) && (
+                  <button
+                    onClick={() => {
+                      clearSearchQuery();
+                      clearAllFilters();
+                    }}
+                    className='mt-5 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dull transition-colors'
+                  >
+                    Ver todos os produtos
+                  </button>
+                )}
+              </div>
             ) : filteredProducts.length === 0 ? (
               <p className='text-gray-500 py-8 text-center text-lg'>
                 Nenhum produto disponível no momento.

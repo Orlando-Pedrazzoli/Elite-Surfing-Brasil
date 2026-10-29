@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { assets, groups, categories } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
+import { DesktopSearch, MobileSearch } from './SearchBar';
 
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO DOS LINKS DA NAVBAR
@@ -86,6 +87,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(null);
   const [mobileSubExpanded, setMobileSubExpanded] = useState(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const location = useLocation();
   const isHomepage = location.pathname === '/';
@@ -94,8 +96,6 @@ const Navbar = () => {
     user,
     setShowUserLogin,
     navigate,
-    setSearchQuery,
-    searchQuery,
     getCartCount,
     logoutUser,
     logoutSeller,
@@ -112,22 +112,10 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomepage]);
 
-  // Limpar search ao sair de /products
+  // Fecha a busca mobile ao mudar de página
   useEffect(() => {
-    const currentPath = window.location.pathname;
-    if (currentPath !== '/products' && !currentPath.startsWith('/products/')) {
-      if (searchQuery && searchQuery.length > 0) {
-        setSearchQuery('');
-      }
-    } else if (
-      currentPath.includes('/products/') &&
-      currentPath.split('/').length > 2
-    ) {
-      if (searchQuery && searchQuery.length > 0) {
-        setSearchQuery('');
-      }
-    }
-  }, [window.location.pathname]);
+    setMobileSearchOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     setOpen(false);
@@ -153,7 +141,10 @@ const Navbar = () => {
 
   const handleCartClick = () => setShowCartSidebar(true);
 
-  const handleSearchClick = () => navigate('/products');
+  const openMobileSearch = () => {
+    setOpen(false);
+    setMobileSearchOpen(true);
+  };
 
   const isTransparent = isHomepage && !scrolled;
 
@@ -349,22 +340,8 @@ const Navbar = () => {
 
           {/* ===== DESKTOP: Icons (Right) ===== */}
           <div className='hidden lg:flex items-center gap-4 flex-shrink-0'>
-            {/* Search Icon */}
-            <button
-              onClick={handleSearchClick}
-              className={`p-2 rounded-lg transition-all duration-200 ${
-                isTransparent ? 'hover:bg-white/10' : 'hover:bg-gray-100'
-              }`}
-              title='Buscar produtos'
-            >
-              <Search
-                className={`w-5 h-5 transition-colors ${
-                  isTransparent
-                    ? 'text-white'
-                    : 'text-gray-600 hover:text-primary'
-                }`}
-              />
-            </button>
+            {/* Busca com autocomplete */}
+            <DesktopSearch isTransparent={isTransparent} />
 
             {/* Admin */}
             <div className='relative group'>
@@ -504,8 +481,14 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* ===== MOBILE: Cart (Right) ===== */}
+          {/* ===== MOBILE: Busca + Cart (Right) ===== */}
           <div className='flex items-center gap-4 lg:hidden'>
+            <MobileSearch
+              isTransparent={isTransparent}
+              open={mobileSearchOpen}
+              onOpen={openMobileSearch}
+              onClose={() => setMobileSearchOpen(false)}
+            />
             <div onClick={handleCartClick} className='relative cursor-pointer'>
               <img
                 src={assets.nav_cart_icon}
@@ -566,10 +549,7 @@ const Navbar = () => {
             {/* Search Mobile */}
             <div className='p-4 border-b border-gray-100'>
               <button
-                onClick={() => {
-                  setOpen(false);
-                  navigate('/products');
-                }}
+                onClick={openMobileSearch}
                 className='w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-full text-gray-500 hover:border-primary transition-colors'
               >
                 <Search className='w-5 h-5' />
