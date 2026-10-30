@@ -45,10 +45,53 @@ import { optimizedImage, resetHeroBanners } from '../../utils/heroBanners';
 
 const API = '/api/seller/banners';
 
-// Medidas recomendadas (a hero ocupa quase o ecrã inteiro)
+// ─────────────────────────────────────────────────────────────────────
+// Proporção da hero — tem de ser IGUAL à de components/MainBanner.jsx
+// (`aspect-[3/5] md:aspect-[2/1]`). Com a mesma proporção, a imagem
+// aparece inteira, sem recorte. Se mudar lá, mudar aqui.
+// ─────────────────────────────────────────────────────────────────────
+const HERO_RATIO = {
+  desktop: { w: 1920, h: 960, label: '2:1' }, // ≥ 768 px de largura
+  mobile: { w: 1080, h: 1800, label: '3:5' }, // < 768 px de largura
+};
+
+// Medidas exatas mostradas no painel
 const SIZE_HINTS = {
-  desktop: '1920 × 1080 px, horizontal (JPG ou WebP)',
-  mobile: '1080 × 1620 px, vertical (JPG ou WebP)',
+  desktop: `${HERO_RATIO.desktop.w} × ${HERO_RATIO.desktop.h} px, horizontal — proporção ${HERO_RATIO.desktop.label} (JPG ou WebP)`,
+  mobile: `${HERO_RATIO.mobile.w} × ${HERO_RATIO.mobile.h} px, vertical — proporção ${HERO_RATIO.mobile.label} (JPG ou WebP)`,
+};
+
+// Acima desta diferença de proporção avisamos que a imagem será cortada
+const RATIO_TOLERANCE = 0.02;
+
+// Lê largura × altura reais de um ficheiro de imagem
+const readImageSize = file =>
+  new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+
+// Texto de aviso quando a proporção da imagem não é a da hero
+// (devolve '' quando está dentro da tolerância)
+const ratioWarning = (size, field) => {
+  if (!size?.width || !size?.height) return '';
+  const target = field === 'mobileImage' ? HERO_RATIO.mobile : HERO_RATIO.desktop;
+  const actual = size.width / size.height;
+  const expected = target.w / target.h;
+  const diff = actual / expected;
+  if (Math.abs(diff - 1) <= RATIO_TOLERANCE) return '';
+  const pct = Math.round(Math.abs(1 - (diff > 1 ? 1 / diff : diff)) * 100);
+  const where = diff > 1 ? 'nas laterais' : 'em cima e embaixo';
+  return `Esta imagem tem ${size.width} × ${size.height} px. A hero é ${target.label} (${target.w} × ${target.h} px): cerca de ${pct}% da imagem será cortada ${where}.`;
 };
 
 // Redução no browser antes do envio
@@ -102,14 +145,20 @@ const emptyForm = () => ({
 const thumb = url => optimizedImage(url, 640);
 
 // ─────────────────────────────────────────────────────────────────────
-// Pré-visualização: mostra o recorte e os textos como ficam na loja
+// Pré-visualização: mesma proporção da hero da loja (2:1 / 3:5)
 // ─────────────────────────────────────────────────────────────────────
+const ratioStyle = mobile => ({
+  aspectRatio: mobile
+    ? `${HERO_RATIO.mobile.w} / ${HERO_RATIO.mobile.h}`
+    : `${HERO_RATIO.desktop.w} / ${HERO_RATIO.desktop.h}`,
+});
+
 const HeroPreview = ({ src, heading, subtitle, mobile }) => {
   const hasText = !!(heading || subtitle);
   return (
     <div
       className='relative overflow-hidden rounded-lg bg-primary-dark'
-      style={{ aspectRatio: mobile ? '390 / 640' : '1920 / 900' }}
+      style={ratioStyle(mobile)}
     >
       {src ? (
         <img
@@ -229,7 +278,7 @@ const BannerRow = ({
                 <div className='w-40 sm:w-48'>
                   <div
                     className='relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200'
-                    style={{ aspectRatio: '1920 / 900' }}
+                    style={ratioStyle(false)}
                   >
                     <img
                       src={thumb(banner.image)}
@@ -242,7 +291,7 @@ const BannerRow = ({
                 <div className='w-12'>
                   <div
                     className='relative overflow-hidden rounded-md bg-gray-100 border border-gray-200'
-                    style={{ aspectRatio: '390 / 640' }}
+                    style={ratioStyle(true)}
                   >
                     <img
                       src={thumb(banner.mobileImage || banner.image)}
@@ -434,6 +483,8 @@ const Banners = () => {
   const [form, setForm] = useState(emptyForm());
   const [files, setFiles] = useState({ image: null, mobileImage: null });
   const [previews, setPreviews] = useState({ image: '', mobileImage: '' });
+  // Aviso de proporção errada por imagem ('' = proporção certa)
+  const [warnings, setWarnings] = useState({ image: '', mobileImage: '' });
   const [removeMobile, setRemoveMobile] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -489,6 +540,7 @@ const Banners = () => {
     setFiles({ image: null, mobileImage: null });
     setPreview('image', '');
     setPreview('mobileImage', '');
+    setWarnings({ image: '', mobileImage: '' });
     setRemoveMobile(false);
     setModalOpen(true);
   };
@@ -510,6 +562,7 @@ const Banners = () => {
       'mobileImage',
       banner.mobileImage ? optimizedImage(banner.mobileImage, 640) : '',
     );
+    setWarnings({ image: '', mobileImage: '' });
     setRemoveMobile(false);
     setModalOpen(true);
   };
@@ -529,11 +582,20 @@ const Banners = () => {
     setFiles(current => ({ ...current, [field]: file }));
     setPreview(field, URL.createObjectURL(file));
     if (field === 'mobileImage') setRemoveMobile(false);
+    // Confere a proporção real e avisa se a imagem for ficar cortada
+    setWarnings(current => ({ ...current, [field]: '' }));
+    readImageSize(file).then(size =>
+      setWarnings(current => ({
+        ...current,
+        [field]: ratioWarning(size, field),
+      })),
+    );
   };
 
   const removeMobileImage = () => {
     setFiles(current => ({ ...current, mobileImage: null }));
     setPreview('mobileImage', '');
+    setWarnings(current => ({ ...current, mobileImage: '' }));
     setRemoveMobile(true);
   };
 
@@ -894,7 +956,7 @@ const Banners = () => {
                 <div className='space-y-3'>
                   <ImageField
                     label='Imagem para desktop'
-                    hint={`Recomendado: ${SIZE_HINTS.desktop}`}
+                    hint={`Medida exata: ${SIZE_HINTS.desktop}`}
                     icon={Monitor}
                     required
                     hasImage={!!previews.image}
@@ -906,11 +968,16 @@ const Banners = () => {
                     heading={form.heading}
                     subtitle={form.subtitle}
                   />
+                  {warnings.image && (
+                    <p className='text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5'>
+                      {warnings.image}
+                    </p>
+                  )}
                 </div>
                 <div className='space-y-3'>
                   <ImageField
                     label='Para celular'
-                    hint={`Recomendado: ${SIZE_HINTS.mobile}`}
+                    hint={`Medida exata: ${SIZE_HINTS.mobile}`}
                     icon={Smartphone}
                     hasImage={!!previews.mobileImage}
                     onPick={file => pickFile('mobileImage', file)}
@@ -923,19 +990,27 @@ const Banners = () => {
                     heading={form.heading}
                     subtitle={form.subtitle}
                   />
+                  {warnings.mobileImage && (
+                    <p className='text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5'>
+                      {warnings.mobileImage}
+                    </p>
+                  )}
                 </div>
               </section>
 
               <div className='flex items-start gap-2 text-[12px] text-gray-500 -mt-2'>
                 <Info className='w-3.5 h-3.5 mt-0.5 flex-shrink-0' />
                 <p>
-                  A hero ocupa quase a tela inteira e o recorte varia com o
-                  tamanho da tela: mantenha o assunto principal no centro da
-                  imagem.
+                  A hero tem a mesma proporção destas medidas, por isso a
+                  imagem aparece inteira, sem corte (a pré-visualização é
+                  fiel). Só em telas muito largas, tipo ultrawide, há um
+                  recorte pequeno nas bordas. Lembre que o menu do site fica
+                  sobre o topo da imagem: evite texto ou logo nessa faixa.
                   {!previews.mobileImage && previews.image && (
                     <span className='block text-amber-600 mt-1'>
-                      Sem imagem própria, o celular mostra um recorte da
-                      imagem de desktop (veja a pré-visualização).
+                      Sem imagem própria para celular, a imagem de desktop
+                      (horizontal) é cortada nas laterais para caber em 3:5
+                      (veja a pré-visualização). Envie uma imagem vertical.
                     </span>
                   )}
                 </p>

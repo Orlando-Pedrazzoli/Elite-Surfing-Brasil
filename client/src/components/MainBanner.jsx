@@ -27,9 +27,25 @@ import {
 const AUTOPLAY_INTERVAL = 5000;
 const TRANSITION_DURATION = 700;
 
-// Altura da hero (igual em todos os estados → a página não "salta")
-const HERO_HEIGHT =
-  'h-[75vh] min-h-[500px] md:h-[85vh] md:min-h-[600px]';
+// ═══════════════════════════════════════════════════════════════════════
+// PROPORÇÃO DA HERO — fixa, para a imagem NUNCA ser cortada
+// ═══════════════════════════════════════════════════════════════════════
+// Antes: altura relativa ao ecrã (75vh / 85vh). Como a proporção mudava
+// de dispositivo para dispositivo, qualquer imagem era recortada em
+// algum deles e não havia "medida certa" para o admin gerar os banners.
+//
+// Agora a hero tem a MESMA proporção das imagens pedidas no painel:
+//   • celular  (< 768 px): 3:5  → imagem 1080 × 1800 px
+//   • desktop (≥ 768 px): 2:1  → imagem 1920 × 960 px
+// Com a mesma proporção, `object-cover` encaixa a imagem sem cortar.
+// A altura resultante é quase igual à anterior (≈ 89vh num 1920×1080,
+// ≈ 77vh num iPhone). `max-h-[90vh]` evita que a hero ultrapasse o ecrã
+// em telas muito largas (ultrawide) — só aí há um recorte residual.
+//
+// Se mudar estas proporções, mudar também HERO_RATIO em
+// pages/seller/Banners.jsx (medidas recomendadas e pré-visualização).
+// ═══════════════════════════════════════════════════════════════════════
+const HERO_HEIGHT = 'aspect-[3/5] md:aspect-[2/1] max-h-[90vh]';
 
 const isExternalLink = link => /^https?:\/\//i.test(link);
 
