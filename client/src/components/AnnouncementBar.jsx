@@ -2,7 +2,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 // 📣 BARRA DE ANÚNCIOS (topo do site)
 // ═══════════════════════════════════════════════════════════════════════
-//   Esquerda : CTA "Seja um revendedor" → /revendedores (pedido do admin em
+//   Esquerda : CTA "Seja um revendedor" → /revendedores, verde WhatsApp
+//              #25D366 (pedido do admin em
 //              31/10/2026; substitui o antigo seletor de região, que era
 //              irrelevante para a loja brasileira)
 //   Centro   : anúncios rotativos (frete, PIX, parcelamento)
@@ -73,7 +74,7 @@ const AnnouncementBar = () => {
             <Link
               to='/revendedores'
               title='Programa de revendedores Elite Surfing'
-              className='group inline-flex items-center gap-1.5 rounded-full bg-sky-400 text-gray-900 text-[10px] sm:text-[11px] font-black tracking-widest uppercase pl-2.5 pr-3 py-1 sm:py-1.5 shadow-[0_0_0_2px_rgba(56,189,248,0.25)] hover:bg-sky-300 hover:shadow-[0_0_0_4px_rgba(56,189,248,0.35)] transition-all duration-200 whitespace-nowrap'
+              className='group inline-flex items-center gap-1.5 rounded-full bg-[#25D366] text-white text-[10px] sm:text-[11px] font-black tracking-widest uppercase pl-2.5 pr-3 py-1 sm:py-1.5 shadow-[0_0_0_2px_rgba(37,211,102,0.25)] hover:bg-[#1ebe5b] hover:shadow-[0_0_0_4px_rgba(37,211,102,0.35)] transition-all duration-200 whitespace-nowrap'
             >
               <Store className='w-3.5 h-3.5 group-hover:-rotate-6 transition-transform' />
               <span className='hidden sm:inline'>Seja um revendedor</span>
