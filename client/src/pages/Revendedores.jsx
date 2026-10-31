@@ -3,8 +3,9 @@
 // 🏪 SEJA UM REVENDEDOR — landing + cadastro de lojista (/revendedores)
 // ═══════════════════════════════════════════════════════════════════════
 // Pedido do admin em 31/10/2026, nos moldes da página de revendedores da
-// Pro-Lite. Estrutura: hero → benefícios → como funciona → formulário →
-// encerramento.
+// Pro-Lite. Estrutura: hero (só texto) → como funciona → formulário → FAQ →
+// encerramento. Em 31/10 o admin pediu para tirar os botões do hero e a
+// secção de benefícios.
 //
 // Copy: tom profissional, foco no lojista. NÃO promete margem, desconto,
 // exclusividade territorial, frete ou pedido mínimo — as condições
@@ -25,9 +26,6 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Store,
-  BadgeCheck,
-  Waves,
-  Handshake,
   ClipboardList,
   Mail,
   FileSpreadsheet,
@@ -35,7 +33,6 @@ import {
   CheckCircle2,
   MessageCircle,
   Loader2,
-  Truck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../context/AppContext';
@@ -112,29 +109,6 @@ const isValidPhone = v => [10, 11].includes(onlyDigits(v).length);
 const inputCls =
   'w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition disabled:bg-gray-50';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
-
-const BENEFITS = [
-  {
-    icon: Waves,
-    title: 'Produtos feitos para quem vive o surf',
-    text: 'Decks, leashes, capas, sarcófagos, quilhas, parafinas e acessórios desenvolvidos para surfistas de todos os níveis, com tecnologia testada no mar.',
-  },
-  {
-    icon: BadgeCheck,
-    title: 'Marca com história e giro na loja',
-    text: 'Desde 2010 no mercado brasileiro, com presença nas principais surf shops, feiras e eventos do país. Produtos que o cliente já conhece e procura.',
-  },
-  {
-    icon: Truck,
-    title: 'Envio para todo o Brasil',
-    text: 'Estoque próprio no Rio de Janeiro e logística pronta para atender a sua loja em qualquer estado, com reposição rápida.',
-  },
-  {
-    icon: Handshake,
-    title: 'Uma parceria para crescer',
-    text: 'Tabela de preços exclusiva para lojistas, com fotos e códigos de todos os produtos, e atendimento comercial direto pelo WhatsApp.',
-  },
-];
 
 const STEPS = [
   { icon: ClipboardList, text: 'Preencha o cadastro com os dados da sua loja' },
@@ -344,49 +318,10 @@ const Revendedores = () => {
               produtos que o surfista já conhece. Cadastre-se para conhecer as
               condições comerciais para lojistas e ampliar o seu mix.
             </p>
-            <div className='mt-8 flex flex-wrap gap-3'>
-              <a
-                href='#cadastro'
-                className='inline-flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 py-3 rounded-lg transition-colors'
-              >
-                <Store className='w-[18px] h-[18px]' /> Quero ser revendedor
-              </a>
-              <a
-                href={whatsappUrl}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='inline-flex items-center gap-2 border border-white/30 hover:bg-white/10 text-white font-medium px-6 py-3 rounded-lg transition-colors'
-              >
-                <MessageCircle className='w-[18px] h-[18px]' /> Falar no WhatsApp
-              </a>
-            </div>
           </div>
         </section>
 
         <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-          {/* ═══ BENEFÍCIOS ═══ */}
-          <section className='mb-12'>
-            <h2 className='text-xl md:text-2xl font-black text-gray-900 mb-5'>
-              Sua loja conectada ao universo do surf
-            </h2>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-              {BENEFITS.map(b => (
-                <div
-                  key={b.title}
-                  className='bg-white rounded-xl p-5 border border-gray-100 shadow-sm'
-                >
-                  <div className='w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3'>
-                    <b.icon className='w-5 h-5' />
-                  </div>
-                  <h3 className='font-bold text-gray-900 mb-1'>{b.title}</h3>
-                  <p className='text-sm text-gray-500 leading-relaxed'>
-                    {b.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
           {/* ═══ COMO FUNCIONA ═══ */}
           <section className='mb-12'>
             <h2 className='text-xl font-black text-gray-900 mb-4'>
