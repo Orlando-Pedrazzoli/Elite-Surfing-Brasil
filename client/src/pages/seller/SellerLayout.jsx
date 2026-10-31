@@ -67,6 +67,11 @@ const SellerLayout = () => {
       path: '/seller/tabelas',
       icon: FileSpreadsheet,
     },
+    {
+      name: 'Revendedores',
+      path: '/seller/revendedores',
+      icon: Store,
+    },
     // ─── Separador ───
     { divider: true, label: 'MARKETING' },
     {

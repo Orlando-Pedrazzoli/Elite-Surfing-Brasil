@@ -11,6 +11,7 @@ import {
   Package,
   Star,
   Search,
+  Store,
 } from 'lucide-react';
 import { assets, groups, categories } from '../assets/assets';
 import { useAppContext } from '../context/AppContext';
@@ -788,6 +789,16 @@ const Navbar = () => {
                     </div>
                   );
                 })}
+
+                {/* CTA Seja um revendedor (menu mobile) → /revendedores */}
+                <Link
+                  to='/revendedores'
+                  onClick={() => handleNavLinkClick('/revendedores')}
+                  className='flex items-center justify-center gap-2 w-full my-3 py-3 px-4 bg-primary hover:bg-primary-dull text-white text-sm font-bold uppercase tracking-wide rounded-lg transition-colors'
+                >
+                  <Store className='w-4 h-4' />
+                  <span>Seja um revendedor</span>
+                </Link>
 
                 <NavLink
                   to='/contact'

@@ -79,6 +79,20 @@ const seoConfig = {
     ],
   },
 
+  resellers: {
+    title: 'Seja um Revendedor — Cadastro de Lojistas',
+    description:
+      'Seja um revendedor Elite Surfing: decks, leashes, capas, sarcófagos, quilhas e acessórios de surf para a sua loja. Cadastre a sua empresa e conheça as condições para lojistas.',
+    url: '/revendedores',
+    keywords: [
+      'revendedor elite surfing',
+      'revenda acessórios de surf',
+      'atacado surf lojista',
+      'distribuidor deck leash capa prancha',
+      'seja um revendedor surf',
+    ],
+  },
+
   faq: {
     title: 'Perguntas Frequentes',
     description:

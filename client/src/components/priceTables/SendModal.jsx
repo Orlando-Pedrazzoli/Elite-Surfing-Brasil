@@ -55,6 +55,9 @@ const SendModal = ({
   emailConfigured,
   flush,
   onSent,
+  // Destinatários já preenchidos ao abrir (ex.: e-mail do revendedor
+  // aprovado, vindo de /seller/revendedores → ?enviar=)
+  initialRecipients = [],
 }) => {
   const [recipients, setRecipients] = useState([]);
   const [draft, setDraft] = useState('');
@@ -81,7 +84,11 @@ const SendModal = ({
 
   useEffect(() => {
     if (!open) return;
-    setRecipients([]);
+    setRecipients(
+      [...new Set(initialRecipients.map(e => String(e).trim().toLowerCase()))]
+        .filter(isValidEmail)
+        .slice(0, MAX_RECIPIENTS),
+    );
     setDraft('');
     setSubject(
       `${table.header.title || 'Tabela de Preços'} — Elite Surfing`.slice(

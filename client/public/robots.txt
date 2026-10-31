@@ -1,7 +1,7 @@
 # =====================================================
 # Elite Surfing Brasil - robots.txt
 # https://www.elitesurfing.com.br
-# Última atualização: 2026-03-31
+# Última atualização: 2026-10-31 (+ /revendedores)
 # =====================================================
 
 # =====================================================
@@ -15,6 +15,7 @@ Allow: /collections/
 Allow: /blog
 Allow: /blog/
 Allow: /contact
+Allow: /revendedores
 Allow: /faq
 Allow: /privacy
 Allow: /terms
@@ -49,6 +50,7 @@ Allow: /collections/
 Allow: /blog
 Allow: /blog/
 Allow: /institucional
+Allow: /revendedores
 Disallow: /seller
 Disallow: /seller/
 Disallow: /cart
@@ -94,6 +96,7 @@ Allow: /collections/
 Allow: /blog
 Allow: /blog/
 Allow: /institucional
+Allow: /revendedores
 Disallow: /seller
 Disallow: /seller/
 Disallow: /cart

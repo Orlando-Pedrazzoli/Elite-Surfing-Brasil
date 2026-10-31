@@ -1,6 +1,19 @@
 // client/src/components/AnnouncementBar.jsx
-import React, { useState, useEffect, useRef } from 'react';
+// ═══════════════════════════════════════════════════════════════════════
+// 📣 BARRA DE ANÚNCIOS (topo do site)
+// ═══════════════════════════════════════════════════════════════════════
+//   Esquerda : CTA "Seja um revendedor" → /revendedores (pedido do admin em
+//              31/10/2026; substitui o antigo seletor de região, que era
+//              irrelevante para a loja brasileira)
+//   Centro   : anúncios rotativos (frete, PIX, parcelamento)
+//   Direita  : redes sociais
+//
+// No celular o CTA aparece em versão compacta ("Revenda") para não
+// disputar espaço com o anúncio rotativo.
+// ═══════════════════════════════════════════════════════════════════════
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Store } from 'lucide-react';
 
 const announcements = [
   {
@@ -20,11 +33,6 @@ const announcements = [
   },
 ];
 
-const regions = [
-  { value: 'br', label: '🇧🇷 Brasil', url: null },
-  { value: 'eu', label: '🇵🇹 Europa', url: 'https://www.elitesurfing.pt/' },
-];
-
 // ═══ ÍCONES SVG INLINE (sem dependência extra) ═══
 const InstagramIcon = () => (
   <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 24 24'>
@@ -38,43 +46,9 @@ const FacebookIcon = () => (
   </svg>
 );
 
-const ChevronDownIcon = () => (
-  <svg
-    className='w-3 h-3'
-    fill='none'
-    viewBox='0 0 24 24'
-    stroke='currentColor'
-    strokeWidth={2.5}
-  >
-    <path
-      strokeLinecap='round'
-      strokeLinejoin='round'
-      d='M19.5 8.25l-7.5 7.5-7.5-7.5'
-    />
-  </svg>
-);
-
-const GlobeIcon = () => (
-  <svg
-    className='w-3.5 h-3.5'
-    fill='none'
-    viewBox='0 0 24 24'
-    stroke='currentColor'
-    strokeWidth={1.8}
-  >
-    <path
-      strokeLinecap='round'
-      strokeLinejoin='round'
-      d='M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5a17.92 17.92 0 01-8.716-4.247m0 0A8.966 8.966 0 013 12c0-1.528.38-2.967 1.05-4.228'
-    />
-  </svg>
-);
-
 const AnnouncementBar = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [showRegionDropdown, setShowRegionDropdown] = useState(false);
-  const dropdownRef = useRef(null);
 
   // ═══ ROTAÇÃO DOS ANÚNCIOS ═══
   useEffect(() => {
@@ -88,90 +62,30 @@ const AnnouncementBar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // ═══ FECHAR DROPDOWN AO CLICAR FORA ═══
-  useEffect(() => {
-    const handleClickOutside = e => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowRegionDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleRegionChange = region => {
-    setShowRegionDropdown(false);
-    if (region.url) {
-      window.location.href = region.url;
-    }
-  };
-
   const current = announcements[currentIndex];
 
   return (
     <div className='bg-gray-900 relative z-[60]'>
-      <div className='max-w-7xl mx-auto px-4 py-2'>
-        <div className='flex items-center justify-between'>
-          {/* ═══ ESQUERDA — Seletor de Região ═══ */}
-          <div
-            className='hidden sm:flex items-center flex-shrink-0'
-            ref={dropdownRef}
-          >
-            <div className='relative'>
-              <button
-                onClick={() => setShowRegionDropdown(!showRegionDropdown)}
-                className='flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors text-[11px] tracking-wide uppercase cursor-pointer group'
-              >
-                <GlobeIcon />
-                <span>
-                  Região:{' '}
-                  <span className='font-semibold text-white'>Brasil</span>
-                </span>
-                <ChevronDownIcon />
-              </button>
-
-              {/* Dropdown */}
-              {showRegionDropdown && (
-                <div className='absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-[100] min-w-[160px]'>
-                  {regions.map(region => (
-                    <button
-                      key={region.value}
-                      onClick={() => handleRegionChange(region)}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
-                        region.value === 'br'
-                          ? 'bg-primary/5 text-primary font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className='text-base'>
-                        {region.label.slice(0, 4)}
-                      </span>
-                      <span>{region.label.slice(4)}</span>
-                      {region.value === 'br' && (
-                        <svg
-                          className='w-3.5 h-3.5 ml-auto text-primary'
-                          fill='currentColor'
-                          viewBox='0 0 20 20'
-                        >
-                          <path
-                            fillRule='evenodd'
-                            d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                            clipRule='evenodd'
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+      <div className='max-w-7xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2'>
+        <div className='flex items-center justify-between gap-2'>
+          {/* ═══ ESQUERDA — CTA Seja um revendedor ═══ */}
+          <div className='flex items-center flex-shrink-0'>
+            <Link
+              to='/revendedores'
+              title='Programa de revendedores Elite Surfing'
+              className='group inline-flex items-center gap-1.5 rounded-full bg-sky-400 text-gray-900 text-[10px] sm:text-[11px] font-black tracking-widest uppercase pl-2.5 pr-3 py-1 sm:py-1.5 shadow-[0_0_0_2px_rgba(56,189,248,0.25)] hover:bg-sky-300 hover:shadow-[0_0_0_4px_rgba(56,189,248,0.35)] transition-all duration-200 whitespace-nowrap'
+            >
+              <Store className='w-3.5 h-3.5 group-hover:-rotate-6 transition-transform' />
+              <span className='hidden sm:inline'>Seja um revendedor</span>
+              <span className='sm:hidden'>Revenda</span>
+            </Link>
           </div>
 
           {/* ═══ CENTRO — Anúncios Rotativos ═══ */}
-          <div className='flex-1 flex items-center justify-center'>
+          <div className='flex-1 min-w-0 flex items-center justify-center'>
             <Link
               to={current.link}
-              className='flex items-center justify-center h-5 overflow-hidden'
+              className='flex items-center justify-center h-5 overflow-hidden max-w-full'
             >
               <div
                 className={`transition-all duration-400 ease-in-out ${
@@ -180,7 +94,7 @@ const AnnouncementBar = () => {
                     : 'opacity-100 translate-y-0'
                 }`}
               >
-                <p className='text-[11px] sm:text-xs tracking-widest uppercase text-zinc-300 hover:text-white transition-colors text-center whitespace-nowrap'>
+                <p className='text-[10px] sm:text-xs tracking-wider sm:tracking-widest uppercase text-zinc-300 hover:text-white transition-colors text-center whitespace-nowrap truncate'>
                   <span className='font-bold text-white'>{current.bold}</span>
                   {'  |  '}
                   <span>{current.text}</span>
