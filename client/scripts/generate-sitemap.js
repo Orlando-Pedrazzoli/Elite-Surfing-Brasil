@@ -3,8 +3,12 @@ import path from 'path';
 
 /**
  * Gerador de Sitemaps - Elite Surfing Brasil
- * Versão: 4.1.0
- * Última atualização: 2026-04-24
+ * Versão: 4.2.0
+ * Última atualização: 2026-10-31
+ *
+ * ALTERAÇÕES v4.2.0 (31/10/2026):
+ * - 🆕 /revendedores (página "Seja um Revendedor") nas páginas estáticas,
+ *   prioridade 0.8 — página de captação de lojistas.
  *
  * ALTERAÇÕES v4.1.0 (24/04/2026):
  * - 🆕 Filtro defensivo para excluir produtos em Draft (inStock=false).
@@ -37,6 +41,7 @@ const staticRoutes = [
   { url: '', changefreq: 'daily', priority: 1.0 },
   { url: '/products', changefreq: 'daily', priority: 0.9 },
   { url: '/blog', changefreq: 'weekly', priority: 0.8 },
+  { url: '/revendedores', changefreq: 'monthly', priority: 0.8 }, // 🏪 Seja um Revendedor (31/10/2026)
   { url: '/contact', changefreq: 'monthly', priority: 0.7 },
   { url: '/faq', changefreq: 'monthly', priority: 0.6 },
   { url: '/institucional', changefreq: 'monthly', priority: 0.5 },
@@ -313,7 +318,7 @@ async function generateSitemaps() {
   console.log('');
   console.log('╔═══════════════════════════════════════════════════╗');
   console.log('║   GERADOR DE SITEMAPS - Elite Surfing Brasil 🇧🇷  ║');
-  console.log('║   v4.1.0 — Draft products excluded              ║');
+  console.log('║   v4.2.0 — + /revendedores                      ║');
   console.log('╚═══════════════════════════════════════════════════╝');
   console.log('');
   console.log(`📍 URL Base: ${SITE_URL}`);

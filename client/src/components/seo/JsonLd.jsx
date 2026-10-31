@@ -129,6 +129,7 @@ export const SiteNavigationSchema = () => {
     { name: 'Stand Up Paddle', url: '/collections/sup' },
     { name: 'Outlet', url: '/collections/outlet' },
     { name: 'Blog', url: '/blog' },
+    { name: 'Seja um Revendedor', url: '/revendedores' },
     { name: 'Contato', url: '/contact' },
     { name: 'FAQ', url: '/faq' },
   ];

@@ -214,6 +214,15 @@ const Footer = () => {
               </li>
               <li>
                 <Link
+                  to='/revendedores'
+                  className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
+                >
+                  <span className='w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-primary transition-colors'></span>
+                  Seja um Revendedor
+                </Link>
+              </li>
+              <li>
+                <Link
                   to='/institucional/trocas-devolucoes-garantia'
                   className='text-gray-600 hover:text-primary transition-colors text-sm flex items-center gap-2 group'
                 >

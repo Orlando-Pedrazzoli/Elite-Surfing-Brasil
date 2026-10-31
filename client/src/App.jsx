@@ -25,6 +25,7 @@ import ProductList from './pages/seller/ProductList';
 import Orders from './pages/seller/Orders';
 import Loading from './components/Loading';
 import Contact from './pages/Contact';
+import Revendedores from './pages/Revendedores';
 import Privacy from './pages/Privacy';
 import RefundPolicy from './pages/RefundPolicy';
 import FAQ from './pages/FAQ';
@@ -52,6 +53,7 @@ import VendasDiretas from './pages/seller/VendasDiretas';
 import Coupons from './pages/seller/Coupons';
 // 🖼️ Banners da hero
 import Banners from './pages/seller/Banners';
+import Resellers from './pages/seller/Resellers';
 // 📋 Tabelas de Preço
 import PriceTables from './pages/seller/PriceTables';
 import PriceTableEditor from './pages/seller/PriceTableEditor';
@@ -161,6 +163,7 @@ const App = () => {
           <Route path='/my-orders' element={<MyOrders />} />
           <Route path='/minha-conta' element={<MyAccount />} />
           <Route path='/contact' element={<Contact />} />
+          <Route path='/revendedores' element={<Revendedores />} />
           <Route path='/privacy' element={<Privacy />} />
           <Route path='/refund-policy' element={<RefundPolicy />} />
           <Route path='/faq' element={<FAQ />} />
@@ -194,6 +197,7 @@ const App = () => {
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
             <Route path='banners' element={<Banners />} />
+            <Route path='revendedores' element={<Resellers />} />
             {/* ─── Instagram ─── */}
             <Route path='instagram' element={<InstagramStudio />} />
             <Route path='instagram/posts' element={<InstagramPosts />} />

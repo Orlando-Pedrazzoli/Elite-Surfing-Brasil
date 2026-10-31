@@ -56,6 +56,10 @@ import {
   bannerPublicRouter,
   bannerAdminRouter,
 } from './routes/bannerRoute.js'; // 🖼️ Banners da hero
+import {
+  resellerPublicRouter,
+  resellerAdminRouter,
+} from './routes/resellerRoute.js'; // 🏪 Programa de revendedores
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -306,6 +310,8 @@ app.get('/', (req, res) => {
 app.use('/api/user', userRouter);
 // 🖼️ Banners da hero (admin) — tem de vir ANTES de /api/seller
 app.use('/api/seller/banners', bannerAdminRouter);
+// 🏪 Revendedores (admin) — tem de vir ANTES de /api/seller
+app.use('/api/seller/resellers', resellerAdminRouter);
 app.use('/api/seller', sellerRouter);
 app.use('/api/product', readLimiter, productRouter);
 app.use('/api/cart', cartRouter);
@@ -326,6 +332,7 @@ app.use('/api/coupon', couponRouter);
 app.use('/api/social', socialRouter); // 📸 Estúdio Instagram (admin)
 app.use('/api/price-tables', priceTableRouter); // 📋 Tabelas de Preço (admin)
 app.use('/api/banner', readLimiter, bannerPublicRouter); // 🖼️ Banners da hero (loja)
+app.use('/api/reseller', resellerPublicRouter); // 🏪 Candidatura de revendedor (loja)
 
 console.log('✅ All routes registered');
 console.log('✅ Payments: Mercado Pago (PIX nativo + Cartão + Boleto)');
