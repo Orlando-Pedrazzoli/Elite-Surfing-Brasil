@@ -80,7 +80,7 @@ const seoConfig = {
   },
 
   resellers: {
-    title: 'Seja um Revendedor Elite Surfing — Cadastro de Lojistas',
+    title: 'Seja um Revendedor — Cadastro de Lojistas',
     description:
       'Seja um revendedor Elite Surfing: decks, leashes, capas, sarcófagos, quilhas e acessórios de surf para a sua loja. Cadastre a sua empresa e conheça as condições para lojistas.',
     url: '/revendedores',

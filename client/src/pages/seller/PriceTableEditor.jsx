@@ -26,7 +26,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -166,6 +166,11 @@ const SAVE_META = {
 // ─────────────────────────────────────────────────────────────────────
 const PriceTableEditor = () => {
   const { id } = useParams();
+  // ?enviar=<email> (vindo de /seller/revendedores): abre o envio por
+  // e-mail já com esse destinatário, assim que a tabela carregar
+  const [searchParams] = useSearchParams();
+  const sendTo = (searchParams.get('enviar') || '').trim().toLowerCase();
+  const autoSendOpened = useRef(false);
   const { axios } = useAppContext();
 
   const [table, setTable] = useState(null);
@@ -191,6 +196,11 @@ const PriceTableEditor = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState('');
   const [sendOpen, setSendOpen] = useState(false);
+  useEffect(() => {
+    if (!table || !sendTo || autoSendOpened.current) return;
+    autoSendOpened.current = true;
+    setSendOpen(true);
+  }, [table, sendTo]);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // ─── Refs do salvamento automático ───
@@ -1309,6 +1319,7 @@ const PriceTableEditor = () => {
         visibleCount={stats.visible}
         emailConfigured={emailConfigured}
         flush={flush}
+        initialRecipients={sendTo ? [sendTo] : []}
         onSent={data => {
           if (data.version) setVersionCount(v => Math.max(v, data.version));
           toast.success(data.message);

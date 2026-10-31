@@ -141,6 +141,9 @@ const Resellers = () => {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(searchParams.get('id') || null);
+  // Tabelas de preço para lojistas (ex.: "Tabela Lojistas" com e sem fotos):
+  // o botão "Enviar tabela" abre o editor já com o e-mail do revendedor
+  const [resellerTables, setResellerTables] = useState([]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -162,6 +165,24 @@ const Resellers = () => {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get('/api/price-tables')
+      .then(({ data }) => {
+        if (cancelled || !data?.success) return;
+        const all = (data.tables || []).filter(
+          t => t.kind === 'cliente' && !t.archived,
+        );
+        const lojistas = all.filter(t => /lojista|revend/i.test(t.name));
+        setResellerTables(lojistas.length ? lojistas : all);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [axios]);
 
   // Abrir direto um registo vindo do link do e-mail (?id=)
   useEffect(() => {
@@ -430,6 +451,7 @@ const Resellers = () => {
       {selected && (
         <ResellerDrawer
           reseller={selected}
+          tables={resellerTables}
           acting={acting}
           onClose={() => openItem(null)}
           onApprove={(note, notify) =>
@@ -451,6 +473,7 @@ const Resellers = () => {
 // ─────────────────────────────────────────────────────────────────────
 const ResellerDrawer = ({
   reseller: r,
+  tables = [],
   acting,
   onClose,
   onApprove,
@@ -543,15 +566,41 @@ const ResellerDrawer = ({
             >
               <Copy className='w-4 h-4' /> Copiar e-mail
             </button>
-            {r.status === 'approved' && (
-              <Link
-                to='/seller/tabelas'
-                className='inline-flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dull'
-              >
-                <FileSpreadsheet className='w-4 h-4' /> Enviar tabela de preços
-              </Link>
-            )}
           </div>
+
+          {/* Enviar tabela de preços (revendedor aprovado) */}
+          {r.status === 'approved' && (
+            <div className='rounded-xl border border-primary/20 bg-primary/5 p-4'>
+              <p className='text-sm font-semibold text-gray-900 mb-1'>
+                Enviar tabela de preços para {r.email}
+              </p>
+              <p className='text-xs text-gray-600 mb-3'>
+                Abre o editor da tabela com o envio por e-mail já preenchido
+                com o endereço do lojista — lá você escolhe com ou sem fotos,
+                PDF ou Excel.
+              </p>
+              <div className='flex flex-wrap gap-2'>
+                {tables.length ? (
+                  tables.map(t => (
+                    <Link
+                      key={t._id}
+                      to={`/seller/tabelas/${t._id}?enviar=${encodeURIComponent(r.email)}`}
+                      className='inline-flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dull'
+                    >
+                      <FileSpreadsheet className='w-4 h-4' /> {t.name}
+                    </Link>
+                  ))
+                ) : (
+                  <Link
+                    to='/seller/tabelas'
+                    className='inline-flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dull'
+                  >
+                    <FileSpreadsheet className='w-4 h-4' /> Abrir Tabelas de Preço
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Empresa */}
           <section>

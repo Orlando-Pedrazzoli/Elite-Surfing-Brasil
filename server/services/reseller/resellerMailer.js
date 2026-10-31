@@ -6,7 +6,9 @@
 //   GMAIL_USER + GMAIL_APP_PASSWORD
 // Opcional:
 //   RESELLER_NOTIFY_EMAIL → quem recebe o aviso de nova candidatura
-//                           (padrão: atendimento@elitesurfing.com.br)
+//                           (padrão: pedrazzoliorlando@gmail.com — pedido
+//                           do Orlando em 31/10/2026; aceita vários
+//                           endereços separados por vírgula)
 //
 // Emails:
 //   1. sendResellerApplicationNotification → LOJA (nova candidatura;
@@ -27,7 +29,11 @@ const SITE_URL = process.env.SITE_URL || 'https://www.elitesurfing.com.br';
 const STORE_EMAIL = 'atendimento@elitesurfing.com.br';
 const STORE_WHATSAPP = '5521964358058';
 const STORE_WHATSAPP_DISPLAY = '(21) 96435-8058';
-const NOTIFY_TO = process.env.RESELLER_NOTIFY_EMAIL || STORE_EMAIL;
+const ADMIN_EMAIL = 'pedrazzoliorlando@gmail.com';
+const NOTIFY_TO = (process.env.RESELLER_NOTIFY_EMAIL || ADMIN_EMAIL)
+  .split(',')
+  .map(e => e.trim())
+  .filter(Boolean);
 
 export const isEmailConfigured = () =>
   !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
