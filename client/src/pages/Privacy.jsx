@@ -257,7 +257,7 @@ const Privacy = () => {
                   <span className='text-primary'>•</span>
                   <span className='text-gray-700'>
                     <strong>Prestadores de serviço:</strong> Empresas que prestam serviços 
-                    de TI, processamento de pagamentos (Stripe), transportadoras e marketing.
+                    de TI, processamento de pagamentos (Mercado Pago), transportadoras e marketing.
                   </span>
                 </li>
                 <li className='flex items-start gap-2'>

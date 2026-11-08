@@ -13,8 +13,11 @@ import {
   Lock,
   Truck,
   RotateCcw,
-  CreditCard,
 } from 'lucide-react';
+import PaymentMethods, {
+  PaymentConditions,
+  MercadoPagoSeal,
+} from './PaymentMethods';
 
 const trustBadges = [
   {
@@ -369,73 +372,8 @@ const Footer = () => {
               <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide'>
                 Formas de Pagamento
               </p>
-              <div className='flex items-center gap-3 flex-wrap justify-center lg:justify-start'>
-                {/* PIX */}
-                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm gap-1.5'>
-                  <svg viewBox='0 0 24 24' className='h-4 w-4' fill='none'>
-                    <path
-                      d='M17.66 6.34l-3.18 3.18a2.5 2.5 0 01-3.54 0L7.76 6.34a2.5 2.5 0 010-3.54l.52-.52a2.5 2.5 0 013.54 0l.18.18.18-.18a2.5 2.5 0 013.54 0l.52.52c.37.37.66.81.84 1.3'
-                      stroke='#32BCAD'
-                      strokeWidth='1.5'
-                      strokeLinecap='round'
-                    />
-                    <path
-                      d='M6.34 17.66l3.18-3.18a2.5 2.5 0 013.54 0l3.18 3.18a2.5 2.5 0 010 3.54l-.52.52a2.5 2.5 0 01-3.54 0l-.18-.18-.18.18a2.5 2.5 0 01-3.54 0l-.52-.52a2.5 2.5 0 010-3.54z'
-                      stroke='#32BCAD'
-                      strokeWidth='1.5'
-                    />
-                  </svg>
-                  <span className='text-xs font-semibold text-[#32BCAD]'>
-                    PIX
-                  </span>
-                </div>
-
-                {/* Visa */}
-                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm'>
-                  <svg viewBox='0 0 48 16' className='h-4' fill='none'>
-                    <path
-                      d='M19.616 15.453h-3.766l2.356-14.453h3.766l-2.356 14.453z'
-                      fill='#00579F'
-                    />
-                    <path
-                      d='M33.734 1.324c-.746-.295-1.916-.608-3.375-.608-3.72 0-6.343 1.973-6.363 4.8-.04 2.085 1.867 3.25 3.29 3.945 1.463.713 1.956 1.178 1.956 1.81-.02.973-1.183 1.42-2.264 1.42-1.503 0-2.308-.227-3.536-.761l-.497-.233-.53 3.278c.886.402 2.517.761 4.216.78 3.96 0 6.53-1.953 6.57-4.968.019-1.655-.992-2.918-3.168-3.963-1.32-.668-2.132-1.12-2.132-1.81.02-.627.687-1.273 2.177-1.273 1.236-.039 2.136.264 2.827.559l.35.156.518-3.132z'
-                      fill='#00579F'
-                    />
-                    <path
-                      d='M39.227 10.113c.31-.832 1.503-4.063 1.503-4.063-.02.039.31-.851.503-1.4l.253 1.264s.726 3.474.876 4.2h-3.135zm4.658-9.113h-2.914c-.907 0-1.58.264-1.975 1.214l-5.602 13.24h3.96l.79-2.183h4.84c.117.51.466 2.183.466 2.183h3.5L43.886 1z'
-                      fill='#00579F'
-                    />
-                    <path
-                      d='M15.63 1L11.93 10.68l-.398-2.027c-.69-2.34-2.847-4.874-5.262-6.14L9.63 15.433h3.99L19.62 1h-3.99z'
-                      fill='#00579F'
-                    />
-                    <path
-                      d='M7.73 1H1.848l-.05.264c4.73 1.205 7.86 4.118 9.165 7.618l-1.322-6.677C9.39 1.303 8.697 1.02 7.73 1z'
-                      fill='#FAA61A'
-                    />
-                  </svg>
-                </div>
-
-                {/* Mastercard */}
-                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm'>
-                  <svg viewBox='0 0 48 30' className='h-5' fill='none'>
-                    <circle cx='18' cy='15' r='12' fill='#EB001B' />
-                    <circle cx='30' cy='15' r='12' fill='#F79E1B' />
-                    <path
-                      d='M24 5.5c2.8 2.2 4.5 5.6 4.5 9.5s-1.7 7.3-4.5 9.5c-2.8-2.2-4.5-5.6-4.5-9.5s1.7-7.3 4.5-9.5z'
-                      fill='#FF5F00'
-                    />
-                  </svg>
-                </div>
-
-                {/* Boleto */}
-                <div className='h-8 px-3 bg-white border border-gray-200 rounded flex items-center justify-center shadow-sm gap-1.5'>
-                  <CreditCard className='w-4 h-4 text-gray-600' />
-                  <span className='text-xs font-semibold text-gray-600'>
-                    Boleto
-                  </span>
-                </div>
-              </div>
+              <PaymentMethods className='justify-center lg:justify-start' />
+              <PaymentConditions className='text-center lg:text-left' />
             </div>
 
             {/* Segurança */}
@@ -443,7 +381,7 @@ const Footer = () => {
               <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide'>
                 Compra Segura
               </p>
-              <div className='flex items-center gap-4'>
+              <div className='flex flex-wrap items-center justify-center lg:justify-end gap-3'>
                 {/* SSL Badge */}
                 <div className='flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full'>
                   <Lock className='w-4 h-4 text-green-600' />
@@ -452,22 +390,8 @@ const Footer = () => {
                   </span>
                 </div>
 
-                {/* Stripe Badge */}
-                <div className='flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-full'>
-                  <svg viewBox='0 0 60 25' className='h-4' fill='none'>
-                    <path
-                      d='M5 10.5c0-.83.68-1.5 1.5-1.5h5c.83 0 1.5.68 1.5 1.5v5c0 .83-.68 1.5-1.5 1.5h-5c-.83 0-1.5-.68-1.5-1.5v-5z'
-                      fill='#635BFF'
-                    />
-                    <path
-                      d='M59.64 10.12c0-3.3-1.6-5.9-4.65-5.9-3.07 0-4.92 2.6-4.92 5.88 0 3.88 2.19 5.84 5.33 5.84 1.53 0 2.69-.35 3.56-.84v-2.59c-.87.43-1.87.7-3.14.7-1.24 0-2.35-.44-2.49-1.94h6.28c0-.17.03-.83.03-1.15zm-6.35-1.22c0-1.44.88-2.04 1.69-2.04.79 0 1.62.6 1.62 2.04h-3.31zm-6.48-4.68c-1.25 0-2.06.59-2.51 1l-.17-.8h-2.82v15.14l3.2-.68.01-3.67c.46.34 1.14.81 2.27.81 2.29 0 4.38-1.84 4.38-5.91 0-3.72-2.13-5.89-4.36-5.89zm-.77 9.06c-.76 0-1.2-.27-1.51-.61l-.02-4.81c.33-.37.79-.64 1.53-.64 1.17 0 1.98 1.31 1.98 3.02 0 1.74-.8 3.04-1.98 3.04zm-9.9-9.72l3.22-.69V0l-3.22.69v2.87zm0 .9h3.22v11.19h-3.22V4.46zm-3.7.87l-.2-.87h-2.77v11.19h3.2V8.24c.76-.99 2.04-.81 2.44-.67V4.46c-.41-.15-1.92-.44-2.67 1.17v-.3zm-6.4-2.32l-3.13.67-.01 10.25c0 1.89 1.42 3.29 3.32 3.29 1.05 0 1.82-.19 2.24-.42v-2.6c-.41.17-2.43.76-2.43-1.14V7.4h2.43V4.46h-2.43l.01-1.45zm-8.8 5.51c0-.5.41-.69.69-.69.63 0 1.43.19 2.06.53V5.23c-.69-.27-1.37-.38-2.06-.38-1.69 0-2.82 0.88-2.82 2.36 0 2.3 3.16 1.93 3.16 2.92 0 .59-.51.78-.97.78-.84 0-1.91-.35-2.75-.81v2.59c.94.4 1.88.57 2.75.57 1.73 0 2.92-.85 2.92-2.36-.01-2.49-3.18-2.04-3.18-2.99z'
-                      fill='#635BFF'
-                    />
-                  </svg>
-                  <span className='text-xs font-semibold text-indigo-700'>
-                    Powered by Stripe
-                  </span>
-                </div>
+                {/* Mercado Pago */}
+                <MercadoPagoSeal />
 
                 {/* Dados Protegidos */}
                 <div className='hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full'>

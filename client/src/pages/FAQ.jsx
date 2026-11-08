@@ -26,7 +26,7 @@ Você receberá um e-mail de confirmação com os detalhes do pedido. Após a co
     },
     {
       question: 'Quais são as formas de pagamento?',
-      answer: `Cartão de Crédito: Aceitamos Visa e Mastercard em até 6x sem juros, ou de 7x a 12x com juros do cartão (o valor total com juros é exibido antes de você confirmar o pagamento). Seus dados são protegidos com criptografia SSL 256-bit via Stripe.
+      answer: `Cartão de Crédito: Aceitamos Visa, Mastercard, Elo e American Express em até 6x sem juros, ou de 7x a 12x com juros do cartão (o valor total com juros é exibido antes de você confirmar o pagamento). O pagamento é processado pelo Mercado Pago, com criptografia SSL 256-bit.
 
 PIX: Pagamento instantâneo com 10% de desconto. Após finalizar o pedido, o QR Code será exibido na tela e enviado por e-mail.
 
@@ -38,7 +38,7 @@ Boleto Bancário: O boleto tem validade de 24 horas. Após o pagamento, a compen
     },
     {
       question: 'É seguro pagar com cartão de crédito?',
-      answer: 'Sim! Utilizamos o Stripe como processador de pagamentos, com criptografia SSL 256-bit. Seus dados de cartão nunca são armazenados em nossos servidores. Todas as transações são protegidas contra fraude.'
+      answer: 'Sim! Utilizamos o Mercado Pago como processador de pagamentos, com criptografia SSL 256-bit. Os dados do cartão são digitados num formulário seguro do próprio Mercado Pago e nunca passam pelos nossos servidores nem ficam armazenados conosco. Todas as transações passam pelo sistema antifraude do Mercado Pago.'
     },
     {
       question: 'Até quando posso pagar meu pedido?',

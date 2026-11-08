@@ -120,7 +120,7 @@ const Terms = () => {
                 <div>
                   <h3 className='font-semibold text-gray-900 mb-2'>4.3. Métodos de Pagamento</h3>
                   <ul className='list-disc list-inside text-gray-700 space-y-1'>
-                    <li>Cartão de Crédito (Visa, Mastercard) — em até 6x sem juros, ou de 7x a 12x com juros (valor total informado no checkout)</li>
+                    <li>Cartão de Crédito (Visa, Mastercard, Elo, American Express) — em até 6x sem juros, ou de 7x a 12x com juros (valor total informado no checkout)</li>
                     <li>PIX — com 10% de desconto</li>
                     <li>Boleto Bancário</li>
                   </ul>
