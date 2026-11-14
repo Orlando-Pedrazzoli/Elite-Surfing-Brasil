@@ -8,51 +8,17 @@
 //   • grid → catálogo em grade (3 por linha) com imagem grande, para o
 //            lojista reconhecer o produto.
 //
-// Robustez em serverless (Vercel):
-//   • As fontes vêm de `pdfmake/build/vfs_fonts.js` (Roboto embutida em
-//     JS) e ficam no sistema de arquivos virtual do pdfmake — não depende
-//     de arquivos .ttf serem incluídos no bundle da função.
-//   • As imagens entram como data URL já baixadas pelo imageLoader.
-//     O pdfmake fica PROIBIDO de buscar URLs ou ler arquivos locais
-//     (setUrlAccessPolicy / setLocalAccessPolicy → false).
+// Fontes, cores e políticas de acesso do pdfmake: ver pdfSetup.js
+// (partilhado com o PDF dos pedidos).
 // ═══════════════════════════════════════════════════════════════════════
 
-import pdfmake from 'pdfmake';
-import vfsFonts from 'pdfmake/build/vfs_fonts.js';
+import pdfmake, { BRAND, COLORS } from './pdfSetup.js';
 import {
   documentTitle,
   formatBRL,
   formatDateBR,
   formatPct,
 } from './exportFormat.js';
-
-Object.entries(vfsFonts).forEach(([name, base64]) => {
-  pdfmake.virtualfs.writeFileSync(name, Buffer.from(base64, 'base64'));
-});
-pdfmake.setFonts({
-  Roboto: {
-    normal: 'Roboto-Regular.ttf',
-    bold: 'Roboto-Medium.ttf',
-    italics: 'Roboto-Italic.ttf',
-    bolditalics: 'Roboto-MediumItalic.ttf',
-  },
-});
-pdfmake.setUrlAccessPolicy(() => false);
-pdfmake.setLocalAccessPolicy(() => false);
-
-const BRAND = 'ELITE SURFING';
-const COLORS = {
-  navy: '#0F3057',
-  text: '#1f2937',
-  muted: '#6b7280',
-  faint: '#9ca3af',
-  line: '#e5e7eb',
-  zebra: '#f8fafc',
-  headRow: '#eef2f7',
-  price: '#15803d',
-  danger: '#b91c1c',
-  placeholder: '#f1f5f9',
-};
 
 const PAGE_MARGINS = [36, 36, 36, 44];
 const CONTENT_WIDTH = 595.28 - PAGE_MARGINS[0] - PAGE_MARGINS[2];
