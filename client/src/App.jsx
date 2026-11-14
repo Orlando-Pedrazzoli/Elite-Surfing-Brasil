@@ -57,6 +57,8 @@ import Resellers from './pages/seller/Resellers';
 // 📋 Tabelas de Preço
 import PriceTables from './pages/seller/PriceTables';
 import PriceTableEditor from './pages/seller/PriceTableEditor';
+import PriceTableOrder from './pages/seller/PriceTableOrder';
+import PriceTableOrders from './pages/seller/PriceTableOrders';
 // 📸 Estúdio Instagram
 import InstagramStudio from './pages/seller/InstagramStudio';
 import InstagramPosts from './pages/seller/InstagramPosts';
@@ -193,7 +195,9 @@ const App = () => {
             <Route path='orders' element={<Orders />} />
             {/* ─── Comercial ─── */}
             <Route path='tabelas' element={<PriceTables />} />
+            <Route path='tabelas/pedidos' element={<PriceTableOrders />} />
             <Route path='tabelas/:id' element={<PriceTableEditor />} />
+            <Route path='tabelas/:id/pedido' element={<PriceTableOrder />} />
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
             <Route path='banners' element={<Banners />} />
@@ -202,7 +206,10 @@ const App = () => {
             <Route path='instagram' element={<InstagramStudio />} />
             <Route path='instagram/posts' element={<InstagramPosts />} />
             <Route path='instagram/settings' element={<InstagramSettings />} />
-            <Route path='instagram/analytics' element={<InstagramAnalytics />} />
+            <Route
+              path='instagram/analytics'
+              element={<InstagramAnalytics />}
+            />
             <Route path='instagram/planner' element={<InstagramPlanner />} />
             <Route path='instagram/captions' element={<InstagramCaptions />} />
             <Route path='blog' element={<BlogManager />} />

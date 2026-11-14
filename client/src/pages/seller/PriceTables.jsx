@@ -37,6 +37,8 @@ import {
   Lock,
   Store,
   BookOpen,
+  ClipboardList,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { describeRule } from '../../utils/priceTableEngine';
@@ -47,6 +49,8 @@ import {
   fmtDate,
 } from '../../utils/priceTableUtils';
 import NewTableModal from '../../components/priceTables/NewTableModal';
+import OrderTablePicker from '../../components/priceTables/OrderTablePicker';
+import { orderableTables } from '../../utils/priceTableOrderUtils';
 
 const PRESET_ICONS = { cost: Lock, markup: Store, wholesale: BookOpen };
 
@@ -163,6 +167,16 @@ const TableCard = ({
               </Link>
 
               <div className='flex items-center gap-1 flex-shrink-0'>
+                {table.kind === 'cliente' && !table.archived && (
+                  <Link
+                    to={`/seller/tabelas/${table._id}/pedido`}
+                    title='Gerar um pedido com os preços desta tabela'
+                    className='flex items-center gap-1.5 px-3.5 py-2 bg-white border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5'
+                  >
+                    <ShoppingBag className='w-4 h-4' />
+                    Pedido
+                  </Link>
+                )}
                 <Link
                   to={`/seller/tabelas/${table._id}`}
                   className='flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90'
@@ -225,6 +239,7 @@ const PriceTables = () => {
   const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [modal, setModal] = useState({ open: false, preset: 'markup' });
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const tablesRef = useRef(tables);
   tablesRef.current = tables;
@@ -349,6 +364,14 @@ const PriceTables = () => {
     });
   };
 
+  // ─── Pedido: uma tabela de lojista → direto; várias → escolher ───
+  const startOrder = () => {
+    const options = orderableTables(tables);
+    if (options.length === 1)
+      navigate(`/seller/tabelas/${options[0]._id}/pedido`);
+    else setPickerOpen(true);
+  };
+
   const tiles = catalog
     ? [
         {
@@ -400,13 +423,30 @@ const PriceTables = () => {
               — em PDF, Excel ou por email
             </p>
           </div>
-          <button
-            onClick={() => setModal({ open: true, preset: 'markup' })}
-            className='flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-sm'
-          >
-            <Plus className='w-5 h-5' />
-            Nova Tabela
-          </button>
+          <div className='flex flex-wrap items-center gap-2'>
+            <Link
+              to='/seller/tabelas/pedidos'
+              className='flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50'
+            >
+              <ClipboardList className='w-5 h-5' />
+              Pedidos
+            </Link>
+            <button
+              onClick={startOrder}
+              disabled={loading}
+              className='flex items-center gap-2 px-4 py-2.5 bg-white border border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 disabled:opacity-50'
+            >
+              <ShoppingBag className='w-5 h-5' />
+              Gerar Pedido
+            </button>
+            <button
+              onClick={() => setModal({ open: true, preset: 'markup' })}
+              className='flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-sm'
+            >
+              <Plus className='w-5 h-5' />
+              Nova Tabela
+            </button>
+          </div>
         </div>
 
         {/* Números do catálogo */}
@@ -545,6 +585,13 @@ const PriceTables = () => {
           </>
         )}
       </div>
+
+      <OrderTablePicker
+        open={pickerOpen}
+        tables={tables}
+        onClose={() => setPickerOpen(false)}
+        onPick={table => navigate(`/seller/tabelas/${table._id}/pedido`)}
+      />
 
       <NewTableModal
         open={modal.open}

@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // Tudo com authSeller: estas rotas devolvem custo e preço de tabela.
 // Só GET/POST/PUT/DELETE — são os métodos liberados no CORS do server.js.
-// As rotas fixas (/reorder, /versions/...) vêm ANTES de /:id.
+// As rotas fixas (/orders, /reorder, /versions/...) vêm ANTES de /:id.
 // ═══════════════════════════════════════════════════════════════════════
 
 import express from 'express';
@@ -24,6 +24,7 @@ import {
   listVersions,
   sendTable,
 } from '../controllers/priceTableController.js';
+import priceTableOrderRouter from './priceTableOrderRoute.js';
 
 const priceTableRouter = express.Router();
 
@@ -40,6 +41,9 @@ const sendLimiter = rateLimit({
 });
 
 priceTableRouter.use(authSeller);
+
+// 🧾 Pedidos (antes de /:id)
+priceTableRouter.use('/orders', priceTableOrderRouter);
 
 priceTableRouter.get('/', listTables);
 priceTableRouter.post('/', createTable);

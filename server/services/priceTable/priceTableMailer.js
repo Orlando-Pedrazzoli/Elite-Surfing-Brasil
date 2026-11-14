@@ -168,3 +168,141 @@ export const sendPriceTableEmail = async ({
     return { success: false, error: error.message || 'Falha no envio' };
   }
 };
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🧾 PEDIDOS — envio do pedido (PDF em anexo + resumo no corpo)
+// ═══════════════════════════════════════════════════════════════════════
+
+const brl = value =>
+  Number(value).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  });
+
+const orderNumber = n => String(Number(n) || 0).padStart(4, '0');
+
+const buildOrderHtml = ({ message, order }) => {
+  const rows = order.items
+    .map(
+      item => `
+        <tr>
+          <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;">
+            ${escapeHtml(item.name)}${item.sku ? `<br><span style="color:#9ca3af;font-size:11px;">${escapeHtml(item.sku)}</span>` : ''}
+          </td>
+          <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:center;white-space:nowrap;">${item.qty}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;white-space:nowrap;">${brl(item.unitPrice)}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right;white-space:nowrap;font-weight:bold;">${brl(item.total)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  const terms = [
+    ['Prazo de pagamento', order.paymentTerms],
+    ['Condições', order.conditions],
+  ]
+    .filter(([, text]) => text)
+    .map(
+      ([label, text]) => `
+        <p style="margin:0 0 4px;font-size:12px;color:#0F3057;font-weight:bold;">${escapeHtml(label)}</p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#111827;">${escapeHtml(text).replace(/\n/g, '<br>')}</p>`,
+    )
+    .join('');
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;">
+            <tr>
+              <td style="background:#0F3057;padding:22px 28px;">
+                <div style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:1px;">ELITE SURFING</div>
+                <div style="color:#c7d2fe;font-size:13px;margin-top:4px;">Pedido nº ${orderNumber(order.number)} · ${formatDateBR(order.pricedAt || order.updatedAt)}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 28px 8px;color:#111827;font-size:15px;">
+                ${messageToHtml(message)}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 28px 8px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                  <tr style="background:#eef2f7;">
+                    <th align="left" style="padding:7px 8px;font-size:11px;color:#6b7280;">Produto</th>
+                    <th style="padding:7px 8px;font-size:11px;color:#6b7280;">Qtd</th>
+                    <th align="right" style="padding:7px 8px;font-size:11px;color:#6b7280;">Preço un.</th>
+                    <th align="right" style="padding:7px 8px;font-size:11px;color:#6b7280;">Total</th>
+                  </tr>
+                  ${rows}
+                  <tr>
+                    <td colspan="2" style="padding:10px 8px;font-size:12px;color:#6b7280;">${order.itemCount} ${order.itemCount === 1 ? 'produto' : 'produtos'} · ${order.totalQty} ${order.totalQty === 1 ? 'peça' : 'peças'}</td>
+                    <td colspan="2" style="padding:10px 8px;font-size:16px;font-weight:bold;text-align:right;color:#0F3057;white-space:nowrap;">${brl(order.subtotal)}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            ${terms ? `<tr><td style="padding:8px 28px 12px;">${terms}</td></tr>` : ''}
+            <tr>
+              <td style="padding:16px 28px 22px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;line-height:1.5;">
+                O pedido completo segue em PDF, em anexo.<br>
+                Elite Surfing Brasil · <a href="${SITE_URL}" style="color:#0F3057;">www.elitesurfing.com.br</a><br>
+                Para confirmar o pedido, basta responder a este email.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+};
+
+const buildOrderText = ({ message, order }) =>
+  [
+    message,
+    '',
+    `PEDIDO Nº ${orderNumber(order.number)}`,
+    ...order.items.map(
+      item =>
+        `${item.qty} × ${item.name}${item.sku ? ` (${item.sku})` : ''} — ${brl(item.unitPrice)} = ${brl(item.total)}`,
+    ),
+    '',
+    `TOTAL: ${brl(order.subtotal)}`,
+    order.paymentTerms ? `Prazo de pagamento: ${order.paymentTerms}` : null,
+    order.conditions ? `Condições: ${order.conditions}` : null,
+    '',
+    'Elite Surfing Brasil — www.elitesurfing.com.br',
+  ]
+    .filter(line => line !== null)
+    .join('\n');
+
+/**
+ * Envia um pedido a UM destinatário.
+ * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+ */
+export const sendOrderEmail = async ({
+  to,
+  subject,
+  message,
+  order,
+  attachments,
+}) => {
+  try {
+    const result = await getTransporter().sendMail({
+      from: { name: 'Elite Surfing Brasil', address: process.env.GMAIL_USER },
+      to,
+      replyTo: process.env.PRICE_TABLE_REPLY_TO || DEFAULT_REPLY_TO,
+      subject,
+      html: buildOrderHtml({ message, order }),
+      text: buildOrderText({ message, order }),
+      attachments,
+    });
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error(`❌ Pedido: falha ao enviar para ${to}:`, error.message);
+    return { success: false, error: error.message || 'Falha no envio' };
+  }
+};
