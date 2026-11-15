@@ -72,6 +72,74 @@ const ColorBall = ({
   );
 };
 
+// Máximo de miniaturas de cor visíveis no card (o resto vira "+N")
+const MAX_THUMBS = 5;
+
+// Gera uma versão reduzida da imagem para a miniatura.
+// Se for Cloudinary, injeta transformação (80x80, formato/qualidade auto);
+// caso contrário devolve a URL original.
+const getThumbUrl = url => {
+  if (!url || typeof url !== 'string') return url;
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace(
+      '/upload/',
+      '/upload/w_80,h_80,c_pad,b_white,f_auto,q_auto/',
+    );
+  }
+  return url;
+};
+
+// Miniatura (avatar) da variante — mostra a foto do produto em vez da cor
+const VariantThumb = ({
+  image,
+  alt,
+  large = false,
+  selected = false,
+  onClick,
+  onMouseEnter,
+  title,
+  outOfStock = false,
+}) => {
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      title={title}
+      aria-label={title}
+      aria-pressed={selected}
+      className={`
+        relative shrink-0 rounded-md overflow-hidden bg-white transition-all duration-200
+        ${large ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-7 h-7 sm:w-9 sm:h-9'}
+        ${
+          selected
+            ? 'border-2 border-gray-900'
+            : 'border border-gray-200 hover:border-gray-500'
+        }
+      `}
+    >
+      <img
+        src={getThumbUrl(image)}
+        alt={alt}
+        loading='lazy'
+        draggable={false}
+        className={`w-full h-full object-contain p-0.5 ${outOfStock ? 'opacity-40' : ''}`}
+      />
+
+      {/* Esgotado: risco diagonal sobre a miniatura */}
+      {outOfStock && (
+        <span
+          className='absolute inset-0 pointer-events-none'
+          style={{
+            background:
+              'linear-gradient(to top right, transparent calc(50% - 0.75px), #9ca3af calc(50% - 0.75px), #9ca3af calc(50% + 0.75px), transparent calc(50% + 0.75px))',
+          }}
+        />
+      )}
+    </button>
+  );
+};
+
 // Componente SizeBadge para variantes por tamanho
 const SizeBadge = ({
   label,
@@ -374,8 +442,8 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
               familyVariantType === 'size'
                 ? 'gap-1.5'
                 : largeSwatches
-                  ? 'gap-2.5'
-                  : 'gap-2'
+                  ? 'gap-2'
+                  : 'gap-1.5'
             }`}
           >
             {familyVariantType === 'size' ? (
@@ -399,22 +467,42 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
               </>
             ) : (
               <>
-                {familyProducts.slice(0, 6).map(fp => (
-                  <ColorBall
-                    key={fp._id}
-                    code1={fp.colorCode || '#ccc'}
-                    code2={fp.colorCode2}
-                    size={largeSwatches ? 26 : 20}
-                    selected={fp._id === displayProduct._id}
-                    outOfStock={(fp.stock || 0) <= 0}
-                    onClick={e => handleColorClick(fp, e)}
-                    onMouseEnter={() => handleColorHover(fp)}
-                    title={`${fp.color || fp.name}${(fp.stock || 0) <= 0 ? ' (Esgotado)' : ''}`}
-                  />
-                ))}
-                {familyProducts.length > 6 && (
+                {familyProducts.slice(0, MAX_THUMBS).map(fp => {
+                  const outOfStock = (fp.stock || 0) <= 0;
+                  const title = `${fp.color || fp.name}${outOfStock ? ' (Esgotado)' : ''}`;
+                  const selected = fp._id === displayProduct._id;
+                  const thumb = fp.image?.[0];
+
+                  // Variante sem imagem → mantém a bolinha de cor como fallback
+                  return thumb ? (
+                    <VariantThumb
+                      key={fp._id}
+                      image={thumb}
+                      alt={fp.color || fp.name}
+                      large={largeSwatches}
+                      selected={selected}
+                      outOfStock={outOfStock}
+                      onClick={e => handleColorClick(fp, e)}
+                      onMouseEnter={() => handleColorHover(fp)}
+                      title={title}
+                    />
+                  ) : (
+                    <ColorBall
+                      key={fp._id}
+                      code1={fp.colorCode || '#ccc'}
+                      code2={fp.colorCode2}
+                      size={largeSwatches ? 26 : 20}
+                      selected={selected}
+                      outOfStock={outOfStock}
+                      onClick={e => handleColorClick(fp, e)}
+                      onMouseEnter={() => handleColorHover(fp)}
+                      title={title}
+                    />
+                  );
+                })}
+                {familyProducts.length > MAX_THUMBS && (
                   <span className='text-xs text-gray-400'>
-                    +{familyProducts.length - 6}
+                    +{familyProducts.length - MAX_THUMBS}
                   </span>
                 )}
               </>
