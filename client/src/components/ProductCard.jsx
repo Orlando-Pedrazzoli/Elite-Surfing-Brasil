@@ -1,4 +1,9 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  memo,
+} from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import {
@@ -72,8 +77,65 @@ const ColorBall = ({
   );
 };
 
-// Máximo de miniaturas de cor visíveis no card (o resto vira "+N")
-const MAX_THUMBS = 5;
+// ─── Miniaturas de cor: quantas cabem numa linha ───
+// A quantidade é calculada pela largura REAL da linha (ResizeObserver),
+// não por breakpoint: o mesmo card aparece em grelhas de 1–4 colunas
+// e no carrossel de novidades, com larguras muito diferentes.
+const THUMB_GAP = 6; // px — igual ao gap-1.5 da linha
+const THUMB_SIZE_SMALL = 28; // cards estreitos (mobile 2 colunas)
+const THUMB_SIZE = 36; // cards normais
+const THUMB_SIZE_LARGE = 44; // grelha mobile de 1 coluna (largeSwatches)
+const NARROW_CARD_WIDTH = 200; // abaixo disto usa a miniatura pequena
+const DEFAULT_SLOTS = 5; // antes da 1ª medição (evita "salto" no render inicial)
+
+// Callback ref: funciona mesmo que a linha só monte depois (família carregada
+// de forma assíncrona). Um único ResizeObserver por elemento.
+const useElementWidth = () => {
+  const [el, setEl] = useState(null);
+  const [width, setWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!el) return;
+    setWidth(el.clientWidth);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      setWidth(prev => (prev === w ? prev : w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+
+  return [setEl, width];
+};
+
+// Decide que variantes mostrar e quantas ficam no "+N".
+// Regras: se todas cabem, mostra todas; senão mostra (slots - 1) + o bloco "+N".
+// A variante selecionada fica sempre visível (substitui a última, se preciso).
+const getVisibleVariants = (items, selectedId, slots) => {
+  if (items.length <= slots) return { visible: items, hidden: 0 };
+  const count = Math.max(1, slots - 1);
+  let visible = items.slice(0, count);
+  const selectedIndex = items.findIndex(i => i._id === selectedId);
+  if (selectedIndex >= count) {
+    visible = [...items.slice(0, count - 1), items[selectedIndex]];
+  }
+  return { visible, hidden: items.length - visible.length };
+};
+
+// Bloco "+N" — mesmo tamanho das miniaturas, leva à página do produto
+const MoreVariantsTile = ({ count, size, onClick }) => (
+  <button
+    type='button'
+    onClick={onClick}
+    title={`Ver mais ${count} ${count === 1 ? 'cor' : 'cores'}`}
+    aria-label={`Ver mais ${count} ${count === 1 ? 'cor' : 'cores'}`}
+    style={{ width: size, height: size }}
+    className='shrink-0 rounded-md border border-gray-200 bg-gray-50 text-gray-600 text-[11px] font-semibold flex items-center justify-center transition-colors hover:border-gray-500 hover:text-gray-900'
+  >
+    +{count}
+  </button>
+);
 
 // Gera uma versão reduzida da imagem para a miniatura.
 // Se for Cloudinary, injeta transformação (80x80, formato/qualidade auto);
@@ -93,7 +155,7 @@ const getThumbUrl = url => {
 const VariantThumb = ({
   image,
   alt,
-  large = false,
+  size = 36,
   selected = false,
   onClick,
   onMouseEnter,
@@ -108,9 +170,9 @@ const VariantThumb = ({
       title={title}
       aria-label={title}
       aria-pressed={selected}
+      style={{ width: size, height: size }}
       className={`
         relative shrink-0 rounded-md overflow-hidden bg-white transition-all duration-200
-        ${large ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-7 h-7 sm:w-9 sm:h-9'}
         ${
           selected
             ? 'border-2 border-gray-900'
@@ -183,6 +245,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
   const [familyProducts, setFamilyProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(product);
   const [isColorTransitioning, setIsColorTransitioning] = useState(false);
+  const [swatchRowRef, swatchRowWidth] = useElementWidth();
 
   // Buscar produtos da mesma família
   useEffect(() => {
@@ -275,6 +338,29 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       setCurrentImageIndex(0);
       setTimeout(() => setIsColorTransitioning(false), 50);
     }, 100);
+  };
+
+  // ─── Miniaturas: tamanho e quantidade conforme a largura do card ───
+  const thumbSize = largeSwatches
+    ? THUMB_SIZE_LARGE
+    : swatchRowWidth > 0 && swatchRowWidth < NARROW_CARD_WIDTH
+      ? THUMB_SIZE_SMALL
+      : THUMB_SIZE;
+  const thumbSlots =
+    swatchRowWidth > 0
+      ? Math.max(
+          2,
+          Math.floor((swatchRowWidth + THUMB_GAP) / (thumbSize + THUMB_GAP)),
+        )
+      : DEFAULT_SLOTS;
+  const { visible: visibleVariants, hidden: hiddenVariantsCount } =
+    getVisibleVariants(familyProducts, displayProduct._id, thumbSlots);
+
+  const handleMoreVariantsClick = e => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.scrollTo(0, 0);
+    navigate(productUrl);
   };
 
   const nextImage = e => {
@@ -464,12 +550,9 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
         {/* Variantes — Cor ou Tamanho */}
         {familyProducts.length >= 1 ? (
           <div
-            className={`flex items-center justify-center mb-2 flex-wrap ${
-              familyVariantType === 'size'
-                ? 'gap-1.5'
-                : largeSwatches
-                  ? 'gap-2'
-                  : 'gap-1.5'
+            ref={familyVariantType === 'size' ? undefined : swatchRowRef}
+            className={`flex items-center justify-center mb-2 gap-1.5 ${
+              familyVariantType === 'size' ? 'flex-wrap' : 'flex-nowrap'
             }`}
           >
             {familyVariantType === 'size' ? (
@@ -493,7 +576,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
               </>
             ) : (
               <>
-                {familyProducts.slice(0, MAX_THUMBS).map(fp => {
+                {visibleVariants.map(fp => {
                   const outOfStock = (fp.stock || 0) <= 0;
                   const title = `${fp.color || fp.name}${outOfStock ? ' (Esgotado)' : ''}`;
                   const selected = fp._id === displayProduct._id;
@@ -505,7 +588,7 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
                       key={fp._id}
                       image={thumb}
                       alt={fp.color || fp.name}
-                      large={largeSwatches}
+                      size={thumbSize}
                       selected={selected}
                       outOfStock={outOfStock}
                       onClick={e => handleColorClick(fp, e)}
@@ -526,10 +609,12 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
                     />
                   );
                 })}
-                {familyProducts.length > MAX_THUMBS && (
-                  <span className='text-xs text-gray-400'>
-                    +{familyProducts.length - MAX_THUMBS}
-                  </span>
+                {hiddenVariantsCount > 0 && (
+                  <MoreVariantsTile
+                    count={hiddenVariantsCount}
+                    size={thumbSize}
+                    onClick={handleMoreVariantsClick}
+                  />
                 )}
               </>
             )}
