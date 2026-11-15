@@ -307,6 +307,14 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
     removeFromCart(displayProduct._id);
   };
 
+  // Imagem exibida no hover: a 2ª foto do produto/variante ativa.
+  // Só quando o utilizador está na 1ª imagem (se navegou pelas setas,
+  // respeita a escolha dele e não troca).
+  const hoverImage =
+    currentImageIndex === 0 && displayProduct.image.length > 1
+      ? displayProduct.image[1]
+      : null;
+
   const cartQuantity = cartItems[displayProduct._id] || 0;
   const canAddMore = cartQuantity < displayProduct.stock;
 
@@ -317,20 +325,38 @@ const ProductCard = memo(({ product, largeSwatches = false }) => {
       className='bg-white w-full transition-all duration-300 flex flex-col h-full relative group'
     >
       {/* ═══ IMAGEM ═══ */}
-      <div className='relative flex items-center justify-center bg-gray-50/50 rounded-lg overflow-hidden aspect-square'>
+      <div className='group/image relative flex items-center justify-center bg-gray-50/50 rounded-lg overflow-hidden aspect-square'>
         <div
           className={`
-          w-full h-full flex items-center justify-center p-2
+          relative w-full h-full flex items-center justify-center p-2
           transition-all duration-150 ease-out
           ${isColorTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}
         `}
         >
           <img
-            className='max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105'
+            className={`max-w-full max-h-full object-contain transition-all duration-300 ease-out group-hover:scale-105 motion-reduce:transition-none ${
+              hoverImage ? 'group-hover/image:opacity-0' : ''
+            }`}
             src={displayProduct.image[currentImageIndex]}
             alt={displayProduct.name}
             loading='lazy'
+            decoding='async'
           />
+
+          {/* Segunda imagem — crossfade no hover (só em dispositivos com hover real) */}
+          {hoverImage && (
+            <span className='absolute inset-0 p-2 flex items-center justify-center pointer-events-none'>
+              <img
+                className='max-w-full max-h-full object-contain opacity-0 transition-all duration-300 ease-out group-hover/image:opacity-100 group-hover:scale-105 motion-reduce:transition-none'
+                src={hoverImage}
+                alt=''
+                aria-hidden='true'
+                loading='lazy'
+                decoding='async'
+                draggable={false}
+              />
+            </span>
+          )}
         </div>
 
         {/* ═══ BADGES CANTO SUPERIOR ESQUERDO ═══ */}
