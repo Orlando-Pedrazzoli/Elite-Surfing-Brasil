@@ -1,7 +1,7 @@
 // client/src/components/MainBanner.jsx
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 // 🖼️ HERO DA PÁGINA INICIAL — carrossel de banners
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 // Os banners deixaram de estar fixos no código: são geridos pelo admin em
 // /seller/banners (imagem desktop, imagem mobile, textos, link e ordem).
 // A leitura e a reserva (banners originais) estão em utils/heroBanners.js.
@@ -12,7 +12,7 @@
 //   • o banner pode ter link — o slide inteiro fica clicável;
 //   • textos opcionais: sem texto, a imagem não é escurecida;
 //   • com um único banner não há setas, pontos nem rotação automática.
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -27,9 +27,9 @@ import {
 const AUTOPLAY_INTERVAL = 5000;
 const TRANSITION_DURATION = 700;
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 // PROPORÇÃO DA HERO — fixa, para a imagem NUNCA ser cortada
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 // Antes: altura relativa ao ecrã (75vh / 85vh). Como a proporção mudava
 // de dispositivo para dispositivo, qualquer imagem era recortada em
 // algum deles e não havia "medida certa" para o admin gerar os banners.
@@ -44,7 +44,7 @@ const TRANSITION_DURATION = 700;
 //
 // Se mudar estas proporções, mudar também HERO_RATIO em
 // pages/seller/Banners.jsx (medidas recomendadas e pré-visualização).
-// ═══════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 const HERO_HEIGHT = 'aspect-[3/5] md:aspect-[2/1] max-h-[90vh]';
 
 const isExternalLink = link => /^https?:\/\//i.test(link);
@@ -269,14 +269,10 @@ const MainBanner = () => {
               />
             </picture>
 
-            {/* Escurecimento: forte só quando há texto por cima; sem
-                texto, apenas o topo (para o menu continuar legível) */}
+            {/* Escurecimento leve apenas no topo (para o menu continuar legível).
+                A imagem permanece original mesmo quando há texto. */}
             <div
-              className={`absolute inset-0 ${
-                hasText
-                  ? 'bg-gradient-to-t from-black/70 via-black/20 to-black/30'
-                  : 'bg-gradient-to-b from-black/35 via-black/5 to-transparent'
-              }`}
+              className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent pointer-events-none"
             />
           </div>
         );
