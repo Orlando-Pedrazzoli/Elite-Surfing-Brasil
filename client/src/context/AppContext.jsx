@@ -95,6 +95,8 @@ export const AppContextProvider = ({ children }) => {
       url.includes('/api/romaneios') ||
       url.includes('/api/product/add') ||
       url.includes('/api/product/update') ||
+      // 🎥 Upload assinado de vídeos de produto (admin)
+      url.includes('/api/product/video') ||
       url.includes('/api/product/delete') ||
       url.includes('/api/product/stock') ||
       // 🔧 FIX iPHONE: /reorder é protegida por authSeller no backend mas

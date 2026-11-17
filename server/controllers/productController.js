@@ -9,6 +9,89 @@ import jwt from 'jsonwebtoken';
 import Product from '../models/Product.js';
 
 // ═══════════════════════════════════════════════════════════════════════
+// 🎥 VÍDEOS DO PRODUTO (MP4)
+// ─────────────────────────────────────────────────────────────────────
+// O browser envia o MP4 direto para o Cloudinary (upload assinado por
+// signProductVideoUpload) e manda só a URL em productData.videos.
+// Aqui validamos que cada URL é mesmo um vídeo da NOSSA conta Cloudinary.
+// ═══════════════════════════════════════════════════════════════════════
+export const MAX_PRODUCT_VIDEOS = 4;
+const PRODUCT_VIDEO_FOLDER = 'products/videos';
+
+const sanitizeVideoUrls = list => {
+  if (!Array.isArray(list)) return [];
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const prefix = `https://res.cloudinary.com/${cloudName}/video/upload/`;
+  const clean = [];
+  for (const raw of list) {
+    const url = String(raw || '').trim();
+    if (!cloudName || !url.startsWith(prefix)) continue;
+    if (!clean.includes(url)) clean.push(url);
+  }
+  return clean.slice(0, MAX_PRODUCT_VIDEOS);
+};
+
+// publicId a partir da URL: tudo depois de /upload/, sem transformações,
+// sem versão (v123) e sem extensão.
+// Ex: .../video/upload/v171/products/videos/abc.mp4 → products/videos/abc
+const videoPublicIdFromUrl = url => {
+  const after = String(url).split('/upload/')[1];
+  if (!after) return null;
+  const parts = after.split('/');
+  while (parts.length > 1 && (parts[0].includes(',') || /^[a-z]{1,3}_/.test(parts[0]))) {
+    parts.shift(); // transformações (ex: f_mp4,vc_h264)
+  }
+  if (parts.length > 1 && /^v\d+$/.test(parts[0])) parts.shift();
+  return parts.join('/').replace(/\.[^/.]+$/, '');
+};
+
+const destroyVideo = async url => {
+  const publicId = videoPublicIdFromUrl(url);
+  if (!publicId) return;
+  try {
+    await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+  } catch (error) {
+    console.log('Erro ao excluir vídeo do Cloudinary:', error.message);
+  }
+};
+
+// Todos os vídeos atuais de um produto (novo array + campo legado)
+const currentVideosOf = product => {
+  const list = [...(product?.videos || [])];
+  if (product?.video && !list.includes(product.video)) list.push(product.video);
+  return list;
+};
+
+// Sign Video Upload : POST /api/product/video/sign-upload (seller)
+export const signProductVideoUpload = async (req, res) => {
+  try {
+    setMutationHeaders(res);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.json({ success: false, message: 'Cloudinary não configurado' });
+    }
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = PRODUCT_VIDEO_FOLDER;
+    const signature = cloudinary.utils.api_sign_request(
+      { timestamp, folder },
+      apiSecret,
+    );
+    res.json({
+      success: true,
+      apiKey,
+      timestamp,
+      folder,
+      signature,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════
 // 🔧 HELPERS
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -252,13 +335,18 @@ export const addProduct = async (req, res) => {
       }),
     );
 
-    let videoUrl = null;
-    if (videoFile) {
+    // 🎥 Vídeos: URLs já enviadas ao Cloudinary pelo browser
+    const videos = sanitizeVideoUrls(productData.videos);
+    delete productData.videos;
+    delete productData.video;
+
+    // Legado: vídeo enviado como arquivo (multer) — entra no array
+    if (videoFile && videos.length < MAX_PRODUCT_VIDEOS) {
       const videoResult = await cloudinary.uploader.upload(videoFile.path, {
         resource_type: 'video',
-        folder: 'products/videos',
+        folder: PRODUCT_VIDEO_FOLDER,
       });
-      videoUrl = videoResult.secure_url;
+      videos.push(videoResult.secure_url);
     }
 
     const stock = productData.stock || 0;
@@ -293,7 +381,8 @@ export const addProduct = async (req, res) => {
       ...(costPrice !== undefined ? { costPrice } : {}),
       ...(wholesalePrice !== undefined ? { wholesalePrice } : {}),
       image: imagesUrl,
-      video: videoUrl,
+      videos,
+      video: null,
       stock,
       inStock,
     });
@@ -847,45 +936,37 @@ export const updateProduct = async (req, res) => {
       finalImageUrls = existingProduct.image;
     }
 
-    let videoUrl = existingProduct.video;
-    if (videoFile) {
-      if (existingProduct.video) {
-        try {
-          const videoPublicId = existingProduct.video
-            .split('/')
-            .slice(-2)
-            .join('/')
-            .split('.')[0];
-          await cloudinary.uploader.destroy(videoPublicId, {
-            resource_type: 'video',
-          });
-        } catch (error) {
-          console.log('Erro ao excluir vídeo antigo:', error.message);
-        }
-      }
+    // ═══════════════════════════════════════════════════════════════
+    // 🎥 VÍDEOS
+    // - productData.videos (array de URLs) → lista final definida pelo
+    //   admin; vídeos que saíram da lista são apagados do Cloudinary.
+    // - Sem productData.videos → mantém os vídeos atuais (compatível com
+    //   clientes antigos que usam o campo `video` + removeVideo).
+    // ═══════════════════════════════════════════════════════════════
+    const previousVideos = currentVideosOf(existingProduct);
+    let finalVideos = previousVideos;
 
+    if (productData.videos !== undefined) {
+      finalVideos = sanitizeVideoUrls(productData.videos);
+    } else if (productData.removeVideo) {
+      finalVideos = [];
+    }
+    delete productData.videos;
+    delete productData.video;
+    delete productData.removeVideo;
+
+    // Legado: vídeo enviado como arquivo (multer) — entra no array
+    if (videoFile && finalVideos.length < MAX_PRODUCT_VIDEOS) {
       const videoResult = await cloudinary.uploader.upload(videoFile.path, {
         resource_type: 'video',
-        folder: 'products/videos',
+        folder: PRODUCT_VIDEO_FOLDER,
       });
-      videoUrl = videoResult.secure_url;
+      finalVideos = [...finalVideos, videoResult.secure_url];
     }
 
-    if (productData.removeVideo && existingProduct.video) {
-      try {
-        const videoPublicId = existingProduct.video
-          .split('/')
-          .slice(-2)
-          .join('/')
-          .split('.')[0];
-        await cloudinary.uploader.destroy(videoPublicId, {
-          resource_type: 'video',
-        });
-      } catch (error) {
-        console.log('Erro ao excluir vídeo:', error.message);
-      }
-      videoUrl = null;
-      delete productData.removeVideo;
+    const keptVideos = new Set(finalVideos);
+    for (const oldUrl of previousVideos) {
+      if (!keptVideos.has(oldUrl)) await destroyVideo(oldUrl);
     }
 
     // 🆕 REMOVIDO: cálculo automático de inStock baseado em stock.
@@ -915,7 +996,8 @@ export const updateProduct = async (req, res) => {
       $set: {
         ...productData,
         image: finalImageUrls,
-        video: videoUrl,
+        videos: finalVideos,
+        video: null,
         ...(costPrice !== undefined ? { costPrice } : {}),
         ...(wholesalePrice !== undefined ? { wholesalePrice } : {}),
       },
@@ -957,22 +1039,9 @@ export const deleteProduct = async (req, res) => {
       }
     }
 
-    // 🔧 FIX: o vídeo NÃO era apagado ao excluir o produto — cada produto
-    // com vídeo deixava o arquivo órfão no Cloudinary para sempre (vídeo
-    // é o que mais pesa na quota). Mesmo padrão de publicId do update.
-    if (product.video) {
-      try {
-        const videoPublicId = product.video
-          .split('/')
-          .slice(-2)
-          .join('/')
-          .split('.')[0];
-        await cloudinary.uploader.destroy(videoPublicId, {
-          resource_type: 'video',
-        });
-      } catch (error) {
-        console.log('Erro ao excluir vídeo do Cloudinary:', error.message);
-      }
+    // 🎥 Apaga todos os vídeos do produto (array + campo legado)
+    for (const videoUrl of currentVideosOf(product)) {
+      await destroyVideo(videoUrl);
     }
 
     await Product.findByIdAndDelete(id);

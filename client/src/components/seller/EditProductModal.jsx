@@ -16,6 +16,8 @@ import {
 } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
+import ProductVideoUploader from './ProductVideoUploader';
+import { getProductVideos } from '../../utils/productMedia';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 import PricingFields from './PricingFields';
 
@@ -480,6 +482,9 @@ const EditImageZone = ({ images, setImages, disabled = false }) => {
 const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   // 🆕 Sistema de imagens unificado: [{ type: 'existing', url }, { type: 'new', file }]
   const [images, setImages] = useState([]);
+  // 🎥 Vídeos MP4 (URLs do Cloudinary) — inclui o campo legado `video`
+  const [videos, setVideos] = useState([]);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -699,6 +704,9 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       } else {
         setImages([]);
       }
+
+      // 🎥 Vídeos existentes (array novo + campo legado)
+      setVideos(getProductVideos(product));
     }
   }, [product]);
 
@@ -783,6 +791,13 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
   const handleSubmit = async event => {
     event.preventDefault();
+
+    // 🎥 Espera o upload do vídeo terminar (senão a URL não vai no produto)
+    if (isVideoUploading) {
+      toast.error('Aguarde o envio do vídeo terminar');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -941,6 +956,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
 
       productData.existingImages = existingImageUrls;
       productData.imageOrder = imageOrder;
+      // 🎥 Lista final de vídeos — os removidos são apagados no servidor
+      productData.videos = videos;
 
       const formData = new FormData();
       formData.append('id', product._id);
@@ -1022,6 +1039,14 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
           <EditImageZone
             images={images}
             setImages={setImages}
+            disabled={isSubmitting}
+          />
+
+          {/* 🎥 VÍDEOS MP4 — upload direto ao Cloudinary */}
+          <ProductVideoUploader
+            videos={videos}
+            setVideos={setVideos}
+            onUploadingChange={setIsVideoUploading}
             disabled={isSubmitting}
           />
 

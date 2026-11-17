@@ -17,6 +17,7 @@ import {
   updateStock,
   decrementStock,
   reorderProducts, // 🆕 Reordenar produtos
+  signProductVideoUpload, // 🎥 Upload assinado de vídeos MP4
 } from '../controllers/productController.js';
 
 const productRouter = express.Router();
@@ -53,6 +54,10 @@ productRouter.post(
   ]),
   updateProduct,
 );
+
+// 🎥 Assina o upload de vídeo MP4 — o browser envia o arquivo direto ao
+// Cloudinary (sem passar pelo limite de ~4.5MB da Vercel)
+productRouter.post('/video/sign-upload', authSeller, signProductVideoUpload);
 
 productRouter.post('/delete', authSeller, deleteProduct);
 productRouter.post('/stock', authSeller, changeStock);

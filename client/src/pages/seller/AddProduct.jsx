@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
 import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
 import PricingFields from '../../components/seller/PricingFields';
+import ProductVideoUploader from '../../components/seller/ProductVideoUploader';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
 const PRESET_COLORS = [
@@ -454,6 +455,9 @@ const ImageUploadZone = ({ files, setFiles }) => {
 // ═══════════════════════════════════════════════════════════════
 const AddProduct = () => {
   const [files, setFiles] = useState([]);
+  // 🎥 Vídeos MP4 (URLs já enviadas ao Cloudinary pelo uploader)
+  const [videos, setVideos] = useState([]);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -654,6 +658,12 @@ const AddProduct = () => {
     // 🔧 FIX: se já está enviando, ignora cliques repetidos
     if (isSubmitting) return;
 
+    // 🎥 Espera o upload do vídeo terminar (senão a URL não vai no produto)
+    if (isVideoUploading) {
+      toast.error('Aguarde o envio do vídeo terminar');
+      return;
+    }
+
     try {
       const activeFiles = files.filter(Boolean);
 
@@ -715,6 +725,8 @@ const AddProduct = () => {
         tags: selectedTags,
         // 🆕 Frete grátis
         freeShipping,
+        // 🎥 Vídeos MP4
+        videos,
       };
 
       // Adicionar filtros se algum foi preenchido
@@ -818,6 +830,7 @@ const AddProduct = () => {
         setWeight('');
         setDimensions({ length: '', width: '', height: '' });
         setFiles([]);
+        setVideos([]);
         setProductFilters({});
         setProductFamily('');
         setVariantType('color');
@@ -869,6 +882,14 @@ const AddProduct = () => {
         {/* 🆕 DRAG & DROP IMAGE UPLOAD                           */}
         {/* ═══════════════════════════════════════════════════════ */}
         <ImageUploadZone files={files} setFiles={setFiles} />
+
+        {/* 🎥 VÍDEOS MP4 — upload direto ao Cloudinary */}
+        <ProductVideoUploader
+          videos={videos}
+          setVideos={setVideos}
+          onUploadingChange={setIsVideoUploading}
+          disabled={isSubmitting}
+        />
 
         {/* Nome */}
         <div className='flex flex-col gap-1'>

@@ -83,9 +83,18 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
+    // Legado: 1 vídeo por produto (enviado via multer). Mantido para os
+    // produtos antigos — ao salvar pelo admin novo, migra para `videos`.
     video: {
       type: String,
       default: null,
+    },
+    // 🎥 Vídeos MP4 do produto (galeria, junto com as imagens).
+    // URLs do Cloudinary enviadas direto do browser (upload assinado) —
+    // não passam pela Vercel (limite de ~4.5MB por request).
+    videos: {
+      type: [String],
+      default: [],
     },
     category: {
       type: String,

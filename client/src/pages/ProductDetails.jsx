@@ -1,6 +1,6 @@
 // client/src/pages/ProductDetails.jsx
 import '../styles/ProductDetails.css';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Link, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Truck } from 'lucide-react';
@@ -15,6 +15,7 @@ import ProductPriceDisplay from '../components/ProductPriceDisplay';
 import ProductInfoTabs from '../components/ProductInfoTabs';
 import ShippingCalculator from '../components/ShippingCalculator';
 import ImageGalleryModal from '../components/ImageGalleryModal';
+import { buildProductMedia, getVideoPoster } from '../utils/productMedia';
 
 // Meta Pixel
 import useMetaPixel from '../hooks/useMetaPixel';
@@ -49,9 +50,18 @@ const ProductDetails = () => {
   const [familyProducts, setFamilyProducts] = useState([]);
   const [displayProduct, setDisplayProduct] = useState(null);
   const [isColorTransitioning, setIsColorTransitioning] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
+  // 🖼️ Índice da imagem aberta no modal de zoom (índice em product.image,
+  // não na galeria — a galeria mistura imagens e vídeos)
+  const [modalImageIndex, setModalImageIndex] = useState(0);
 
   const imageScrollRef = useRef(null);
+
+  // 🎥 Galeria unificada: imagem principal → vídeos MP4 → restantes imagens
+  const media = useMemo(
+    () => buildProductMedia(displayProduct),
+    [displayProduct],
+  );
+  const currentMedia = media[currentImageIndex] || media[0];
 
   // Estado para produto carregado via API (quando não está no products)
   const [apiProduct, setApiProduct] = useState(null);
@@ -249,8 +259,8 @@ const ProductDetails = () => {
   };
 
   // Modal
-  const openModal = useCallback(index => {
-    setCurrentImageIndex(index);
+  const openModal = useCallback(imageIndex => {
+    setModalImageIndex(imageIndex);
     setIsModalOpen(true);
   }, []);
 
@@ -322,7 +332,7 @@ const ProductDetails = () => {
     if (window.innerWidth >= 640 && displayProduct) {
       if (newIndex >= thumbStartIndex + 5) {
         setThumbStartIndex(prev =>
-          Math.min(prev + 1, Math.max(0, displayProduct.image.length - 5)),
+          Math.min(prev + 1, Math.max(0, media.length - 5)),
         );
       } else if (newIndex < thumbStartIndex) {
         setThumbStartIndex(prev => Math.max(prev - 1, 0));
@@ -334,15 +344,14 @@ const ProductDetails = () => {
 
   const nextImage = () => {
     if (!displayProduct) return;
-    const newIndex = (currentImageIndex + 1) % displayProduct.image.length;
+    const newIndex = (currentImageIndex + 1) % media.length;
     changeImage(newIndex);
   };
 
   const prevImage = () => {
     if (!displayProduct) return;
     const newIndex =
-      (currentImageIndex - 1 + displayProduct.image.length) %
-      displayProduct.image.length;
+      (currentImageIndex - 1 + media.length) % media.length;
     changeImage(newIndex);
   };
 
@@ -350,7 +359,7 @@ const ProductDetails = () => {
     if (!displayProduct) return;
     const newIndex = thumbStartIndex - 1;
     setThumbStartIndex(
-      newIndex < 0 ? Math.max(0, displayProduct.image.length - 5) : newIndex,
+      newIndex < 0 ? Math.max(0, media.length - 5) : newIndex,
     );
   };
 
@@ -358,7 +367,7 @@ const ProductDetails = () => {
     if (!displayProduct) return;
     const newIndex = thumbStartIndex + 1;
     setThumbStartIndex(
-      newIndex > displayProduct.image.length - 5 ? 0 : newIndex,
+      newIndex > media.length - 5 ? 0 : newIndex,
     );
   };
 
@@ -558,7 +567,7 @@ const ProductDetails = () => {
           images={displayProduct.image}
           isOpen={isModalOpen}
           onClose={closeModal}
-          initialIndex={currentImageIndex}
+          initialIndex={modalImageIndex}
           productName={displayProduct.name}
           showThumbnails={true}
           showCounter={true}
@@ -600,55 +609,64 @@ const ProductDetails = () => {
           <div className='flex flex-col gap-4'>
             {/* Main Image Container */}
             <div className='relative w-full max-w-[450px] h-[350px] sm:h-[450px] mx-auto'>
-              {/* Mobile Carousel */}
+              {/* Mobile Carousel — imagens e vídeos */}
               <div
                 ref={imageScrollRef}
                 onScroll={() => handleImageScroll(imageScrollRef)}
                 className='flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide sm:hidden border border-gray-200 rounded-xl shadow-sm relative'
               >
-                {displayProduct.video && (
-                  <div className='relative w-full h-full flex-shrink-0 snap-center bg-black'>
-                    <video
-                      src={displayProduct.video}
-                      controls
-                      playsInline
-                      className='w-full h-full object-contain'
-                    />
-                  </div>
+                {media.map((item, index) =>
+                  item.type === 'video' ? (
+                    <div
+                      key={`v-${item.url}`}
+                      className='relative w-full h-full flex-shrink-0 snap-center bg-black'
+                    >
+                      <video
+                        src={item.url}
+                        poster={getVideoPoster(item.url)}
+                        controls
+                        playsInline
+                        preload='metadata'
+                        className='w-full h-full object-contain'
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      key={`i-${index}`}
+                      className='relative w-full h-full flex-shrink-0 snap-center'
+                    >
+                      <img
+                        src={item.url}
+                        alt={`${displayProduct.name} - imagem ${item.imageIndex + 1}`}
+                        className={`w-full h-full object-contain transition-all duration-300 cursor-pointer ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
+                        onClick={() => openModal(item.imageIndex)}
+                      />
+                    </div>
+                  ),
                 )}
-                {displayProduct.image.map((image, index) => (
-                  <div
-                    key={index}
-                    className='relative w-full h-full flex-shrink-0 snap-center'
-                  >
-                    <img
-                      src={image}
-                      alt={`Imagem ${index + 1}`}
-                      className={`w-full h-full object-contain transition-all duration-300 cursor-pointer ${isColorTransitioning ? 'opacity-0' : 'opacity-100'}`}
-                      onClick={() => openModal(index)}
-                    />
-                  </div>
-                ))}
               </div>
 
-              {/* Desktop Main Image */}
+              {/* Desktop Main Media */}
               <div className='relative border border-gray-200 w-full h-full rounded-xl overflow-hidden hidden sm:block shadow-sm'>
-                {showVideo && displayProduct.video ? (
+                {currentMedia?.type === 'video' ? (
                   <video
-                    src={displayProduct.video}
+                    key={currentMedia.url}
+                    src={currentMedia.url}
+                    poster={getVideoPoster(currentMedia.url)}
                     controls
                     autoPlay
+                    muted
+                    playsInline
                     className='w-full h-full object-contain bg-black'
-                    onEnded={() => setShowVideo(false)}
                   />
                 ) : (
                   <img
-                    src={displayProduct.image[currentImageIndex]}
-                    alt='Produto'
+                    src={currentMedia?.url}
+                    alt={displayProduct.name}
                     className={`w-full h-full object-contain transition-all duration-300 cursor-pointer ${
                       isTransitioning ? 'opacity-70' : 'opacity-100'
                     } ${isColorTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-                    onClick={() => openModal(currentImageIndex)}
+                    onClick={() => openModal(currentMedia?.imageIndex || 0)}
                   />
                 )}
 
@@ -662,11 +680,13 @@ const ProductDetails = () => {
                   </div>
                 )}
 
-                <div className='absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg text-xs opacity-0 hover:opacity-100 transition-opacity'>
-                  Clique para ampliar
-                </div>
+                {currentMedia?.type !== 'video' && (
+                  <div className='absolute top-2 right-2 bg-black/50 text-white p-2 rounded-lg text-xs opacity-0 hover:opacity-100 transition-opacity'>
+                    Clique para ampliar
+                  </div>
+                )}
 
-                {displayProduct.image.length > 1 && (
+                {media.length > 1 && (
                   <>
                     <button
                       onClick={e => {
@@ -692,38 +712,27 @@ const ProductDetails = () => {
 
               {/* Mobile Dots */}
               <div className='flex justify-center gap-2 mt-4 sm:hidden'>
-                {displayProduct.video && (
-                  <button
-                    onClick={() => {
-                      if (imageScrollRef.current) {
-                        imageScrollRef.current.scrollTo({
-                          left: 0,
-                          behavior: 'smooth',
-                        });
-                      }
-                    }}
-                    className='w-2.5 h-2.5 rounded-full bg-red-500 transition-all duration-300 hover:scale-110'
-                    title='Vídeo'
-                  />
-                )}
-                {displayProduct.image.map((_, index) => (
+                {media.map((item, index) => (
                   <button
                     key={index}
                     onClick={() => changeImage(index)}
+                    title={item.type === 'video' ? 'Vídeo' : undefined}
                     className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                       currentImageIndex === index
                         ? 'bg-primary scale-110'
-                        : 'bg-gray-300 hover:bg-gray-400'
+                        : item.type === 'video'
+                          ? 'bg-red-400 hover:bg-red-500'
+                          : 'bg-gray-300 hover:bg-gray-400'
                     }`}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Desktop Thumbnails */}
+            {/* Desktop Thumbnails — imagens e vídeos */}
             <div className='hidden sm:flex justify-center'>
               <div className='flex items-center gap-2 max-w-[550px]'>
-                {displayProduct.image.length > 5 && (
+                {media.length > 5 && (
                   <button
                     onClick={scrollThumbsLeft}
                     className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'
@@ -733,62 +742,51 @@ const ProductDetails = () => {
                 )}
 
                 <div className='flex gap-3 overflow-hidden'>
-                  {displayProduct.video && (
-                    <div
-                      onClick={() => {
-                        setShowVideo(true);
-                      }}
-                      className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 relative ${
-                        showVideo
-                          ? 'border-primary scale-105 shadow-lg'
-                          : 'border-gray-300 hover:scale-105 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className='w-full h-full bg-gray-900 flex items-center justify-center'>
-                        <svg
-                          className='w-8 h-8 text-white'
-                          fill='currentColor'
-                          viewBox='0 0 24 24'
+                  {media
+                    .slice(thumbStartIndex, thumbStartIndex + 5)
+                    .map((item, index) => {
+                      const realIndex = thumbStartIndex + index;
+                      const active = currentImageIndex === realIndex;
+                      return (
+                        <div
+                          key={realIndex}
+                          onClick={() => selectThumbnail(realIndex)}
+                          className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 relative ${
+                            active
+                              ? 'border-primary scale-105 shadow-lg'
+                              : 'border-gray-300 hover:scale-105 hover:border-gray-400'
+                          }`}
                         >
-                          <path d='M8 5v14l11-7z' />
-                        </svg>
-                      </div>
-                      <div className='absolute bottom-1 left-1 right-1 text-center'>
-                        <span className='text-[10px] text-white bg-black/60 px-1 rounded'>
-                          Vídeo
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {displayProduct.image
-                    .slice(
-                      thumbStartIndex,
-                      thumbStartIndex + (displayProduct.video ? 4 : 5),
-                    )
-                    .map((image, index) => (
-                      <div
-                        key={thumbStartIndex + index}
-                        onClick={() => {
-                          setShowVideo(false);
-                          selectThumbnail(thumbStartIndex + index);
-                        }}
-                        className={`border-2 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 flex-shrink-0 ${
-                          !showVideo &&
-                          currentImageIndex === thumbStartIndex + index
-                            ? 'border-primary scale-105 shadow-lg'
-                            : 'border-gray-300 hover:scale-105 hover:border-gray-400'
-                        }`}
-                      >
-                        <img
-                          src={image}
-                          alt={`Miniatura ${thumbStartIndex + index + 1}`}
-                          className='w-full h-full object-cover transition-transform duration-300'
-                        />
-                      </div>
-                    ))}
+                          {item.type === 'video' ? (
+                            <>
+                              <img
+                                src={getVideoPoster(item.url)}
+                                alt='Vídeo do produto'
+                                className='w-full h-full object-cover bg-gray-900'
+                              />
+                              <div className='absolute inset-0 flex items-center justify-center bg-black/30'>
+                                <svg
+                                  className='w-7 h-7 text-white drop-shadow'
+                                  fill='currentColor'
+                                  viewBox='0 0 24 24'
+                                >
+                                  <path d='M8 5v14l11-7z' />
+                                </svg>
+                              </div>
+                            </>
+                          ) : (
+                            <img
+                              src={item.url}
+                              alt={`Miniatura ${realIndex + 1}`}
+                              className='w-full h-full object-cover transition-transform duration-300'
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
 
-                {displayProduct.image.length > 5 && (
+                {media.length > 5 && (
                   <button
                     onClick={scrollThumbsRight}
                     className='p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-90 flex-shrink-0'

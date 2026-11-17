@@ -400,5 +400,766 @@ const BannerRow = ({
   );
 };
 
-// The rest of the file continues with the form and other components...
-// (truncated in this example for brevity, but in real call it would be the full content)
+// ─────────────────────────────────────────────────────────────────────
+// Campo de envio de imagem
+// ─────────────────────────────────────────────────────────────────────
+const ImageField = ({
+  label,
+  hint,
+  icon,
+  required,
+  hasImage,
+  onPick,
+  onRemove,
+  disabled,
+}) => {
+  const Icon = icon;
+  const inputRef = useRef(null);
+  return (
+    <div>
+      <p className='text-sm font-medium text-gray-700 flex items-center gap-1.5'>
+        <Icon className='w-4 h-4 text-gray-400' />
+        {label}
+        {required ? (
+          <span className='text-red-500'>*</span>
+        ) : (
+          <span className='text-gray-400 font-normal'>(opcional)</span>
+        )}
+      </p>
+      <p className='text-[11px] text-gray-500 mt-0.5 mb-2'>{hint}</p>
+      <div className='flex flex-wrap items-center gap-2'>
+        <button
+          type='button'
+          onClick={() => inputRef.current?.click()}
+          disabled={disabled}
+          className='inline-flex items-center gap-2 px-3.5 py-2 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50'
+        >
+          <Upload className='w-4 h-4' />
+          {hasImage ? 'Trocar imagem' : 'Escolher imagem'}
+        </button>
+        {hasImage && onRemove && (
+          <button
+            type='button'
+            onClick={onRemove}
+            disabled={disabled}
+            className='text-xs text-gray-500 hover:text-red-600 underline underline-offset-2'
+          >
+            Remover
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type='file'
+          accept='image/*'
+          className='hidden'
+          onChange={e => {
+            const file = e.target.files?.[0];
+            e.target.value = ''; // permite escolher o mesmo ficheiro de novo
+            if (file) onPick(file);
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// PÁGINA
+// ═══════════════════════════════════════════════════════════════════════
+const Banners = () => {
+  const { axios } = useAppContext();
+
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  // Formulário (modal)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(emptyForm());
+  const [files, setFiles] = useState({ image: null, mobileImage: null });
+  const [previews, setPreviews] = useState({ image: '', mobileImage: '' });
+  // Aviso de proporção errada por imagem ('' = proporção certa)
+  const [warnings, setWarnings] = useState({ image: '', mobileImage: '' });
+  const [removeMobile, setRemoveMobile] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchBanners = useCallback(async () => {
+    try {
+      const { data } = await axios.get(API);
+      if (data.success) setBanners(data.banners);
+      else toast.error(data.message || 'Erro ao carregar os banners');
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || 'Erro ao carregar os banners',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [axios]);
+
+  useEffect(() => {
+    fetchBanners();
+  }, [fetchBanners]);
+
+  // liberta as pré-visualizações locais ao sair
+  const previewsRef = useRef(previews);
+  previewsRef.current = previews;
+  useEffect(
+    () => () => {
+      Object.values(previewsRef.current).forEach(url => {
+        if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+    },
+    [],
+  );
+
+  const liveCount = useMemo(
+    () => banners.filter(b => b.status === 'active').length,
+    [banners],
+  );
+
+  // Depois de qualquer alteração: a loja (neste browser) relê os banners
+  const afterChange = () => resetHeroBanners();
+
+  // ─── Modal ───
+  const setPreview = (field, url) =>
+    setPreviews(current => {
+      if (current[field]?.startsWith('blob:'))
+        URL.revokeObjectURL(current[field]);
+      return { ...current, [field]: url };
+    });
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setFiles({ image: null, mobileImage: null });
+    setPreview('image', '');
+    setPreview('mobileImage', '');
+    setWarnings({ image: '', mobileImage: '' });
+    setRemoveMobile(false);
+    setModalOpen(true);
+  };
+
+  const openEdit = banner => {
+    setEditing(banner);
+    setForm({
+      title: banner.title || '',
+      heading: banner.heading || '',
+      subtitle: banner.subtitle || '',
+      link: banner.link || '',
+      startsAt: toInputDateTime(banner.startsAt),
+      endsAt: toInputDateTime(banner.endsAt),
+      isActive: banner.isActive !== false,
+    });
+    setFiles({ image: null, mobileImage: null });
+    setPreview('image', banner.image ? optimizedImage(banner.image, 1280) : '');
+    setPreview(
+      'mobileImage',
+      banner.mobileImage ? optimizedImage(banner.mobileImage, 640) : '',
+    );
+    setWarnings({ image: '', mobileImage: '' });
+    setRemoveMobile(false);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (saving) return;
+    setModalOpen(false);
+    setEditing(null);
+  };
+
+  const setField = (key, value) =>
+    setForm(current => ({ ...current, [key]: value }));
+
+  const pickFile = (field, file) => {
+    if (!file.type.startsWith('image/'))
+      return toast.error('Escolha um arquivo de imagem.');
+    setFiles(current => ({ ...current, [field]: file }));
+    setPreview(field, URL.createObjectURL(file));
+    if (field === 'mobileImage') setRemoveMobile(false);
+    // Confere a proporção real e avisa se a imagem for ficar cortada
+    setWarnings(current => ({ ...current, [field]: '' }));
+    readImageSize(file).then(size =>
+      setWarnings(current => ({
+        ...current,
+        [field]: ratioWarning(size, field),
+      })),
+    );
+  };
+
+  const removeMobileImage = () => {
+    setFiles(current => ({ ...current, mobileImage: null }));
+    setPreview('mobileImage', '');
+    setWarnings(current => ({ ...current, mobileImage: '' }));
+    setRemoveMobile(true);
+  };
+
+  // Reduz as imagens no browser; se o pedido ainda ficar acima do limite
+  // da Vercel, tenta uma redução mais forte
+  const prepareImages = async () => {
+    const reduce = async settings => {
+      const out = {};
+      for (const field of ['image', 'mobileImage']) {
+        if (files[field])
+          out[field] = await compressImage(files[field], settings[field]);
+      }
+      return out;
+    };
+    const size = set =>
+      Object.values(set).reduce((sum, file) => sum + (file?.size || 0), 0);
+
+    let prepared = await reduce(COMPRESSION);
+    if (size(prepared) > MAX_REQUEST_BYTES)
+      prepared = await reduce(COMPRESSION_STRONG);
+    if (size(prepared) > MAX_REQUEST_BYTES)
+      throw new Error(
+        'As imagens são grandes demais para enviar. Exporte-as em JPG com até 2 MB cada e tente de novo.',
+      );
+    return prepared;
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) return toast.error('Dê um nome ao banner.');
+    if (!editing && !files.image)
+      return toast.error('Escolha a imagem para desktop.');
+    if (form.startsAt && form.endsAt && form.endsAt <= form.startsAt)
+      return toast.error('A data de fim deve ser posterior à de início.');
+
+    try {
+      setSaving(true);
+      const prepared = await prepareImages();
+
+      const body = new FormData();
+      body.append('title', form.title.trim());
+      body.append('heading', form.heading);
+      body.append('subtitle', form.subtitle.trim());
+      body.append('link', form.link.trim());
+      body.append('isActive', String(form.isActive));
+      body.append(
+        'startsAt',
+        form.startsAt ? new Date(form.startsAt).toISOString() : '',
+      );
+      body.append(
+        'endsAt',
+        form.endsAt ? new Date(form.endsAt).toISOString() : '',
+      );
+      if (prepared.image) body.append('image', prepared.image);
+      if (prepared.mobileImage)
+        body.append('mobileImage', prepared.mobileImage);
+      if (editing && removeMobile && !prepared.mobileImage)
+        body.append('removeMobileImage', 'true');
+
+      const { data } = editing
+        ? await axios.put(`${API}/${editing._id}`, body)
+        : await axios.post(API, body);
+
+      if (data.success) {
+        toast.success(data.message);
+        setModalOpen(false);
+        setEditing(null);
+        afterChange();
+        fetchBanners();
+      } else {
+        toast.error(data.message || 'Erro ao salvar o banner');
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.status === 413
+          ? 'As imagens são grandes demais para enviar. Reduza-as e tente de novo.'
+          : error.response?.data?.message ||
+              error.message ||
+              'Erro ao salvar o banner',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Ordem ───
+  const saveOrder = async (next, previous) => {
+    setBanners(next);
+    try {
+      setBusy(true);
+      const { data } = await axios.put(`${API}/reorder`, {
+        ids: next.map(b => b._id),
+      });
+      if (!data.success) throw new Error(data.message);
+      afterChange();
+    } catch (error) {
+      setBanners(previous);
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          'Não foi possível salvar a ordem',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reorder = (from, to) => {
+    if (to < 0 || to >= banners.length || from === to) return;
+    const next = [...banners];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    saveOrder(next, banners);
+  };
+
+  const handleDragEnd = result => {
+    if (!result.destination) return;
+    reorder(result.source.index, result.destination.index);
+  };
+
+  // ─── Ativar / excluir / importar ───
+  const handleToggle = async banner => {
+    try {
+      setBusy(true);
+      const { data } = await axios.post(`${API}/${banner._id}/toggle`);
+      if (data.success) {
+        toast.success(data.message);
+        afterChange();
+        fetchBanners();
+      } else toast.error(data.message || 'Erro ao alterar o banner');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao alterar o banner');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async banner => {
+    if (
+      !window.confirm(
+        `Excluir o banner "${banner.title}"? Esta ação não pode ser desfeita.`,
+      )
+    )
+      return;
+    try {
+      setBusy(true);
+      const { data } = await axios.delete(`${API}/${banner._id}`);
+      if (data.success) {
+        toast.success(data.message);
+        afterChange();
+        fetchBanners();
+      } else toast.error(data.message || 'Erro ao excluir o banner');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao excluir o banner');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      setBusy(true);
+      const { data } = await axios.post(`${API}/import-defaults`);
+      if (data.success) {
+        toast.success(data.message);
+        setBanners(data.banners);
+        afterChange();
+      } else toast.error(data.message || 'Erro ao importar');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erro ao importar');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const inputCls =
+    'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30';
+
+  // ─────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────
+  return (
+    <div className='flex-1 h-[95vh] overflow-y-auto bg-gray-50'>
+      <div className='p-6 md:p-8 max-w-5xl mx-auto'>
+        {/* Cabeçalho */}
+        <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-900'>Banners</h1>
+            <p className='text-sm text-gray-500 mt-1'>
+              Carrossel do topo da página inicial, no desktop e no celular
+            </p>
+          </div>
+          <div className='flex flex-wrap items-center gap-2'>
+            <a
+              href='/'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='flex items-center gap-2 px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition-all'
+            >
+              <ExternalLink className='w-4 h-4' />
+              Ver na loja
+            </a>
+            <button
+              onClick={openCreate}
+              className='flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-sm'
+            >
+              <Plus className='w-5 h-5' />
+              Novo Banner
+            </button>
+          </div>
+        </div>
+
+        {/* Como funciona */}
+        {!loading && banners.length > 0 && (
+          <div className='flex items-start gap-3 p-4 mb-5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600'>
+            <Info className='w-4 h-4 mt-0.5 flex-shrink-0 text-primary' />
+            <p>
+              {liveCount > 0 ? (
+                <>
+                  <strong className='text-gray-900'>
+                    {liveCount} {liveCount === 1 ? 'banner' : 'banners'} no ar
+                  </strong>
+                  , exibidos na ordem desta lista. Arraste pela alça (ou use as
+                  setas) para mudar a ordem.
+                </>
+              ) : (
+                <>
+                  <strong className='text-gray-900'>
+                    Nenhum banner no ar.
+                  </strong>{' '}
+                  Enquanto não houver um banner ativo, a loja mostra os 2
+                  banners originais do site.
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Lista */}
+        {loading ? (
+          <div className='flex items-center justify-center py-24 text-gray-400'>
+            <Loader2 className='w-6 h-6 animate-spin' />
+          </div>
+        ) : banners.length === 0 ? (
+          <div className='bg-white border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center'>
+            <Images className='w-10 h-10 mx-auto text-gray-300' />
+            <p className='mt-3 font-semibold text-gray-900'>
+              Nenhum banner cadastrado
+            </p>
+            <p className='mt-1 text-sm text-gray-500 max-w-md mx-auto'>
+              A loja está mostrando os 2 banners originais do site. Importe-os
+              para os poder reordenar, editar ou substituir, ou comece por um
+              banner novo.
+            </p>
+            <div className='mt-5 flex flex-wrap items-center justify-center gap-2'>
+              <button
+                onClick={handleImport}
+                disabled={busy}
+                className='inline-flex items-center gap-2 px-4 py-2.5 bg-white text-primary border border-primary/30 rounded-xl font-semibold hover:bg-primary/5 transition-all disabled:opacity-60'
+              >
+                {busy ? (
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                ) : (
+                  <Download className='w-4 h-4' />
+                )}
+                Importar banners atuais
+              </button>
+              <button
+                onClick={openCreate}
+                className='inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all'
+              >
+                <Plus className='w-4 h-4' />
+                Novo Banner
+              </button>
+            </div>
+          </div>
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId='hero-banners'>
+              {provided => (
+                <ul ref={provided.innerRef} {...provided.droppableProps}>
+                  {banners.map((banner, index) => (
+                    <BannerRow
+                      key={banner._id}
+                      banner={banner}
+                      index={index}
+                      total={banners.length}
+                      busy={busy}
+                      onMove={(from, delta) => reorder(from, from + delta)}
+                      onEdit={openEdit}
+                      onToggle={handleToggle}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                  {provided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
+        )}
+      </div>
+
+      {/* ═══ MODAL — criar / editar ═══ */}
+      {modalOpen && (
+        <div
+          className='fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto'
+          onMouseDown={e => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div
+            role='dialog'
+            aria-modal='true'
+            aria-labelledby='banner-form-title'
+            className='bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-6'
+          >
+            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100'>
+              <h2
+                id='banner-form-title'
+                className='text-lg font-bold text-gray-900'
+              >
+                {editing ? 'Editar banner' : 'Novo banner'}
+              </h2>
+              <button
+                onClick={closeModal}
+                aria-label='Fechar'
+                className='p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+              >
+                <X className='w-5 h-5' />
+              </button>
+            </div>
+
+            <div className='px-6 py-5 space-y-6'>
+              {/* Nome */}
+              <div>
+                <label
+                  htmlFor='banner-title'
+                  className='block text-sm font-medium text-gray-700 mb-1'
+                >
+                  Nome do banner <span className='text-red-500'>*</span>
+                </label>
+                <input
+                  id='banner-title'
+                  type='text'
+                  value={form.title}
+                  maxLength={160}
+                  onChange={e => setField('title', e.target.value)}
+                  placeholder='Ex.: Coleção de decks Verão 2027'
+                  className={inputCls}
+                />
+                <p className='text-[11px] text-gray-500 mt-1'>
+                  Identifica o banner nesta lista e descreve a imagem para o
+                  Google e para leitores de tela. Não aparece sobre a imagem.
+                </p>
+              </div>
+
+              {/* Imagens + pré-visualização */}
+              <section className='grid grid-cols-1 md:grid-cols-[1fr_170px] gap-5'>
+                <div className='space-y-3'>
+                  <ImageField
+                    label='Imagem para desktop'
+                    hint={`Medida exata: ${SIZE_HINTS.desktop}`}
+                    icon={Monitor}
+                    required
+                    hasImage={!!previews.image}
+                    onPick={file => pickFile('image', file)}
+                    disabled={saving}
+                  />
+                  <HeroPreview
+                    src={previews.image}
+                    heading={form.heading}
+                    subtitle={form.subtitle}
+                  />
+                  {warnings.image && (
+                    <p className='text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5'>
+                      {warnings.image}
+                    </p>
+                  )}
+                </div>
+                <div className='space-y-3'>
+                  <ImageField
+                    label='Para celular'
+                    hint={`Medida exata: ${SIZE_HINTS.mobile}`}
+                    icon={Smartphone}
+                    hasImage={!!previews.mobileImage}
+                    onPick={file => pickFile('mobileImage', file)}
+                    onRemove={removeMobileImage}
+                    disabled={saving}
+                  />
+                  <HeroPreview
+                    mobile
+                    src={previews.mobileImage || previews.image}
+                    heading={form.heading}
+                    subtitle={form.subtitle}
+                  />
+                  {warnings.mobileImage && (
+                    <p className='text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5'>
+                      {warnings.mobileImage}
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              <div className='flex items-start gap-2 text-[12px] text-gray-500 -mt-2'>
+                <Info className='w-3.5 h-3.5 mt-0.5 flex-shrink-0' />
+                <p>
+                  A hero tem a mesma proporção destas medidas, por isso a
+                  imagem aparece inteira, sem corte (a pré-visualização é
+                  fiel). Só em telas muito largas, tipo ultrawide, há um
+                  recorte pequeno nas bordas. Lembre que o menu do site fica
+                  sobre o topo da imagem: evite texto ou logo nessa faixa.
+                  {!previews.mobileImage && previews.image && (
+                    <span className='block text-amber-600 mt-1'>
+                      Sem imagem própria para celular, a imagem de desktop
+                      (horizontal) é cortada nas laterais para caber em 3:5
+                      (veja a pré-visualização). Envie uma imagem vertical.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* Textos */}
+              <section className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <label
+                    htmlFor='banner-heading'
+                    className='block text-sm font-medium text-gray-700 mb-1'
+                  >
+                    Texto principal{' '}
+                    <span className='text-gray-400 font-normal'>(opcional)</span>
+                  </label>
+                  <textarea
+                    id='banner-heading'
+                    rows={2}
+                    value={form.heading}
+                    maxLength={120}
+                    onChange={e => setField('heading', e.target.value)}
+                    placeholder={'Precision Meets\nPerformance'}
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor='banner-subtitle'
+                    className='block text-sm font-medium text-gray-700 mb-1'
+                  >
+                    Texto secundário{' '}
+                    <span className='text-gray-400 font-normal'>(opcional)</span>
+                  </label>
+                  <input
+                    id='banner-subtitle'
+                    type='text'
+                    value={form.subtitle}
+                    maxLength={80}
+                    onChange={e => setField('subtitle', e.target.value)}
+                    placeholder='Elite Surfing'
+                    className={inputCls}
+                  />
+                  <p className='text-[11px] text-gray-500 mt-1'>
+                    Deixe os dois vazios se a imagem já tiver texto: assim ela
+                    não é escurecida.
+                  </p>
+                </div>
+              </section>
+
+              {/* Link */}
+              <div>
+                <label
+                  htmlFor='banner-link'
+                  className='block text-sm font-medium text-gray-700 mb-1'
+                >
+                  Link ao clicar{' '}
+                  <span className='text-gray-400 font-normal'>(opcional)</span>
+                </label>
+                <input
+                  id='banner-link'
+                  type='text'
+                  value={form.link}
+                  maxLength={500}
+                  onChange={e => setField('link', e.target.value)}
+                  placeholder='/collections/decks'
+                  className={inputCls}
+                />
+                <p className='text-[11px] text-gray-500 mt-1'>
+                  Caminho do site (ex.: /collections/decks, /products) ou um
+                  endereço completo começado por https://
+                </p>
+              </div>
+
+              {/* Período + ativo */}
+              <section className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <label
+                    htmlFor='banner-starts'
+                    className='block text-sm font-medium text-gray-700 mb-1'
+                  >
+                    Exibir a partir de{' '}
+                    <span className='text-gray-400 font-normal'>(opcional)</span>
+                  </label>
+                  <input
+                    id='banner-starts'
+                    type='datetime-local'
+                    value={form.startsAt}
+                    onChange={e => setField('startsAt', e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor='banner-ends'
+                    className='block text-sm font-medium text-gray-700 mb-1'
+                  >
+                    Exibir até{' '}
+                    <span className='text-gray-400 font-normal'>(opcional)</span>
+                  </label>
+                  <input
+                    id='banner-ends'
+                    type='datetime-local'
+                    value={form.endsAt}
+                    onChange={e => setField('endsAt', e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+              </section>
+
+              <label className='flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={form.isActive}
+                  onChange={e => setField('isActive', e.target.checked)}
+                  className='mt-0.5 w-4 h-4 accent-primary'
+                />
+                <div>
+                  <p className='text-sm font-medium text-gray-800'>
+                    Banner ativo
+                  </p>
+                  <p className='text-[11px] text-gray-500'>
+                    Desligado: o banner fica guardado mas não aparece na loja.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className='flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100'>
+              <button
+                onClick={closeModal}
+                disabled={saving}
+                className='px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100'
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className='inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90 disabled:opacity-60'
+              >
+                {saving && <Loader2 className='w-4 h-4 animate-spin' />}
+                {saving
+                  ? 'Enviando...'
+                  : editing
+                    ? 'Salvar alterações'
+                    : 'Criar banner'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Banners;
