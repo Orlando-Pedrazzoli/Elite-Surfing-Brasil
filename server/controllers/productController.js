@@ -55,6 +55,17 @@ const destroyVideo = async url => {
   }
 };
 
+// Ordem da galeria: só aceita se bater com a quantidade real de imagens e
+// vídeos — senão devolve [] (a loja usa a ordem padrão).
+const sanitizeMediaOrder = (order, imageCount, videoCount) => {
+  if (!Array.isArray(order)) return [];
+  const clean = order.filter(t => t === 'image' || t === 'video');
+  const images = clean.filter(t => t === 'image').length;
+  const videos = clean.length - images;
+  if (images !== imageCount || videos !== videoCount) return [];
+  return clean;
+};
+
 // Todos os vídeos atuais de um produto (novo array + campo legado)
 const currentVideosOf = product => {
   const list = [...(product?.videos || [])];
@@ -337,8 +348,10 @@ export const addProduct = async (req, res) => {
 
     // 🎥 Vídeos: URLs já enviadas ao Cloudinary pelo browser
     const videos = sanitizeVideoUrls(productData.videos);
+    const requestedMediaOrder = productData.mediaOrder;
     delete productData.videos;
     delete productData.video;
+    delete productData.mediaOrder;
 
     // Legado: vídeo enviado como arquivo (multer) — entra no array
     if (videoFile && videos.length < MAX_PRODUCT_VIDEOS) {
@@ -383,6 +396,11 @@ export const addProduct = async (req, res) => {
       image: imagesUrl,
       videos,
       video: null,
+      mediaOrder: sanitizeMediaOrder(
+        requestedMediaOrder,
+        imagesUrl.length,
+        videos.length,
+      ),
       stock,
       inStock,
     });
@@ -951,9 +969,11 @@ export const updateProduct = async (req, res) => {
     } else if (productData.removeVideo) {
       finalVideos = [];
     }
+    const requestedMediaOrder = productData.mediaOrder;
     delete productData.videos;
     delete productData.video;
     delete productData.removeVideo;
+    delete productData.mediaOrder;
 
     // Legado: vídeo enviado como arquivo (multer) — entra no array
     if (videoFile && finalVideos.length < MAX_PRODUCT_VIDEOS) {
@@ -998,6 +1018,15 @@ export const updateProduct = async (req, res) => {
         image: finalImageUrls,
         videos: finalVideos,
         video: null,
+        // 🎞️ Ordem enviada pelo admin; sem ela, mantém a atual se ainda
+        // bater com as quantidades (senão volta à ordem padrão)
+        mediaOrder: sanitizeMediaOrder(
+          requestedMediaOrder !== undefined
+            ? requestedMediaOrder
+            : existingProduct.mediaOrder,
+          finalImageUrls.length,
+          finalVideos.length,
+        ),
         ...(costPrice !== undefined ? { costPrice } : {}),
         ...(wholesalePrice !== undefined ? { wholesalePrice } : {}),
       },

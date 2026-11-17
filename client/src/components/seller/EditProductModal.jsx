@@ -1,11 +1,5 @@
 // client/src/components/seller/EditProductModal.jsx
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   assets,
   categories,
@@ -16,9 +10,12 @@ import {
 } from '../../assets/assets';
 import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
-import ProductVideoUploader from './ProductVideoUploader';
-import { getProductVideos } from '../../utils/productMedia';
-import { Upload, X, GripVertical, Image as ImageIcon } from 'lucide-react';
+import ProductMediaZone from './ProductMediaZone';
+import {
+  productToMediaItems,
+  isImageItem,
+  isVideoItem,
+} from '../../utils/productMedia';
 import PricingFields from './PricingFields';
 
 // 🎯 CORES PRÉ-DEFINIDAS (SIMPLES)
@@ -80,7 +77,6 @@ const PRESET_SIZES = [
   "14'0",
 ];
 
-const MAX_IMAGES = 8;
 
 // Componente para renderizar bolinha de cor
 const ColorBall = ({
@@ -180,310 +176,13 @@ const SizeBadge = ({
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🆕 EDIT IMAGE ZONE — Imagens atuais + Novas com Drag & Drop
-// ═══════════════════════════════════════════════════════════════
-// Cada item no array `images` é:
-//   { type: 'existing', url: '...' }   ← imagem já salva no servidor
-//   { type: 'new', file: File }        ← imagem nova (upload)
-// ═══════════════════════════════════════════════════════════════
-const EditImageZone = ({ images, setImages, disabled = false }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [dragSourceIndex, setDragSourceIndex] = useState(null);
-  const fileInputRef = useRef(null);
-  const dragCounter = useRef(0);
-
-  const addFiles = useCallback(
-    newFiles => {
-      const imageFiles = Array.from(newFiles).filter(file => {
-        if (!file.type.startsWith('image/')) {
-          toast.error(`"${file.name}" não é uma imagem`);
-          return false;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`"${file.name}" excede 10MB`);
-          return false;
-        }
-        return true;
-      });
-
-      if (imageFiles.length === 0) return;
-
-      setImages(prev => {
-        const available = MAX_IMAGES - prev.length;
-        if (available <= 0) {
-          toast.error(`Máximo de ${MAX_IMAGES} imagens`);
-          return prev;
-        }
-        const toAdd = imageFiles
-          .slice(0, available)
-          .map(file => ({ type: 'new', file }));
-        if (imageFiles.length > available) {
-          toast(
-            `Apenas ${available} imagem(ns) adicionada(s) (limite: ${MAX_IMAGES})`,
-            { icon: 'ℹ️' },
-          );
-        }
-        return [...prev, ...toAdd];
-      });
-    },
-    [setImages],
-  );
-
-  const removeImage = useCallback(
-    index => {
-      setImages(prev => prev.filter((_, i) => i !== index));
-    },
-    [setImages],
-  );
-
-  // Drag & Drop — zona de upload
-  const handleDragEnter = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current++;
-    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
-  };
-
-  const handleDragLeave = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current--;
-    if (dragCounter.current === 0) setIsDragging(false);
-  };
-
-  const handleDragOver = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounter.current = 0;
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleClickUpload = () => {
-    if (!disabled) fileInputRef.current?.click();
-  };
-
-  const handleFileInput = e => {
-    if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
-      e.target.value = '';
-    }
-  };
-
-  // Drag & Drop — reordenar thumbnails
-  const handleThumbDragStart = (e, index) => {
-    if (disabled) return;
-    setDragSourceIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', index.toString());
-  };
-
-  const handleThumbDragOver = (e, index) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dragSourceIndex !== null && dragSourceIndex !== index) {
-      setDragOverIndex(index);
-    }
-  };
-
-  const handleThumbDrop = (e, targetIndex) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
-      setImages(prev => {
-        const updated = [...prev];
-        const [moved] = updated.splice(dragSourceIndex, 1);
-        updated.splice(targetIndex, 0, moved);
-        return updated;
-      });
-    }
-    setDragSourceIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const handleThumbDragEnd = () => {
-    setDragSourceIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const slotsLeft = MAX_IMAGES - images.length;
-
-  const getImageSrc = img => {
-    return img.type === 'existing' ? img.url : URL.createObjectURL(img.file);
-  };
-
-  return (
-    <div>
-      <p className='text-base font-medium mb-2'>Imagens do Produto</p>
-
-      {/* Thumbnails grid */}
-      {images.length > 0 && (
-        <div className='mb-4'>
-          <div className='flex items-center justify-between mb-2'>
-            <p className='text-sm font-medium text-gray-600'>
-              {images.length} imagem{images.length !== 1 ? 's' : ''}
-            </p>
-            {images.length > 1 && (
-              <p className='text-xs text-gray-400'>
-                Arraste para reordenar • A primeira é a imagem principal
-              </p>
-            )}
-          </div>
-
-          <div className='grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3'>
-            {images.map((img, index) => (
-              <div
-                key={`${img.type}-${img.type === 'existing' ? img.url : img.file.name}-${index}`}
-                draggable={!disabled}
-                onDragStart={e => handleThumbDragStart(e, index)}
-                onDragOver={e => handleThumbDragOver(e, index)}
-                onDrop={e => handleThumbDrop(e, index)}
-                onDragEnd={handleThumbDragEnd}
-                className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-150 aspect-square ${
-                  dragOverIndex === index
-                    ? 'border-primary scale-105 shadow-md'
-                    : dragSourceIndex === index
-                      ? 'border-gray-300 opacity-40'
-                      : index === 0
-                        ? 'border-primary/50 ring-1 ring-primary/20'
-                        : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <img
-                  src={getImageSrc(img)}
-                  alt={`Imagem ${index + 1}`}
-                  className='w-full h-full object-cover'
-                />
-
-                {/* Overlay com ações */}
-                <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-150'>
-                  {/* Botão remover */}
-                  {!disabled && (
-                    <button
-                      type='button'
-                      onClick={e => {
-                        e.stopPropagation();
-                        removeImage(index);
-                      }}
-                      className='absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm'
-                      title='Remover imagem'
-                    >
-                      <X className='w-3.5 h-3.5' />
-                    </button>
-                  )}
-
-                  {/* Indicador drag */}
-                  {!disabled && (
-                    <div className='absolute bottom-1 left-1 opacity-0 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing'>
-                      <GripVertical className='w-4 h-4 text-white drop-shadow' />
-                    </div>
-                  )}
-                </div>
-
-                {/* Badge principal */}
-                {index === 0 && (
-                  <div className='absolute top-1 left-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm'>
-                    Principal
-                  </div>
-                )}
-
-                {/* Badge tipo */}
-                {img.type === 'new' && (
-                  <div className='absolute bottom-1 right-1 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm'>
-                    Nova
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Drop zone para adicionar mais */}
-      <div
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={slotsLeft > 0 && !disabled ? handleClickUpload : undefined}
-        className={`relative border-2 border-dashed rounded-xl p-4 text-center transition-all duration-200 ${
-          slotsLeft <= 0 || disabled
-            ? 'border-gray-200 bg-gray-50 cursor-default'
-            : isDragging
-              ? 'border-primary bg-primary/5 scale-[1.01] shadow-lg'
-              : 'border-gray-300 hover:border-primary/50 hover:bg-gray-50 cursor-pointer'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type='file'
-          accept='image/*'
-          multiple
-          onChange={handleFileInput}
-          className='hidden'
-          disabled={disabled}
-        />
-
-        {isDragging ? (
-          <div className='py-2'>
-            <Upload className='w-8 h-8 text-primary mx-auto mb-1 animate-bounce' />
-            <p className='text-primary font-semibold'>Solte as imagens aqui</p>
-          </div>
-        ) : slotsLeft > 0 && !disabled ? (
-          <div className='py-1'>
-            <div className='flex items-center justify-center gap-2 mb-1'>
-              <ImageIcon className='w-5 h-5 text-gray-400' />
-              <p className='text-gray-700 font-medium text-sm'>
-                Arraste ou{' '}
-                <span className='text-primary underline'>
-                  clique para adicionar
-                </span>
-              </p>
-            </div>
-            <p className='text-xs text-gray-400'>
-              PNG, JPG ou WEBP • Máx. 10MB • {slotsLeft} de {MAX_IMAGES}{' '}
-              disponíveis
-            </p>
-          </div>
-        ) : (
-          <p className='text-gray-500 text-sm py-1'>
-            {disabled
-              ? 'Enviando...'
-              : `Limite de ${MAX_IMAGES} imagens atingido`}
-          </p>
-        )}
-      </div>
-
-      {/* Ação limpar todas */}
-      {images.length > 1 && !disabled && (
-        <button
-          type='button'
-          onClick={() => setImages([])}
-          className='mt-2 text-xs text-red-500 hover:text-red-700 transition-colors font-medium'
-        >
-          Remover todas as imagens
-        </button>
-      )}
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
   // 🆕 Sistema de imagens unificado: [{ type: 'existing', url }, { type: 'new', file }]
-  const [images, setImages] = useState([]);
-  // 🎥 Vídeos MP4 (URLs do Cloudinary) — inclui o campo legado `video`
-  const [videos, setVideos] = useState([]);
+  // 🖼️🎥 Imagens + vídeos numa só lista — a ordem é a ordem da galeria
+  //   { type: 'existing', url } | { type: 'new', file } | { type: 'video', url }
+  const [media, setMedia] = useState([]);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -698,15 +397,8 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       setSelectedTags(product.tags || []);
       setFreeShipping(product.freeShipping || false);
 
-      // 🆕 Imagens existentes
-      if (product.image && product.image.length > 0) {
-        setImages(product.image.map(url => ({ type: 'existing', url })));
-      } else {
-        setImages([]);
-      }
-
-      // 🎥 Vídeos existentes (array novo + campo legado)
-      setVideos(getProductVideos(product));
+      // 🖼️🎥 Imagens e vídeos existentes, na ordem atual da galeria
+      setMedia(productToMediaItems(product));
     }
   }, [product]);
 
@@ -801,6 +493,7 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
     setIsSubmitting(true);
 
     try {
+      const images = media.filter(isImageItem);
       if (images.length === 0) {
         toast.error('Adicione pelo menos uma imagem');
         setIsSubmitting(false);
@@ -957,7 +650,11 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
       productData.existingImages = existingImageUrls;
       productData.imageOrder = imageOrder;
       // 🎥 Lista final de vídeos — os removidos são apagados no servidor
-      productData.videos = videos;
+      productData.videos = media.filter(isVideoItem).map(item => item.url);
+      // 🎞️ Ordem da galeria (só os tipos por posição)
+      productData.mediaOrder = media.map(item =>
+        isVideoItem(item) ? 'video' : 'image',
+      );
 
       const formData = new FormData();
       formData.append('id', product._id);
@@ -1036,16 +733,9 @@ const EditProductModal = ({ product, onClose, onSuccess, axios }) => {
           {/* ═══════════════════════════════════════════════════════ */}
           {/* 🆕 IMAGENS — Drag & Drop + Reordenar                  */}
           {/* ═══════════════════════════════════════════════════════ */}
-          <EditImageZone
-            images={images}
-            setImages={setImages}
-            disabled={isSubmitting}
-          />
-
-          {/* 🎥 VÍDEOS MP4 — upload direto ao Cloudinary */}
-          <ProductVideoUploader
-            videos={videos}
-            setVideos={setVideos}
+          <ProductMediaZone
+            media={media}
+            setMedia={setMedia}
             onUploadingChange={setIsVideoUploading}
             disabled={isSubmitting}
           />

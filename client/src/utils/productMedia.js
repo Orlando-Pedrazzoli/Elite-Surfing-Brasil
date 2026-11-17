@@ -20,7 +20,12 @@ export const getVideoPoster = url => {
     .replace(/\.[^/.]+$/, '.jpg');
 };
 
-// Galeria unificada: imagem principal → vídeos → restantes imagens.
+// Galeria unificada (imagens + vídeos) na ordem definida pelo admin.
+// `product.mediaOrder` guarda só os TIPOS por posição, ex:
+//   ['image', 'video', 'image', 'image']
+// e as URLs vêm de product.image / product.videos (cada um na sua ordem).
+// Sem mediaOrder válido (produtos antigos): imagem principal → vídeos →
+// restantes imagens.
 // Cada item de imagem guarda `imageIndex` (índice em product.image) para
 // abrir o modal de zoom na imagem certa.
 export const buildProductMedia = product => {
@@ -32,6 +37,32 @@ export const buildProductMedia = product => {
     imageIndex,
   }));
   const videoItems = videos.map(url => ({ type: 'video', url }));
+
+  const order = Array.isArray(product?.mediaOrder) ? product.mediaOrder : [];
+  const orderMatches =
+    order.length === imageItems.length + videoItems.length &&
+    order.filter(t => t === 'image').length === imageItems.length &&
+    order.filter(t => t === 'video').length === videoItems.length;
+
+  if (orderMatches) {
+    let i = 0;
+    let v = 0;
+    return order.map(t => (t === 'video' ? videoItems[v++] : imageItems[i++]));
+  }
+
   if (imageItems.length === 0) return videoItems;
   return [imageItems[0], ...videoItems, ...imageItems.slice(1)];
 };
+
+// Itens do formulário do admin (ProductMediaZone) a partir de um produto salvo
+export const productToMediaItems = product =>
+  buildProductMedia(product).map(item =>
+    item.type === 'video'
+      ? { type: 'video', url: item.url }
+      : { type: 'existing', url: item.url },
+  );
+
+// Tipos dos itens do formulário do admin
+export const isImageItem = item =>
+  item?.type === 'existing' || item?.type === 'new';
+export const isVideoItem = item => item?.type === 'video';

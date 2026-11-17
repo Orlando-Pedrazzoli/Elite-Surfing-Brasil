@@ -96,6 +96,14 @@ const productSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // 🎞️ Ordem da galeria (imagens + vídeos juntos), só com os TIPOS por
+    // posição — ex: ['image', 'video', 'image']. As URLs continuam em
+    // `image` e `videos`, cada um na sua ordem. Vazio = ordem padrão
+    // (imagem principal → vídeos → restantes imagens).
+    mediaOrder: {
+      type: [{ type: String, enum: ['image', 'video'] }],
+      default: [],
+    },
     category: {
       type: String,
       required: true,
