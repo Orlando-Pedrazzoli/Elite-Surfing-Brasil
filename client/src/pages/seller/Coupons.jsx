@@ -14,7 +14,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { groups, categories } from '../../assets/assets';
+import { useAdminCategories } from '../../context/CategoriesContext';
 import {
   Ticket,
   Plus,
@@ -109,7 +109,7 @@ const generateCode = (prefix = 'ELITE') => {
   return `${prefix}${s}`;
 };
 
-const scopeLabel = c => {
+const scopeLabel = (c, groups, categories) => {
   if (c.scope === 'groups') {
     const names = c.groups.map(g => groups.find(x => x.slug === g)?.name || g);
     return names.join(', ');
@@ -128,6 +128,8 @@ const scopeLabel = c => {
 // ─────────────────────────────────────────────────────────────────────
 const Coupons = () => {
   const { axios } = useAppContext();
+  // 🗂️ Categorias geridas em /seller/categorias (inclui as ocultas)
+  const { groups, categories } = useAdminCategories();
 
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -549,7 +551,7 @@ const Coupons = () => {
                         </td>
                         <td className='px-4 py-3 align-top'>
                           <p className='text-gray-700 max-w-[200px] line-clamp-2'>
-                            {scopeLabel(c)}
+                            {scopeLabel(c, groups, categories)}
                           </p>
                           {c.scope !== 'all' && (
                             <p className='text-[11px] text-gray-400 mt-0.5'>

@@ -12,6 +12,8 @@
 // quebra: a seção nasce no fim, com o título derivado do slug
 // ("Deck-Novo" → "Deck Novo"), e o admin pode renomear no editor.
 // ═══════════════════════════════════════════════════════════════════════
+import Category from '../../models/Category.js';
+import { DEFAULT_GROUPS } from '../../data/defaultCategories.js';
 
 export const CATEGORY_CATALOG = [
   // ═══ DECKS ═══
@@ -98,12 +100,60 @@ const normalizePath = path =>
     .trim()
     .toLowerCase();
 
-const INDEX = new Map(
+let INDEX = new Map(
   CATEGORY_CATALOG.map((cat, order) => [
     normalizePath(cat.path),
     { ...cat, order },
   ]),
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🗂️ Categorias do admin (/seller/categorias) — título e ordem passam a vir
+// do MongoDB. Se o admin não renomeou a subcategoria, mantém o título da
+// tabela acima (ex: "Capa Refletiva Combate"). Recarrega no máx. 1x/min.
+// ═══════════════════════════════════════════════════════════════════════
+const DEFAULT_NAMES = new Map(
+  DEFAULT_GROUPS.flatMap(g =>
+    (g.children || []).map(c => [normalizePath(c.slug), c.name]),
+  ),
+);
+const STATIC_TITLES = new Map(
+  CATEGORY_CATALOG.map(c => [normalizePath(c.path), c.title]),
+);
+const REFRESH_MS = 60 * 1000;
+let lastRefresh = 0;
+
+export const refreshCategoryCatalog = async () => {
+  if (Date.now() - lastRefresh < REFRESH_MS) return;
+  try {
+    const docs = await Category.find()
+      .select('name slug parent order')
+      .lean();
+    if (docs.length === 0) return;
+    lastRefresh = Date.now();
+
+    const roots = docs.filter(d => !d.parent).sort((a, b) => a.order - b.order);
+    const next = new Map();
+    roots.forEach((root, gi) => {
+      docs
+        .filter(d => d.parent && String(d.parent) === String(root._id))
+        .sort((a, b) => a.order - b.order)
+        .forEach((child, ci) => {
+          const key = normalizePath(child.slug);
+          const renamed = DEFAULT_NAMES.get(key) !== child.name;
+          next.set(key, {
+            path: child.slug,
+            title: renamed ? child.name : STATIC_TITLES.get(key) || child.name,
+            group: root.slug,
+            order: gi * 1000 + ci,
+          });
+        });
+    });
+    INDEX = next;
+  } catch (error) {
+    console.error('[priceTable] categorias do admin indisponíveis:', error.message);
+  }
+};
 
 /** Título legível de uma categoria (fallback: slug com espaços). */
 export const categoryTitle = path => {

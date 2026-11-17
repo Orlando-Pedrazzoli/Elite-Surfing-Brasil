@@ -1,10 +1,12 @@
+// client/src/components/Categories.jsx
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { categories } from '../assets/assets';
+import { useCategories } from '../context/CategoriesContext';
 import { useAppContext } from '../context/AppContext';
 
 const Categories = () => {
   const { products } = useAppContext();
+  const { categories } = useCategories();
 
   // Calcular contagem de produtos por categoria (apenas principais e em stock)
   const categoryCounts = useMemo(() => {
@@ -29,7 +31,7 @@ const Categories = () => {
       const countB = categoryCounts[b.path.toLowerCase()] || 0;
       return countB - countA;
     });
-  }, [categoryCounts]);
+  }, [categoryCounts, categories]);
 
   return (
     <div className='mt-16 hidden md:block px-6 md:px-16 lg:px-24 xl:px-32'>

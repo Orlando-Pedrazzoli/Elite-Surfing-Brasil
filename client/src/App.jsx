@@ -53,6 +53,8 @@ import VendasDiretas from './pages/seller/VendasDiretas';
 import Coupons from './pages/seller/Coupons';
 // 🖼️ Banners da hero
 import Banners from './pages/seller/Banners';
+// 🗂️ Categorias geridas no admin
+import Categories from './pages/seller/Categories';
 import Resellers from './pages/seller/Resellers';
 // 📋 Tabelas de Preço
 import PriceTables from './pages/seller/PriceTables';
@@ -201,6 +203,7 @@ const App = () => {
             {/* ─── Marketing ─── */}
             <Route path='cupons' element={<Coupons />} />
             <Route path='banners' element={<Banners />} />
+            <Route path='categorias' element={<Categories />} />
             <Route path='revendedores' element={<Resellers />} />
             {/* ─── Instagram ─── */}
             <Route path='instagram' element={<InstagramStudio />} />

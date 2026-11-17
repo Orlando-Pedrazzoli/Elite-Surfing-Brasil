@@ -12,7 +12,15 @@
 // mesma resposta ao mesmo termo.
 // ═══════════════════════════════════════════════════════════════
 
-import { categories, groups } from '../assets/assets';
+import {
+  categories as staticCategories,
+  groups as staticGroups,
+} from '../assets/assets';
+
+// 🗂️ Categorias usadas na busca — começam com a lista do código e são
+// trocadas pelas do admin assim que o CategoriesProvider as carrega.
+let categories = staticCategories;
+let groups = staticGroups;
 
 export const MIN_QUERY_LENGTH = 2;
 export const SUGGESTION_LIMIT = 6;
@@ -64,7 +72,13 @@ const expandTokens = tokens => {
 // ───────────────────────────────────────────────────────────────
 // Índice por produto (calculado uma vez por produto e reutilizado)
 // ───────────────────────────────────────────────────────────────
-const indexCache = new WeakMap();
+let indexCache = new WeakMap();
+
+export const setSearchCategories = (nextGroups, nextCategories) => {
+  if (Array.isArray(nextGroups)) groups = nextGroups;
+  if (Array.isArray(nextCategories)) categories = nextCategories;
+  indexCache = new WeakMap(); // nomes de categoria podem ter mudado
+};
 
 const categoryLabel = path => {
   const found = categories.find(

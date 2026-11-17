@@ -1,7 +1,7 @@
 // client/src/pages/seller/ProductList.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { groups, getCategoriesByGroup } from '../../assets/assets';
+import { useAdminCategories } from '../../context/CategoriesContext';
 import toast from 'react-hot-toast';
 import EditProductModal from '../../components/seller/EditProductModal';
 import MarginBadge from '../../components/seller/MarginBadge';
@@ -143,6 +143,8 @@ const ColorBall = ({
 
 const ProductList = () => {
   const { products, currency, axios, fetchProducts } = useAppContext();
+  // 🗂️ Categorias geridas em /seller/categorias (inclui as ocultas)
+  const { groups, getCategoriesByGroup } = useAdminCategories();
   const [updatingProducts, setUpdatingProducts] = useState(new Set());
   // 🔧 FIX: edição local de estoque — o input não dispara mais uma request
   // por tecla digitada (digitar "25" salvava 2 e depois 25, com refreshes

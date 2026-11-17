@@ -1,14 +1,11 @@
+// client/src/components/CollectionsGrid.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { groups } from '../assets/assets';
+import { useCategories } from '../context/CategoriesContext';
 
-// 6 grupos visíveis, layout 3x2
-const VISIBLE_GROUPS = ['leashes', 'decks', 'capas', 'sarcofagos', 'quilhas', 'acessorios'];
-
-const filteredGroups = VISIBLE_GROUPS
-  .map(id => groups.find(g => g.id === id))
-  .filter(Boolean);
+// 🗂️ Coleções da home: categorias marcadas "Mostrar na página inicial" no
+// admin (/seller/categorias), na ordem definida lá. Layout 3 colunas.
 
 // Mobile Card - imagem + texto abaixo
 const MobileCard = ({ name, slug, image }) => (
@@ -58,6 +55,11 @@ const DesktopCard = ({ name, slug, image }) => (
 );
 
 const CollectionsGrid = () => {
+  const { groups } = useCategories();
+  const filteredGroups = groups.filter(
+    g => g.showOnHome !== false && !g.isTagGroup && g.image,
+  );
+
   return (
     <section className="pt-4 pb-8 md:py-16 px-6 md:px-16 lg:px-24 xl:px-32 bg-white overflow-hidden w-full max-w-full">
       {/* Mobile: Grid 2 colunas */}

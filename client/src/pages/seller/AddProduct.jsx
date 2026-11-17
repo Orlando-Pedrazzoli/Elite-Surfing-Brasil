@@ -1,13 +1,6 @@
 // client/src/pages/seller/AddProduct.jsx
 import React, { useState, useMemo } from 'react';
-import {
-  assets,
-  categories,
-  groups,
-  getCategoriesByGroup,
-  getFiltersByGroup,
-  AVAILABLE_TAGS,
-} from '../../assets/assets';
+import { useAdminCategories } from '../../context/CategoriesContext';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import { compressImages } from '../../utils/imageCompression';
@@ -156,6 +149,13 @@ const SizeBadge = ({
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
 const AddProduct = () => {
+  // 🗂️ Categorias e subcategorias geridas em /seller/categorias
+  const {
+    groups,
+    getCategoriesByGroup,
+    getFiltersByGroup,
+    availableTags: AVAILABLE_TAGS,
+  } = useAdminCategories();
   // 🖼️🎥 Imagens + vídeos numa só lista — a ordem é a ordem da galeria
   //   { type: 'new', file } | { type: 'video', url }
   const [media, setMedia] = useState([]);
@@ -227,13 +227,13 @@ const AddProduct = () => {
   const filteredCategories = useMemo(() => {
     if (!selectedGroup) return [];
     return getCategoriesByGroup(selectedGroup);
-  }, [selectedGroup]);
+  }, [selectedGroup, getCategoriesByGroup]);
 
   // 🆕 Obter filtros disponíveis para o grupo selecionado
   const groupFilterDefs = useMemo(() => {
     if (!selectedGroup) return [];
     return getFiltersByGroup(selectedGroup);
-  }, [selectedGroup]);
+  }, [selectedGroup, getFiltersByGroup]);
 
   // 🆕 Filtros visíveis (respeita parent-child)
   const visibleFilters = useMemo(() => {

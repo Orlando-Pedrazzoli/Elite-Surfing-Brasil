@@ -1,5 +1,5 @@
 // client/src/components/Navbar.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   Lock,
@@ -13,65 +13,51 @@ import {
   Search,
   Store,
 } from 'lucide-react';
-import { assets, groups, categories } from '../assets/assets';
+import { assets } from '../assets/assets';
+import { useCategories } from '../context/CategoriesContext';
 import { useAppContext } from '../context/AppContext';
 import { DesktopSearch, MobileSearch } from './SearchBar';
 
 // ═══════════════════════════════════════════════════════════════
-// CONFIGURAÇÃO DOS LINKS DA NAVBAR
+// 🗂️ LINKS DA NAVBAR — vêm das categorias do admin (/seller/categorias)
+// ─────────────────────────────────────────────────────────────────
+// DEPARTAMENTOS | <categorias ativas, na ordem do admin> | BLOG
+// As coleções por tag (SUP, Bodyboard, Outlet) aparecem só no dropdown
+// DEPARTAMENTOS, como antes.
 // ═══════════════════════════════════════════════════════════════
-const NAV_DEPARTMENTS = [
+const buildNavDepartments = groups => [
   { label: 'DEPARTAMENTOS', slug: null, path: '/products' },
-  { label: 'ACESSÓRIOS', slug: 'acessorios' },
-  { label: 'LEASHES', slug: 'leashes' },
-  { label: 'DECKS', slug: 'decks' },
-  { label: 'CAPAS', slug: 'capas' },
-  { label: 'SARCÓFAGOS', slug: 'sarcofagos' },
-  { label: 'QUILHAS', slug: 'quilhas' },
+  ...groups
+    .filter(g => !g.isTagGroup)
+    .map(g => ({ label: g.name.toUpperCase(), slug: g.slug })),
   { label: 'BLOG', slug: 'blog', path: '/blog', noDropdown: true },
 ];
 
-const sarcofagoSublinks = [
-  { text: 'Sarcófago Combate', path: 'Sarcofago-Combate' },
-  { text: 'Sarcófago Premium', path: 'Sarcofago-Premium' },
-  { text: 'Sarcófago Combate c/ Rodas', path: 'Sarcofago-Combate-Rodas' },
-  { text: 'Sarcófago Premium c/ Rodas', path: 'Sarcofago-Premium-Rodas' },
-];
+// ═══════════════════════════════════════════════════════════════
+// DECKS: Longboard / Front / SUP ficam no 1º nível; todos os outros
+// decks (modelos de shortboard) entram no flyout "Deck Shortboard".
+// Um deck novo criado no admin cai automaticamente no Shortboard.
+// ═══════════════════════════════════════════════════════════════
+const DECK_TOP_LEVEL = ['deck-longboard', 'deck-front', 'deck-sup'];
 
-// ═══════════════════════════════════════════════════════════════
-// 🆕 DECKS: 4 tipos principais, Shortboard tem sub-menu flyout
-// ═══════════════════════════════════════════════════════════════
-const deckTypes = [
-  {
-    text: 'Deck Shortboard',
-    path: null,
-    filterPath: '/collections/decks?tipo=shortboard',
-    children: [
-      { text: 'Deck Maldivas', path: 'Deck-Maldivas' },
-      { text: 'Deck Mentawai', path: 'Deck-Mentawai' },
-      { text: 'Deck Fiji Classic', path: 'Deck-Fiji-Classic' },
-      { text: 'Deck Hawaii', path: 'Deck-Hawaii' },
-      { text: 'Deck J-Bay', path: 'Deck-J-Bay' },
-      { text: 'Deck Noronha', path: 'Deck-Noronha' },
-      { text: 'Deck Peniche', path: 'Deck-Peniche' },
-      { text: 'Deck Saquarema', path: 'Deck-Saquarema' },
-      { text: 'Deck Combate', path: 'Deck-Combate' },
-    ],
-  },
-  { text: 'Deck Longboard', path: 'Deck-Longboard' },
-  { text: 'Deck Front', path: 'Deck-Front' },
-  { text: 'Deck SUP', path: 'Deck-SUP' },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// 🆕 QUILHAS: subcategorias
-// ═══════════════════════════════════════════════════════════════
-const quilhaSublinks = [
-  { text: 'Quilha Shortboard', path: 'Quilha-Shortboard' },
-  { text: 'Quilha Longboard', path: 'Quilha-Longboard' },
-  { text: 'Quilha SUP', path: 'Quilha-SUP' },
-  { text: 'Chave / Parafuso', path: 'Chave-Parafuso' },
-];
+const buildDeckTypes = deckCategories => {
+  const shortboard = deckCategories.filter(
+    c => !DECK_TOP_LEVEL.includes(String(c.path).toLowerCase()),
+  );
+  const others = deckCategories.filter(c =>
+    DECK_TOP_LEVEL.includes(String(c.path).toLowerCase()),
+  );
+  const list = [];
+  if (shortboard.length > 0) {
+    list.push({
+      text: 'Deck Shortboard',
+      path: null,
+      filterPath: '/collections/decks?tipo=shortboard',
+      children: shortboard.map(c => ({ text: c.text, path: c.path })),
+    });
+  }
+  return [...list, ...others.map(c => ({ text: c.text, path: c.path }))];
+};
 
 // 🔑 Iniciais do cliente para o avatar (ex: "Orlando Pedrazzoli" → "OP")
 const getInitials = name => {
@@ -103,6 +89,13 @@ const Navbar = () => {
     isSeller,
     setShowCartSidebar,
   } = useAppContext();
+
+  const { groups, categories, getCategoriesByGroup } = useCategories();
+  const NAV_DEPARTMENTS = useMemo(() => buildNavDepartments(groups), [groups]);
+  const deckTypes = useMemo(
+    () => buildDeckTypes(getCategoriesByGroup('decks')),
+    [getCategoriesByGroup],
+  );
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -151,9 +144,7 @@ const Navbar = () => {
 
   // Obter sublinks por slug
   const getSublinks = slug => {
-    if (slug === 'sarcofagos') return sarcofagoSublinks;
     if (slug === 'decks') return null;
-    if (slug === 'quilhas') return quilhaSublinks;
     return categories.filter(cat => cat.group === slug);
   };
 

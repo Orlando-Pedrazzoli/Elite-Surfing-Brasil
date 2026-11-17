@@ -1,3 +1,4 @@
+// client/src/components/seo/index.js
 /**
  * SEO Components - Elite Surfing Brasil
  * Versão: 4.0.0
@@ -29,6 +30,7 @@ export {
   collectionDescriptions,
   getCategorySEO,
   getCollectionSEO,
+  hasCollectionSEO,
   getProductSEO,
   getBlogPostSEO,
 } from './seoConfig';

@@ -20,6 +20,7 @@ import {
   categoryTitle,
   categoryOrder,
   categoryKey,
+  refreshCategoryCatalog,
 } from './categoryCatalog.js';
 
 const collator = new Intl.Collator('pt-BR', {
@@ -60,6 +61,8 @@ const toTableProduct = doc => ({
 
 /** Todos os produtos cadastrados (inclui variantes e rascunhos). */
 export const loadProducts = async () => {
+  // 🗂️ Títulos/ordem das seções seguem as categorias do admin
+  await refreshCategoryCatalog();
   const docs = await Product.find({}).select(PRODUCT_PROJECTION).lean();
   return docs.map(toTableProduct);
 };

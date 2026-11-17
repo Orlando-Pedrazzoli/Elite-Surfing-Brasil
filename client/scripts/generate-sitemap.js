@@ -1,3 +1,4 @@
+// client/scripts/generate-sitemap.js
 import fs from 'fs';
 import path from 'path';
 
@@ -61,7 +62,7 @@ const staticRoutes = [
 // =====================================================
 // COLLECTIONS
 // =====================================================
-const collections = [
+let collections = [
   { slug: 'decks', changefreq: 'weekly', priority: 0.9 },
   { slug: 'leashes', changefreq: 'weekly', priority: 0.9 },
   { slug: 'capas', changefreq: 'weekly', priority: 0.9 },
@@ -76,7 +77,7 @@ const collections = [
 // =====================================================
 // CATEGORIES
 // =====================================================
-const categories = [
+let categories = [
   { slug: 'Deck-Maldivas', changefreq: 'weekly', priority: 0.8 },
   { slug: 'Deck-Mentawai', changefreq: 'weekly', priority: 0.8 },
   { slug: 'Deck-Fiji-Classic', changefreq: 'weekly', priority: 0.8 },
@@ -114,6 +115,39 @@ const categories = [
 ];
 
 const invalidProductSlugs = [];
+
+// =====================================================
+// 🗂️ CATEGORIAS DO ADMIN (/seller/categorias)
+// As listas acima são a reserva: se a API responder, o sitemap usa as
+// categorias e subcategorias ativas que o admin configurou.
+// =====================================================
+async function fetchCategories() {
+  try {
+    const response = await fetch(`${API_URL}/api/category`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!data.success || !Array.isArray(data.groups) || data.groups.length === 0) {
+      throw new Error('resposta sem categorias');
+    }
+    collections = data.groups.map(g => ({
+      slug: g.slug,
+      changefreq: g.slug === 'outlet' ? 'daily' : 'weekly',
+      priority: g.isTagGroup ? 0.8 : 0.9,
+    }));
+    categories = (data.categories || []).map(c => ({
+      slug: c.path,
+      changefreq: 'weekly',
+      priority: 0.8,
+    }));
+    console.log(
+      `✅ Categorias do admin: ${collections.length} coleções, ${categories.length} subcategorias`,
+    );
+  } catch (error) {
+    console.warn(
+      `⚠️ Categorias do admin indisponíveis (${error.message}) — usando a lista do script`,
+    );
+  }
+}
 
 // =====================================================
 // FUNÇÕES AUXILIARES
@@ -332,6 +366,7 @@ async function generateSitemaps() {
     console.log('📁 Pasta /public criada');
   }
 
+  await fetchCategories();
   const products = await fetchProducts();
   const blogPosts = await fetchBlogPosts();
 

@@ -1,5 +1,7 @@
+// client/src/pages/ProductCategory.jsx
 import React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import { useCategories } from '../context/CategoriesContext';
 
 // ═══════════════════════════════════════════════════════════════
 // 🔀 REDIRECT MAP: categoria antiga → GroupPage + filtros
@@ -54,6 +56,7 @@ const categoryRedirectMap = {
 
 const ProductCategory = () => {
   const { category } = useParams();
+  const { getCategoryByPath, loaded } = useCategories();
 
   // Procurar no map (case-sensitive primeiro, depois case-insensitive)
   const redirect = categoryRedirectMap[category] 
@@ -61,13 +64,30 @@ const ProductCategory = () => {
         ([key]) => key.toLowerCase() === (category || '').toLowerCase()
       )?.[1];
 
-  if (redirect) {
+  // Subcategoria do admin (pode ter sido movida para outra categoria)
+  const adminCategory = getCategoryByPath(category);
+
+  if (redirect && (!adminCategory || adminCategory.group === redirect.group)) {
     const params = new URLSearchParams();
     Object.entries(redirect.filters).forEach(([key, value]) => {
       params.set(key, value);
     });
     return <Navigate to={`/collections/${redirect.group}?${params.toString()}`} replace />;
   }
+
+  // 🗂️ Subcategoria criada/movida no admin → página da categoria filtrada por ela
+  if (adminCategory) {
+    const params = new URLSearchParams({ categoria: adminCategory.path });
+    return (
+      <Navigate
+        to={`/collections/${adminCategory.group}?${params.toString()}`}
+        replace
+      />
+    );
+  }
+
+  // Ainda a carregar a lista do admin → espera antes de desistir
+  if (!loaded) return <div className='min-h-[60vh]' />;
 
   // Fallback: categoria não mapeada → redireciona para produtos
   return <Navigate to="/products" replace />;

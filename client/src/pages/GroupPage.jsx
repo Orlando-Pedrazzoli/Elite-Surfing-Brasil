@@ -1,11 +1,13 @@
+// client/src/pages/GroupPage.jsx
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronDown, SlidersHorizontal, LayoutGrid, Rows3, X, Truck, Package } from 'lucide-react';
-import { getGroupBySlug, getFiltersByGroup, filterDefinitions, filterProductsByFilters, getFilterLabel } from '../assets/assets';
+import { filterDefinitions, filterProductsByFilters, getFilterLabel } from '../assets/assets';
+import { useCategories } from '../context/CategoriesContext';
 import { useAppContext } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
-import { SEO, getCollectionSEO, BreadcrumbSchema, OrganizationSchema, CollectionSchema } from '../components/seo';
+import { SEO, getCollectionSEO, hasCollectionSEO, BreadcrumbSchema, OrganizationSchema, CollectionSchema } from '../components/seo';
 
 // ═══════════════════════════════════════════════════════════════
 // 🆕 Componente Accordion de Filtro Individual
@@ -237,20 +239,34 @@ const GroupPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, navigate } = useAppContext();
 
-  // Obter dados do grupo
+  // 🗂️ Dados do grupo vêm do admin de categorias
+  const {
+    getGroupBySlug,
+    getFilterSetKey,
+    getCategoryByPath,
+    loaded: categoriesLoaded,
+  } = useCategories();
+  // 🗂️ ?categoria=<subcategoria> — usado pelas subcategorias criadas no
+  // admin (as originais redirecionam para filtros, ver ProductCategory.jsx)
+  const categoriaParam = searchParams.get('categoria') || '';
+  const activeSubcategory = categoriaParam
+    ? getCategoryByPath(categoriaParam)
+    : null;
   const group = getGroupBySlug(groupSlug);
+  // Chave dos filtros (mantém-se mesmo se o slug da categoria mudar)
+  const filterSetKey = getFilterSetKey(groupSlug);
 
   // Obter definições de filtros deste grupo
   const filterDefs = useMemo(() => {
-    return getFiltersByGroup(groupSlug);
-  }, [groupSlug]);
+    return filterDefinitions[filterSetKey] || [];
+  }, [filterSetKey]);
 
   // ═══════════════════════════════════════════════════════════════
   // STATE: Filtros do grupo (acordeões checkbox)
   // ═══════════════════════════════════════════════════════════════
   const [activeFilters, setActiveFilters] = useState(() => {
     const initial = {};
-    const defs = filterDefinitions[groupSlug] || [];
+    const defs = filterDefinitions[filterSetKey] || [];
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
       if (paramValue) {
@@ -275,7 +291,7 @@ const GroupPage = () => {
 
   // Sincronizar filtros do grupo quando searchParams mudam
   useEffect(() => {
-    const defs = filterDefinitions[groupSlug] || [];
+    const defs = filterDefinitions[filterSetKey] || [];
     const fromUrl = {};
     defs.forEach(fd => {
       const paramValue = searchParams.get(fd.key);
@@ -295,13 +311,22 @@ const GroupPage = () => {
       minPrice: searchParams.get('minPrice') || '',
       maxPrice: searchParams.get('maxPrice') || '',
     });
-  }, [searchParams, groupSlug]);
+  }, [searchParams, groupSlug, filterSetKey]);
 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [mobileGridCols, setMobileGridCols] = useState(2);
 
   // SEO
-  const seoData = getCollectionSEO(groupSlug);
+  // Coleção criada no admin (sem SEO escrito à mão) → nome e descrição do admin
+  const baseSeo = getCollectionSEO(groupSlug);
+  const seoData =
+    group && !hasCollectionSEO(groupSlug)
+      ? {
+          ...baseSeo,
+          title: `${group.name} - Elite Surfing Brasil`,
+          description: group.description || baseSeo.description,
+        }
+      : baseSeo;
 
   // Breadcrumbs
   const breadcrumbItems = [
@@ -332,14 +357,21 @@ const GroupPage = () => {
       });
     }
 
-    // GRUPO NORMAL: buscar por campo group
+    // GRUPO NORMAL: buscar por campo group (+ subcategoria, se houver)
+    const wantedCategory = categoriaParam.toLowerCase();
     return products.filter(product => {
       if (product.group && product.group === groupSlug) {
+        if (
+          wantedCategory &&
+          String(product.category || '').toLowerCase() !== wantedCategory
+        ) {
+          return false;
+        }
         return product.isMainVariant !== false;
       }
       return false;
     });
-  }, [products, groupSlug, group]);
+  }, [products, groupSlug, group, categoriaParam]);
 
   // ═══════════════════════════════════════════════════════════════
   // 🆕 ESTATÍSTICAS dos produtos (para contagens nos filtros globais)
@@ -371,7 +403,7 @@ const GroupPage = () => {
   // ═══════════════════════════════════════════════════════════════
   const groupProducts = useMemo(() => {
     // 1. Aplicar filtros do grupo (acordeões)
-    let filtered = filterProductsByFilters(allGroupProducts, activeFilters, groupSlug);
+    let filtered = filterProductsByFilters(allGroupProducts, activeFilters, filterSetKey);
 
     // 2. 🆕 Aplicar filtros globais
     if (globalFilters.freeShipping) {
@@ -401,7 +433,7 @@ const GroupPage = () => {
       if (!aIsInactive && bIsInactive) return -1;
       return 0;
     });
-  }, [allGroupProducts, activeFilters, globalFilters, groupSlug]);
+  }, [allGroupProducts, activeFilters, globalFilters, groupSlug, filterSetKey]);
 
   // ═══════════════════════════════════════════════════════════════
   // CONTAGEM de produtos por filtro
@@ -420,7 +452,7 @@ const GroupPage = () => {
       }
     });
 
-    let baseProducts = filterProductsByFilters(allGroupProducts, otherFilters, groupSlug);
+    let baseProducts = filterProductsByFilters(allGroupProducts, otherFilters, filterSetKey);
 
     // 🆕 Aplicar filtros globais na contagem também
     if (globalFilters.freeShipping) {
@@ -453,13 +485,19 @@ const GroupPage = () => {
     });
 
     return counts;
-  }, [filterDefs, activeFilters, allGroupProducts, globalFilters, groupSlug]);
+  }, [filterDefs, activeFilters, allGroupProducts, globalFilters, groupSlug, filterSetKey]);
 
   // ═══════════════════════════════════════════════════════════════
   // 🆕 Sincronizar TODOS os filtros com a URL
   // ═══════════════════════════════════════════════════════════════
   const syncFiltersToUrl = useCallback((groupFilters, globals) => {
     const params = new URLSearchParams();
+
+    // Mantém a subcategoria escolhida (?categoria=)
+    const currentCategoria = new URLSearchParams(window.location.search).get(
+      'categoria',
+    );
+    if (currentCategoria) params.set('categoria', currentCategoria);
 
     // Filtros do grupo
     Object.entries(groupFilters).forEach(([k, values]) => {
@@ -546,6 +584,11 @@ const GroupPage = () => {
   const hasFilters = filterDefs.length > 0;
   // 🆕 Sempre mostrar sidebar se há filtros do grupo OU se há produtos com frete grátis
   const showSidebar = hasFilters || productStats.freeShippingCount > 0 || allGroupProducts.length > 0;
+
+  // Coleção criada há pouco no admin: espera a lista do servidor
+  if (!group && !categoriesLoaded) {
+    return <div className='min-h-[60vh]' />;
+  }
 
   // Se grupo não existe
   if (!group) {
@@ -808,13 +851,34 @@ const GroupPage = () => {
                 </p>
               </div>
 
+              {/* 🗂️ Subcategoria ativa (?categoria=) */}
+              {categoriaParam && (
+                <div className='flex flex-wrap gap-2 mb-3'>
+                  <span className='inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-sm rounded-full'>
+                    {activeSubcategory?.text || categoriaParam.replace(/-/g, ' ')}
+                    <button
+                      type='button'
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams);
+                        params.delete('categoria');
+                        setSearchParams(params, { replace: true });
+                      }}
+                      className='ml-1 hover:text-primary-dull'
+                      aria-label='Remover subcategoria'
+                    >
+                      <X className='w-3.5 h-3.5' />
+                    </button>
+                  </span>
+                </div>
+              )}
+
               {/* Tags de Filtros Ativos */}
               {totalActiveFilters > 0 && (
                 <div className='flex flex-wrap gap-2 mb-4'>
                   {/* Tags dos filtros do grupo */}
                   {Object.entries(activeFilters).map(([filterKey, values]) =>
                     values.map(value => {
-                      const label = getFilterLabel(groupSlug, filterKey, value);
+                      const label = getFilterLabel(filterSetKey, filterKey, value);
                       return (
                         <span 
                           key={`${filterKey}-${value}`}

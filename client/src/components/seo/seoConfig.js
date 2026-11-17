@@ -637,6 +637,10 @@ export const categoryDescriptions = {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
 
+// 🗂️ Há SEO escrito à mão para esta coleção? (coleções novas do admin não têm)
+export const hasCollectionSEO = collectionSlug =>
+  !!collectionDescriptions[(collectionSlug || '').toLowerCase().trim()];
+
 export const getCollectionSEO = collectionSlug => {
   const slug = (collectionSlug || '').toLowerCase().trim();
   if (collectionDescriptions[slug]) return collectionDescriptions[slug];

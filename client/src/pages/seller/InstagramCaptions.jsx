@@ -10,16 +10,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Pencil, Trash2, Save, X, Quote, Eye, EyeOff } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { groups as storeGroups } from '../../assets/assets';
+import { useCategories } from '../../context/CategoriesContext';
 import { POST_TYPES, POST_GOALS } from '../../utils/socialUtils';
 import { MANDATORY_HASHTAGS, NICHE_SLOTS } from '../../utils/hashtagPolicy';
 
-const GROUP_OPTIONS = [
+const buildGroupOptions = storeGroups => [
   { id: 'all', name: 'Todas as coleções' },
   ...(storeGroups || []).filter(g => !g.isTagGroup).map(g => ({ id: g.id, name: g.name })),
 ];
-
-const groupName = id => GROUP_OPTIONS.find(g => g.id === id)?.name || id;
 
 const EMPTY = {
   group: 'decks',
@@ -39,6 +37,10 @@ const inputCls =
 
 const InstagramCaptions = () => {
   const { axios } = useAppContext();
+  // 🗂️ Coleções vêm do admin de categorias
+  const { groups: storeGroups } = useCategories();
+  const GROUP_OPTIONS = buildGroupOptions(storeGroups);
+  const groupName = id => GROUP_OPTIONS.find(g => g.id === id)?.name || id;
   const [templates, setTemplates] = useState([]);
   const [angles, setAngles] = useState({});
   const [loading, setLoading] = useState(true);

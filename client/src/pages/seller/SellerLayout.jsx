@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   Images,
   Quote,
+  FolderTree,
 } from 'lucide-react';
 
 const SellerLayout = () => {
@@ -54,6 +55,11 @@ const SellerLayout = () => {
       name: 'Lista de Produtos',
       path: '/seller/product-list',
       icon: PackageSearch,
+    },
+    {
+      name: 'Categorias',
+      path: '/seller/categorias',
+      icon: FolderTree,
     },
     {
       name: 'Pedidos',
