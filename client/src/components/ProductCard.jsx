@@ -138,17 +138,23 @@ const MoreVariantsTile = ({ count, size, onClick }) => (
 );
 
 // Gera uma versão reduzida da imagem para a miniatura.
-// Se for Cloudinary, injeta transformação (80x80, formato/qualidade auto);
-// caso contrário devolve a URL original.
+// Se for Cloudinary:
+//   1) e_trim:10 → corta a margem branca/transparente à volta do produto
+//      (é isto que dá o "zoom": o produto passa a ocupar a miniatura toda)
+//   2) 120x120 c_pad → volta a enquadrar num quadrado sem deformar
+//      (120px = nítido em ecrãs retina até à miniatura de 44px)
+// Caso contrário devolve a URL original (o zoom é feito por CSS).
+const isCloudinaryUrl = url =>
+  typeof url === 'string' &&
+  url.includes('res.cloudinary.com') &&
+  url.includes('/upload/');
+
 const getThumbUrl = url => {
-  if (!url || typeof url !== 'string') return url;
-  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
-    return url.replace(
-      '/upload/',
-      '/upload/w_80,h_80,c_pad,b_white,f_auto,q_auto/',
-    );
-  }
-  return url;
+  if (!isCloudinaryUrl(url)) return url;
+  return url.replace(
+    '/upload/',
+    '/upload/e_trim:10/w_120,h_120,c_pad,b_white,f_auto,q_auto/',
+  );
 };
 
 // Miniatura (avatar) da variante — mostra a foto do produto em vez da cor
@@ -185,7 +191,10 @@ const VariantThumb = ({
         alt={alt}
         loading='lazy'
         draggable={false}
-        className={`w-full h-full object-contain p-0.5 ${outOfStock ? 'opacity-40' : ''}`}
+        className={`w-full h-full object-contain p-[2px] ${
+          // Fora do Cloudinary não há e_trim → zoom por CSS
+          isCloudinaryUrl(image) ? '' : 'scale-[1.3]'
+        } ${outOfStock ? 'opacity-40' : ''}`}
       />
 
       {/* Esgotado: risco diagonal sobre a miniatura */}
